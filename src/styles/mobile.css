@@ -1,0 +1,29 @@
+/* Mobile-first tweaks – everything here targets small screens by default. */
+
+@media (max-width: 400px) {
+  .container,
+  .container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .card {
+    border-radius: 1.25rem;
+  }
+
+  h5,
+  h6 {
+    font-size: 1rem;
+  }
+
+  .navbar-brand span {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-bottom-nav {
+    display: none;
+  }
+}
+

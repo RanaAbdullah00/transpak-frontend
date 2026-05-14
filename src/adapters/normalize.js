@@ -1,0 +1,102 @@
+// Data normalization adapters so UI never breaks on field mismatches.
+
+export const normalizeLoad = (raw) => {
+  if (!raw) return null;
+  const id = raw.id ?? raw._id ?? raw.loadId ?? null;
+  const price = Number(raw.price ?? raw.expectedPrice ?? raw.amount ?? 0);
+  return {
+    // canonical
+    id,
+    title: raw.title ?? raw.cargo ?? raw.description ?? 'Load',
+    price,
+    pickup: raw.pickup ?? raw.origin ?? '',
+    delivery: raw.delivery ?? raw.destination ?? '',
+    status: raw.status ?? 'open',
+    shipperId: raw.shipperId ?? null,
+    assignedCarrierId: raw.assignedCarrierId ?? null,
+    // backward-compatible fields used by existing components
+    code: raw.code ?? `L-${String(id ?? '').slice(-4)}`,
+    cargo: raw.cargo ?? raw.title ?? raw.description ?? 'Load',
+    origin: raw.origin ?? raw.pickup ?? '',
+    destination: raw.destination ?? raw.delivery ?? '',
+    weight: raw.weight ?? 0,
+    vehicleType: raw.vehicleType ?? raw.type ?? 'Truck',
+    distance: raw.distance ?? 0,
+    expectedPrice: price,
+    pickupDate: raw.pickupDate ?? raw.date ?? '',
+    deadlineHours: raw.deadlineHours != null ? raw.deadlineHours : 2,
+    deadline: raw.deadline
+  };
+};
+
+export const normalizeLoads = (arr) => (Array.isArray(arr) ? arr.map(normalizeLoad).filter(Boolean) : []);
+
+export const normalizeBid = (raw) => {
+  if (!raw) return null;
+  const id = raw.id ?? raw._id ?? null;
+  const price = Number(raw.price ?? raw.amount ?? 0);
+  return {
+    id,
+    loadId: raw.loadId ?? raw.load ?? null,
+    carrierId: raw.carrierId ?? raw.carrier ?? null,
+    carrierName: raw.carrierName ?? raw.name ?? 'Carrier',
+    vehicleType: raw.vehicleType ?? 'Truck',
+    transitTime: raw.transitTime ?? raw.etaDays ?? 2,
+    price,
+    amount: price,
+    status: raw.status ?? 'pending',
+    suggestedAmount: raw.suggestedAmount != null ? Number(raw.suggestedAmount) : null,
+    suggestedAt: raw.suggestedAt ?? null,
+    suggestedBy: raw.suggestedBy ?? null,
+    createdAt: raw.createdAt ?? new Date().toISOString()
+  };
+};
+
+export const normalizeBids = (arr) => (Array.isArray(arr) ? arr.map(normalizeBid).filter(Boolean) : []);
+
+export const normalizeNotification = (raw) => {
+  if (!raw) return null;
+  const rt = raw.roleType != null && String(raw.roleType).trim() !== '' ? String(raw.roleType).toLowerCase().trim() : null;
+  const ty = raw.type != null && String(raw.type).trim() !== '' ? String(raw.type).trim() : null;
+  return {
+    id: raw.id ?? raw._id ?? null,
+    senderId: raw.senderId ?? null,
+    receiverId: raw.receiverId ?? null,
+    roleType: rt,
+    type: ty,
+    message: raw.message ?? raw.title ?? '',
+    title: raw.title ?? null,
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+    read: Boolean(raw.read ?? raw.isRead)
+  };
+};
+
+export const normalizeNotifications = (arr) =>
+  (Array.isArray(arr) ? arr.map(normalizeNotification).filter(Boolean) : []);
+
+export const normalizeTracking = (raw) => {
+  if (!raw) return null;
+  const t = raw.tracking || {};
+  const loc = t.location != null ? t.location : t.currentLocation;
+  const hasCoords =
+    Array.isArray(loc) &&
+    loc.length >= 2 &&
+    Number.isFinite(Number(loc[0])) &&
+    Number.isFinite(Number(loc[1]));
+  const backendFlag = t.locationUnavailable === true;
+  const locationUnavailable = backendFlag || !hasCoords;
+  const safeLoc = hasCoords ? [Number(loc[0]), Number(loc[1])] : null;
+  return {
+    tracking: {
+      ...t,
+      status: t.status ?? 'posted',
+      eta: t.eta,
+      locationUnavailable,
+      location: safeLoc,
+      currentLocation: safeLoc
+    },
+    history: Array.isArray(raw.history) ? raw.history : [],
+    liveTrackingMap: raw.liveTrackingMap || { coordinates: [] }
+  };
+};
+

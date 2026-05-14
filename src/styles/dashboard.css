@@ -1,0 +1,14 @@
+.tp-load-card,
+.tp-bid-card {
+  border-radius: 1.25rem !important;
+}
+
+.tp-load-card h6,
+.tp-bid-card h6 {
+  font-size: 0.95rem;
+}
+
+.tp-map-card {
+  border-radius: 1.5rem !important;
+}
+
