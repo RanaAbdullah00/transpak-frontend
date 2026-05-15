@@ -1,12 +1,11 @@
 import React from 'react';
 import Modal from '../ui/Modal.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-
-const STREAM_PATH = '/api/demo-video/stream';
+import { getDemoVideoStreamUrl } from '../../utils/backendOrigin.js';
 
 const DemoVideoModal = ({ open, onClose, videoUrl, mimeType, emptyMessage }) => {
   const { t } = useLanguage();
-  const src = videoUrl || (open ? STREAM_PATH : null);
+  const src = videoUrl || (open ? getDemoVideoStreamUrl() : null);
 
   return (
     <Modal open={open} onClose={onClose} title={t('common.watchDemo')} size="lg" closeLabel={t('common.close')}>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TransPak">
+  <defs>
+    <linearGradient id="tp-fav-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14532d"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#tp-fav-bg)"/>
+  <!-- LTR mark; crisp at 16–32px -->
+  <g fill="#fafafa">
+    <path d="M14 18h18v4H22v22h-4V22h-8v-4z"/>
+  </g>
+  <g fill="#4ade80">
+    <path d="M36 18h11c4.4 0 7.5 2.6 7.5 6.3s-3.1 6.4-7.5 6.4h-6.5v9.3h-4.5V18zm4.5 4v8.7h6.5c2.2 0 3.6-1.3 3.6-3.4s-1.4-3.3-3.6-3.3h-6.5z"/>
+  </g>
+  <path fill="none" stroke="#bbf7d0" stroke-width="1.5" stroke-linecap="round" d="M12 48h12M46 14l4 4-4 4" opacity="0.9"/>
+</svg>

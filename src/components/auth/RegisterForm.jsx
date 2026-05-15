@@ -120,10 +120,13 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
       const payload = unwrapResponseData(res) || {};
       const { token, user, currentRole, registrationKind, emailVerification } = payload;
       const mergedOrExisting = registrationKind === 'merged' || registrationKind === 'existing';
+      const isPendingSignup = registrationKind === 'pending';
       notifySuccess(
         upgradeRole || (mergedOrExisting && token)
           ? t('auth.roleAddedSuccess')
           : mergedOrExisting && !token
+          ? t('auth.verifyEmailToContinue')
+          : isPendingSignup
           ? t('auth.verifyEmailToContinue')
           : t('auth.accountCreatedSuccess')
       );

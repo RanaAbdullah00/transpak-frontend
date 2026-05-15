@@ -1,19 +1,7 @@
 import axios from 'axios';
+import { getApiRoot, API_BASE } from '../config/apiConfig.js';
 
-// Base URL: explicit VITE_API_URL wins. In dev, empty/unset uses same-origin `/api` (Vite proxy → backend).
-function apiBaseUrl() {
-  const raw = import.meta.env.VITE_API_URL;
-  const explicit = typeof raw === 'string' ? raw.trim() : '';
-  if (explicit) {
-    let base = explicit.replace(/\/$/, '');
-    if (!base.endsWith('/api')) base = `${base}/api`;
-    return base;
-  }
-  if (import.meta.env.DEV) return '/api';
-  return 'http://localhost:5000/api';
-}
-
-const BASE_URL = apiBaseUrl();
+const BASE_URL = getApiRoot();
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -33,13 +21,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-api.interceptors.response.use((response) => {
-  const body = response.data;
-  if (body && typeof body.success === 'boolean' && 'data' in body) {
-    return { ...response, data: body.data };
+api.interceptors.response.use(
+  (response) => {
+    const body = response.data;
+    if (body && typeof body.success === 'boolean' && 'data' in body) {
+      return { ...response, data: body.data };
+    }
+    return response;
+  },
+  (error) => {
+    if (!error.response && error.code === 'ERR_NETWORK') {
+      const target = API_BASE || BASE_URL;
+      error.message = import.meta.env.DEV
+        ? `Cannot reach API (${target}). Start transpak-backend and set VITE_PROXY_TARGET in transpak-frontend/.env.`
+        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Check Cloudflare build env VITE_API_URL=https://transpak-backend.onrender.com`;
+    }
+    return Promise.reject(error);
   }
-  return response;
-});
+);
 
+export { API_BASE, BASE_URL };
 export default api;
-

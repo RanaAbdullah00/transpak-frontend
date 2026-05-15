@@ -3,6 +3,7 @@ import { FaPlay, FaChevronRight } from 'react-icons/fa';
 import DemoVideoModal from './DemoVideoModal.jsx';
 import { fetchDemoVideoInfo } from '../../services/demoVideoService.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { getDemoVideoStreamUrl } from '../../utils/backendOrigin.js';
 
 /**
  * Segmented, form-field-style CTA for the official demo video (auth header, help, compact).
@@ -22,7 +23,7 @@ const DemoVideoWatchButton = ({ className = '', variant = 'default' }) => {
     setOpen(true);
   }, []);
 
-  const videoUrl = info?.hasVideo ? '/api/demo-video/stream' : null;
+  const videoUrl = info?.hasVideo ? getDemoVideoStreamUrl() : null;
 
   const rootClass = [
     'tp-watch-demo-segmented',

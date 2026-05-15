@@ -20,7 +20,7 @@ export function unwrapErrorMessage(err) {
   const d = err?.response?.data;
   if (!d) {
     if (err?.message === 'Network Error') {
-      return 'Unable to reach the server. Check that the backend is running and that `VITE_API_URL` + CORS settings match the browser origin.';
+      return 'Unable to reach the server. In production set VITE_API_URL=https://transpak-backend.onrender.com when building the frontend. Check Render DATABASE_URL and CORS for your Cloudflare Pages URL.';
     }
     return err?.message || '';
   }

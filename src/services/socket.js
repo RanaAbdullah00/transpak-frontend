@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { getBackendOrigin } from '../utils/backendOrigin.js';
 
 /**
  * Socket.io client (JWT in handshake). Server-delivered events only.
@@ -10,9 +11,15 @@ export function createSocketClient({
   onChatMessage,
   onChatSeen
 }) {
-  const url =
-    import.meta.env.VITE_SOCKET_URL ||
-    (import.meta.env.DEV ? window.location.origin : 'http://localhost:5000');
+  const explicitSocket = typeof import.meta.env.VITE_SOCKET_URL === 'string' ? import.meta.env.VITE_SOCKET_URL.trim() : '';
+  let url = explicitSocket;
+  if (!url) {
+    if (import.meta.env.DEV && !import.meta.env.VITE_API_URL?.trim()) {
+      url = window.location.origin;
+    } else {
+      url = getBackendOrigin() || window.location.origin;
+    }
+  }
 
   let socket = null;
 
@@ -21,6 +28,11 @@ export function createSocketClient({
       socket: null,
       disconnect: () => {}
     };
+  }
+
+  if (!url) {
+    console.warn('[socket] No backend URL — set VITE_API_URL (or VITE_SOCKET_URL) in production');
+    return { socket: null, disconnect: () => {} };
   }
 
   try {
