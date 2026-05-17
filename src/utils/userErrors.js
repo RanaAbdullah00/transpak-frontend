@@ -40,7 +40,7 @@ function serverUnavailableMessage(t) {
 export function formatUserError(err, t, options = {}) {
   const { fallback } = options;
 
-  if (err?.message === 'Network Error') {
+  if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') {
     return networkMessage(t);
   }
 

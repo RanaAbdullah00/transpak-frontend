@@ -5,6 +5,7 @@ const BASE_URL = getApiRoot();
 
 const api = axios.create({
   baseURL: BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -34,7 +35,7 @@ api.interceptors.response.use(
       const target = API_BASE || BASE_URL;
       error.message = import.meta.env.DEV
         ? `Cannot reach API (${target}). Start transpak-backend and set VITE_PROXY_TARGET in transpak-frontend/.env.`
-        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Check Cloudflare build env VITE_API_URL=https://transpak-backend.onrender.com`;
+        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Rebuild frontend with VITE_API_URL set to your Render URL; ensure Render CORS allows your Cloudflare Pages domain.`;
     }
     return Promise.reject(error);
   }

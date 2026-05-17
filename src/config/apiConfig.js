@@ -15,7 +15,14 @@ export function getApiBase() {
     console.error('[api] VITE_API_URL is missing — production build must set it to your Render API URL.');
     return '';
   }
-  return raw.replace(/\/api\/?$/i, '').replace(/\/$/, '');
+  let base = raw.replace(/\/api\/?$/i, '').replace(/\/$/, '');
+  if (!import.meta.env.DEV && base.startsWith('http://')) {
+    base = `https://${base.slice('http://'.length)}`;
+  }
+  if (!import.meta.env.DEV && base && !base.startsWith('https://')) {
+    base = `https://${base}`;
+  }
+  return base;
 }
 
 /** Axios baseURL: `${API_BASE}/api` in production, `/api` in local dev (proxy). */
