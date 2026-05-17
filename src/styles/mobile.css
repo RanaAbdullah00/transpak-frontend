@@ -1,4 +1,8 @@
 /* Mobile + tablet responsive refinements */
+.tp-touch-target {
+  min-height: 44px;
+}
+
 @media (max-width: 991.98px) {
   .tp-main-shell {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
@@ -33,6 +37,46 @@
   .tp-city-select__menu {
     max-height: min(40vh, 280px);
   }
+
+  .tp-dashboard .tp-stat-card {
+    min-width: 0;
+  }
+
+  .modal-dialog {
+    margin: 0.75rem;
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .modal-content {
+    max-height: min(90vh, 720px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .tp-load-card,
+  .tp-truck-form-card,
+  .tp-filter-card {
+    overflow: hidden;
+  }
+
+  .tp-carrier-load-actions .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tp-bid-card .d-flex.gap-2 {
+    flex-wrap: wrap;
+  }
+
+  .tp-bid-card .btn {
+    flex: 1 1 auto;
+    min-width: min(100%, 8rem);
+  }
 }
 
 @media (max-width: 575.98px) {
@@ -49,5 +93,25 @@
   .container-fluid {
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .tp-truck-page .list-group-item .btn {
+    width: 100%;
+  }
+
+  .tp-dashboard h5 {
+    font-size: 1.1rem;
+  }
+
+  .tp-counter-offer-box input {
+    width: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .tp-main-shell main {
+    overflow-x: clip;
   }
 }

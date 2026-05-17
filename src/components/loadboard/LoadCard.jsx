@@ -6,9 +6,10 @@ import Button from '../ui/Button.jsx';
 import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
+import CarrierLoadActions from './CarrierLoadActions.jsx';
 
 // Card representing a single load in the marketplace.
-const LoadCard = ({ load, onBid }) => {
+const LoadCard = ({ load, onBid, carrierMode = false, onCarrierAccept, onCarrierCounter, carrierBusy = false }) => {
   const { t } = useLanguage();
   const expectedPrice = Number(load?.expectedPrice ?? 0);
   const distance = load?.distance ?? '—';
@@ -73,11 +74,20 @@ const LoadCard = ({ load, onBid }) => {
           </Badge>
         )}
       </div>
-      {onBid && (
+      {carrierMode ? (
+        <CarrierLoadActions
+          load={load}
+          onAccept={onCarrierAccept}
+          onCounter={onCarrierCounter}
+          busy={carrierBusy}
+          disabled={Boolean(load.deadline && isDeadlinePast) || load.status !== 'open'}
+        />
+      ) : null}
+      {!carrierMode && onBid ? (
         <div className="mt-auto">
           <Button
             variant="primary"
-            className="w-100 btn-sm rounded-lg"
+            className="w-100 btn-sm rounded-lg tp-btn-glow"
             onClick={() => onBid(load)}
             disabled={Boolean(load.deadline && isDeadlinePast)}
           >
@@ -86,7 +96,7 @@ const LoadCard = ({ load, onBid }) => {
               : t('pages.loads.loadCardPlaceBid')}
           </Button>
         </div>
-      )}
+      ) : null}
     </Card>
   );
 };

@@ -5,7 +5,9 @@ import LoadList from '../../components/loadboard/LoadList.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import Loader from '../../components/ui/Loader.jsx';
-import { notifyError } from '../../components/ui/ToastProvider.jsx';
+import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
+import { acceptLoadAtListedFare, submitCounterOffer } from '../../services/carrierLoadOffer.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 
@@ -29,9 +31,12 @@ const AvailableLoads = ({ embedded = false }) => {
   });
   const [loads, setLoads] = useState([]);
   const [myBidLoadIds, setMyBidLoadIds] = useState(new Set());
+  const [offerBusyId, setOfferBusyId] = useState(null);
   const debouncedFilters = useDebouncedValue(filters, 400);
 
   const { request, loading: apiLoading } = useApi();
+  const activeRole = user?.activeRole ?? user?.roles?.[0];
+  const isCarrier = activeRole === 'carrier';
 
   const fetchMyBids = useCallback(async () => {
     try {
@@ -49,6 +54,16 @@ const AvailableLoads = ({ embedded = false }) => {
 
   useEffect(() => {
     fetchMyBids();
+  }, [fetchMyBids]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'bids') return;
+      fetchMyBids().catch(() => {});
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
   }, [fetchMyBids]);
 
   useEffect(() => {
@@ -84,9 +99,38 @@ const AvailableLoads = ({ embedded = false }) => {
   }, [debouncedFilters, request, myBidLoadIds, t]);
 
   const handleBid = (load) => {
-    const activeRole = user?.activeRole ?? user?.roles?.[0];
-    if (activeRole === 'carrier') return navigate('/bids/place', { state: { load } });
+    if (isCarrier) return;
     return navigate(`/loads/${encodeURIComponent(load.id)}`);
+  };
+
+  const handleCarrierAccept = async (load) => {
+    setOfferBusyId(load.id);
+    try {
+      await acceptLoadAtListedFare(request, load);
+      notifySuccess(t('pages.loads.carrierAcceptSuccess'));
+      setMyBidLoadIds((prev) => new Set(prev).add(String(load.id)));
+      setLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
+      fetchMyBids().catch(() => {});
+    } catch (err) {
+      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+    } finally {
+      setOfferBusyId(null);
+    }
+  };
+
+  const handleCarrierCounter = async (load, amount) => {
+    setOfferBusyId(load.id);
+    try {
+      await submitCounterOffer(request, load, amount);
+      notifySuccess(t('pages.loads.carrierCounterSuccess'));
+      setMyBidLoadIds((prev) => new Set(prev).add(String(load.id)));
+      setLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
+      fetchMyBids().catch(() => {});
+    } catch (err) {
+      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+    } finally {
+      setOfferBusyId(null);
+    }
   };
 
   const handleFilterChange = (e) => {
@@ -212,7 +256,14 @@ const AvailableLoads = ({ embedded = false }) => {
           <Loader />
         </div>
       ) : (
-        <LoadList loads={loads} onBid={handleBid} />
+        <LoadList
+          loads={loads}
+          onBid={isCarrier ? undefined : handleBid}
+          carrierMode={isCarrier}
+          onCarrierAccept={handleCarrierAccept}
+          onCarrierCounter={handleCarrierCounter}
+          carrierBusyLoadId={offerBusyId}
+        />
       )}
     </div>
   );

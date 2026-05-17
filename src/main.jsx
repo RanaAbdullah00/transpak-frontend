@@ -14,6 +14,9 @@ import { AppProvider } from './context/AppContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { ToastProvider } from './components/ui/ToastProvider.jsx';
 import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
+import { verifyProductionDeploy } from './utils/verifyDeploy.js';
+
+verifyProductionDeploy();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

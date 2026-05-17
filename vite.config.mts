@@ -1,5 +1,20 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react-swc';
+import { execSync } from 'node:child_process';
+
+function resolveBuildId() {
+  const fromCi =
+    process.env.CF_PAGES_COMMIT_SHA ||
+    process.env.CLOUDFLARE_PAGES_COMMIT_SHA ||
+    process.env.RENDER_GIT_COMMIT ||
+    '';
+  if (fromCi) return String(fromCi).slice(0, 12);
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    return 'local';
+  }
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -14,8 +29,13 @@ export default defineConfig(({ mode }) => {
 
   const proxyTarget = (env.VITE_PROXY_TARGET || 'http://127.0.0.1:5000').replace(/\/$/, '');
 
+  const appBuildId = resolveBuildId();
+
   return {
     plugins: [react()],
+    define: {
+      'import.meta.env.VITE_APP_BUILD_ID': JSON.stringify(appBuildId)
+    },
     build: {
       rollupOptions: {
         output: {

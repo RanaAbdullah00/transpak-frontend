@@ -10,6 +10,7 @@ import AnalyticsChart from '../../components/dashboard/AnalyticsChart.jsx';
 import LoadList from '../../components/loadboard/LoadList.jsx';
 import ActiveShipmentPanel from '../../components/dashboard/ActiveShipmentPanel.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
+import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 
 // Dashboard view tailored for shippers.
 const ShipperDashboard = () => {
@@ -81,11 +82,16 @@ const ShipperDashboard = () => {
   }, [request]);
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--shipper">
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h5 className="mb-0">{t('pages.dashboard.shipperTitle')}</h5>
-        <div className="d-flex gap-2 flex-wrap">
-          {!profileComplete && (
+        <div>
+          <h5 className="mb-1">{t('pages.dashboard.shipperTitle')}</h5>
+          <p className="small text-muted mb-0">{t('pages.dashboard.shipperSubtitle')}</p>
+        </div>
+        <div className="d-flex gap-2 flex-wrap align-items-center">
+          {profileComplete ? (
+            <ActiveRoleBadge />
+          ) : (
             <Link to="/profile" className="btn btn-warning btn-sm rounded-lg">
               {t('pages.dashboard.incompleteProfileCta')}
             </Link>

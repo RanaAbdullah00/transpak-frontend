@@ -12,6 +12,10 @@ import ActiveShipmentPanel from '../../components/dashboard/ActiveShipmentPanel.
 import { FaTruck } from 'react-icons/fa';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { Link } from 'react-router-dom';
+import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
+import { acceptLoadAtListedFare, submitCounterOffer } from '../../services/carrierLoadOffer.js';
+import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 
 // Dashboard view tailored for carriers.
 const CarrierDashboard = () => {
@@ -23,6 +27,7 @@ const CarrierDashboard = () => {
   const [openLoads, setOpenLoads] = useState([]);
   const [bidSummary, setBidSummary] = useState({ accepted: 0, pending: 0 });
   const [fleetCount, setFleetCount] = useState(0);
+  const [offerBusyId, setOfferBusyId] = useState(null);
 
   const metrics = useMemo(() => {
     const open = openLoads.length;
@@ -77,12 +82,43 @@ const CarrierDashboard = () => {
     })();
   }, [request]);
 
+  const handleCarrierAccept = async (load) => {
+    setOfferBusyId(load.id);
+    try {
+      await acceptLoadAtListedFare(request, load);
+      notifySuccess(t('pages.loads.carrierAcceptSuccess'));
+      setOpenLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
+    } catch (err) {
+      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+    } finally {
+      setOfferBusyId(null);
+    }
+  };
+
+  const handleCarrierCounter = async (load, amount) => {
+    setOfferBusyId(load.id);
+    try {
+      await submitCounterOffer(request, load, amount);
+      notifySuccess(t('pages.loads.carrierCounterSuccess'));
+      setOpenLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
+    } catch (err) {
+      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+    } finally {
+      setOfferBusyId(null);
+    }
+  };
+
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--carrier">
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h5 className="mb-0">{t('pages.dashboard.carrierTitle')}</h5>
-        <div className="d-flex gap-2 flex-wrap">
-          {!profileComplete && (
+        <div>
+          <h5 className="mb-1">{t('pages.dashboard.carrierTitle')}</h5>
+          <p className="small text-muted mb-0">{t('pages.dashboard.carrierSubtitle')}</p>
+        </div>
+        <div className="d-flex gap-2 flex-wrap align-items-center">
+          {profileComplete ? (
+            <ActiveRoleBadge />
+          ) : (
             <Link to="/profile" className="btn btn-warning btn-sm rounded-lg">
               {t('pages.dashboard.incompleteProfileCta')}
             </Link>
@@ -115,7 +151,13 @@ const CarrierDashboard = () => {
         <div className="d-flex justify-content-between align-items-center mb-1">
           <h6 className="mb-0">{t('pages.dashboard.recommendedLoads')}</h6>
         </div>
-        <LoadList loads={openLoads} />
+        <LoadList
+          loads={openLoads}
+          carrierMode
+          onCarrierAccept={handleCarrierAccept}
+          onCarrierCounter={handleCarrierCounter}
+          carrierBusyLoadId={offerBusyId}
+        />
       </div>
       <div className="mt-4">
         <div className="d-flex justify-content-between align-items-center mb-3">

@@ -95,3 +95,95 @@
 .tp-socket-status--visible {
   opacity: 1;
 }
+
+/* Active role badges (profile complete) */
+.tp-active-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.tp-active-role-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.tp-active-role-badge--shipper {
+  color: #047857;
+  background: color-mix(in srgb, #10b981 16%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, #10b981 40%, transparent);
+}
+
+.tp-active-role-badge--carrier {
+  color: #0369a1;
+  background: color-mix(in srgb, #0ea5e9 16%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, #0ea5e9 42%, transparent);
+}
+
+/* Role dashboards */
+.tp-dashboard {
+  --tp-dash-accent: var(--tp-role-accent, var(--pak-primary));
+}
+
+.tp-dashboard--shipper {
+  --tp-dash-accent: #0d9488;
+}
+
+.tp-dashboard--carrier {
+  --tp-dash-accent: #0284c7;
+}
+
+.tp-dashboard .tp-stat-card,
+.tp-dashboard .card,
+.tp-dashboard .tp-load-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.tp-dashboard .tp-load-card:hover,
+.tp-dashboard .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px var(--tp-role-glow, rgba(0, 0, 0, 0.08));
+}
+
+.tp-dashboard--shipper h5 {
+  color: color-mix(in srgb, #047857 70%, var(--text-primary));
+}
+
+.tp-dashboard--carrier h5 {
+  color: color-mix(in srgb, #0369a1 75%, var(--text-primary));
+}
+
+.tp-btn-glow {
+  transition: box-shadow 0.25s ease, transform 0.15s ease;
+}
+
+.tp-btn-glow:hover:not(:disabled) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pak-primary) 22%, transparent);
+}
+
+.tp-btn-glow:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.tp-counter-offer-box {
+  background: color-mix(in srgb, var(--tp-dash-accent, var(--pak-primary)) 8%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--tp-dash-accent, var(--pak-primary)) 22%, var(--pak-border));
+}
+
+.tp-truck-page .tp-img-contain-full {
+  max-height: min(40vw, 180px);
+}
+
+.tp-truck-list .list-group-item:last-child {
+  border-bottom: none !important;
+}

@@ -21,6 +21,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
 import { SidebarProfileSheet } from '../profile/ProfileSheet.jsx';
+import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
 
 const navLinkClass = ({ isActive }) =>
   `nav-link d-flex align-items-center gap-2 rounded-lg px-3 py-2 mb-1 ${isActive ? 'active' : ''}`;
@@ -179,9 +180,7 @@ const Sidebar = () => {
               <div className="flex-grow-1 min-w-0">
                 <div className="fw-semibold text-truncate small">{user.name || t('common.userFallback')}</div>
                 {user.profileComplete ? (
-                  <span className="tp-role-badge">
-                    {isShipper ? t('auth.shipper') : isCarrier ? t('auth.carrier') : t('common.admin')}
-                  </span>
+                  <ActiveRoleBadge className="mt-1" />
                 ) : (
                   <span className="badge bg-danger tp-badge-xs">{t('nav.profileIncompleteBadge')}</span>
                 )}

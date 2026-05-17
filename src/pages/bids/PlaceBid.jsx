@@ -20,6 +20,12 @@ const PlaceBid = () => {
   const { request, loading } = useApi();
 
   useEffect(() => {
+    const role = user?.activeRole ?? user?.roles?.[0];
+    if (role === 'carrier') {
+      notifyInfo(t('pages.loads.carrierUseFreightBoard'));
+      navigate('/loads/manage', { replace: true, state: { tab: 'freight' } });
+      return;
+    }
     if (user && user.profileComplete === false) {
       notifyInfo(t('pages.placeBid.profileCompleteFirst'));
       navigate('/profile', { replace: true });

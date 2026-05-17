@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "deploy:check": "node ../scripts/check-production-sync.mjs",
     "preview": "vite preview",
     "lint": "eslint src"
   },
