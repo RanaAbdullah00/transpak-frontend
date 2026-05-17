@@ -13,6 +13,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { FaLock } from 'react-icons/fa';
+import { getDeliveryHint } from '../../utils/otpDelivery.js';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -26,6 +27,13 @@ const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const deliveryHint = useMemo(
+    () =>
+      location.state?.emailDelivered === false
+        ? getDeliveryHint(location.state, '')
+        : location.state?.deliveryHint || null,
+    [location.state]
+  );
 
   useEffect(() => {
     if (!email) {
@@ -93,6 +101,14 @@ const ResetPassword = () => {
             <p className="small text-body-secondary mb-3">
               <strong className="text-body">{email}</strong>
             </p>
+            {deliveryHint ? (
+              <p
+                className="small text-warning-emphasis mb-3 border-start border-warning border-3 ps-2"
+                role="status"
+              >
+                {deliveryHint}
+              </p>
+            ) : null}
             <form onSubmit={handleSubmit} className="tp-auth-register-form">
               <div className="mb-2">
                 <label className="form-label small">{t('auth.otpCodeLabel')}</label>

@@ -10,6 +10,7 @@ import { sendForgotPasswordOtpApi } from '../../services/authService.js';
 import { unwrapResponseData } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
 import { FaEnvelope } from 'react-icons/fa';
 
 const ForgotPassword = () => {
@@ -31,12 +32,21 @@ const ForgotPassword = () => {
         navigate('/reset-password', { replace: false, state: { email: email.trim().toLowerCase() } });
         return;
       }
-      if (!data.sent && data.deliveryHint) {
-        notifyError(data.deliveryHint);
-        return;
+      if (!isEmailDelivered(data)) {
+        const hint = getDeliveryHint(data, t('auth.otpResendNotDelivered'));
+        if (hint) notifyError(hint);
+      } else {
+        notifySuccess(t('auth.forgotSubtitle'));
       }
-      notifySuccess(t('auth.forgotSubtitle'));
-      navigate('/reset-password', { replace: false, state: { email: email.trim().toLowerCase() } });
+      navigate('/reset-password', {
+        replace: false,
+        state: {
+          email: email.trim().toLowerCase(),
+          emailDelivered: isEmailDelivered(data),
+          deliveryHint: getDeliveryHint(data, '') || null,
+          deliveryReason: data.deliveryReason || null
+        }
+      });
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('errors.generic') }));
     } finally {

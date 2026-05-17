@@ -17,6 +17,9 @@ export function getRegisterErrorToast(err, t) {
   if (code === 'VALIDATION_ERROR') return msg;
   if (code === 'EMAIL_ALREADY_EXISTS') return msg;
   if (code === 'SERVER_ERROR') return t('errors.generic');
+  if (code === 'DATABASE_UNAVAILABLE') {
+    return msg || 'Service is temporarily unavailable. Please try again in a moment.';
+  }
   return msg;
 }
 
@@ -33,5 +36,9 @@ export function getOtpFlowErrorToast(err, t) {
   if (code === 'INVALID_OTP') return msg.includes('attempt') ? msg : t('errors.otpInvalid');
   if (code === 'OTP_COOLDOWN') return msg;
   if (code === 'VALIDATION_ERROR') return msg;
+  if (code === 'DATABASE_UNAVAILABLE') {
+    return msg || 'Service is temporarily unavailable. Please try again in a moment.';
+  }
+  if (code === 'SERVER_ERROR') return t('errors.generic');
   return msg;
 }

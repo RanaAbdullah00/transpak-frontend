@@ -13,6 +13,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { getOtpFlowErrorToast } from '../../utils/authApiErrors.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
+import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
 
 const VerifyEmail = () => {
   const navigate = useNavigate();
@@ -28,13 +29,17 @@ const VerifyEmail = () => {
   const [cooldown, setCooldown] = useState(0);
   const [deliveryBanner, setDeliveryBanner] = useState(() => ({
     hint: location.state?.deliveryHint || null,
-    reason: location.state?.deliveryReason || null
+    reason: location.state?.deliveryReason || null,
+    showWarning:
+      location.state?.emailDelivered === false || Boolean(location.state?.deliveryHint)
   }));
 
   useEffect(() => {
     setDeliveryBanner({
       hint: location.state?.deliveryHint || null,
-      reason: location.state?.deliveryReason || null
+      reason: location.state?.deliveryReason || null,
+      showWarning:
+        location.state?.emailDelivered === false || Boolean(location.state?.deliveryHint)
     });
   }, [location.state]);
 
@@ -85,11 +90,12 @@ const VerifyEmail = () => {
         const retry = Number(data?.retryAfterSeconds);
         if (Number.isFinite(retry) && retry > 0) setCooldown(retry);
         else setCooldown(45);
-      } else if (data?.deliveryFailed && !data?.devOtp) {
-        const hint = data.deliveryHint || t('auth.otpResendNotDelivered');
+      } else if (!isEmailDelivered(data) && !data?.devOtp) {
+        const hint = getDeliveryHint(data, t('auth.otpResendNotDelivered'));
         setDeliveryBanner((prev) => ({
           hint,
-          reason: data.deliveryReason || prev.reason
+          reason: data.deliveryReason || prev.reason,
+          showWarning: true
         }));
         notifyError(hint);
         const retry = Number(data?.retryAfterSeconds);
@@ -97,7 +103,7 @@ const VerifyEmail = () => {
         else setCooldown(45);
       } else {
         notifySuccess(t('auth.resendOtp'));
-        setDeliveryBanner((prev) => ({ ...prev, hint: null, reason: null }));
+        setDeliveryBanner((prev) => ({ ...prev, hint: null, reason: null, showWarning: false }));
         const retry = Number(data?.retryAfterSeconds);
         if (Number.isFinite(retry) && retry > 0) setCooldown(retry);
         else setCooldown(45);
@@ -139,8 +145,11 @@ const VerifyEmail = () => {
             <p className="small text-body-secondary mb-3">
               <strong className="text-body">{email}</strong>
             </p>
-            {deliveryBanner.hint ? (
-              <p className="small text-body-secondary mb-3 border-start border-3 ps-2" role="status">
+            {deliveryBanner.showWarning && deliveryBanner.hint ? (
+              <p
+                className="small text-warning-emphasis mb-3 border-start border-warning border-3 ps-2"
+                role="status"
+              >
                 {deliveryBanner.hint}
               </p>
             ) : null}

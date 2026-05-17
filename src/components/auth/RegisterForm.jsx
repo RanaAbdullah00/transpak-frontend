@@ -9,6 +9,7 @@ import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { unwrapResponseData } from '../../utils/unwrapApi.js';
 import { getRegisterErrorToast } from '../../utils/authApiErrors.js';
+import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -143,6 +144,9 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
 
       if (import.meta.env.DEV && emailVerification?.devOtp) {
         notifySuccess(`Dev OTP: ${emailVerification.devOtp}`);
+      } else if (emailVerification && !isEmailDelivered(emailVerification)) {
+        const hint = getDeliveryHint(emailVerification, t('auth.otpResendNotDelivered'));
+        if (hint) notifyError(hint);
       }
 
       onDone?.(user);
@@ -150,7 +154,8 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
         replace: true,
         state: {
           email: form.email.trim().toLowerCase(),
-          deliveryHint: emailVerification?.deliveryHint || null,
+          emailDelivered: emailVerification ? isEmailDelivered(emailVerification) : true,
+          deliveryHint: getDeliveryHint(emailVerification, '') || null,
           deliveryReason: emailVerification?.deliveryReason || null
         }
       });

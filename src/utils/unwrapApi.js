@@ -11,7 +11,8 @@ export function unwrapResponseData(res) {
 
 /** API `code` from axios err.response.data (e.g. WRONG_PASSWORD, VALIDATION_ERROR). */
 export function unwrapErrorCode(err) {
-  const c = err?.response?.data?.code;
+  const d = err?.response?.data;
+  const c = d?.code ?? d?.error;
   return typeof c === 'string' && c.length ? c : null;
 }
 

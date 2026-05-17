@@ -37,6 +37,15 @@ api.interceptors.response.use(
         ? `Cannot reach API (${target}). Start transpak-backend and set VITE_PROXY_TARGET in transpak-frontend/.env.`
         : `Cannot reach API (${target || 'VITE_API_URL not set'}). Rebuild frontend with VITE_API_URL set to your Render URL; ensure Render CORS allows your Cloudflare Pages domain.`;
     }
+    const body = error.response?.data;
+    if (body && typeof body === 'object') {
+      if (!body.code && typeof body.error === 'string') {
+        body.code = body.error;
+      }
+      if (!error.message && typeof body.message === 'string') {
+        error.message = body.message;
+      }
+    }
     return Promise.reject(error);
   }
 );

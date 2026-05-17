@@ -8,6 +8,7 @@ import { loginApi } from '../../services/authService.js';
 import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapResponseData, unwrapErrorCode } from '../../utils/unwrapApi.js';
+import { formatUserError } from '../../utils/userErrors.js';
 import { FaEnvelope, FaLock } from 'react-icons/fa';
 
 const DEMO_ADMIN_EMAIL = 'mrabdullah0456@gmail.com';
