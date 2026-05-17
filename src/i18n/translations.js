@@ -1253,6 +1253,10 @@ export const translations = {
       activityNoCommercialHint:
         'ذاتی سرگرمی کے اعداد و شمار کے لیے شپر یا کیریئر کردار سے سائن ان کریں۔'
     },
+    deploy: {
+      mismatchTitle: 'سسٹم ورژن میں عدم مطابقت',
+      mismatchBody: 'فرنٹ اینڈ اور API ہم آہنگ نہیں۔ Cloudflare اور Render دوبارہ ڈپلائے کریں، پھر ہارڈ ریفریش کریں۔'
+    },
     reviews: {
       rateUsersHint:
         'بڈ قبول ہونے کے بعد آپ اپنے ساتھی کو 1–5 ستارے دے سکتے ہیں۔ ہر لوڈ پر ایک بار درجہ دیا جا سکتا ہے۔',
