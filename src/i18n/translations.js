@@ -193,6 +193,10 @@ export const translations = {
       statAdminReviews: 'Reviews stored',
       activityNoCommercialHint: 'Sign in with a shipper or carrier role to see your personal activity metrics.'
     },
+    deploy: {
+      mismatchTitle: 'System version mismatch detected',
+      mismatchBody: 'Frontend and API builds may be out of sync. Redeploy Cloudflare Pages and Render, then hard-refresh.'
+    },
     reviews: {
       rateUsersHint:
         'After a bid is accepted, you can leave a 1–5 star rating for your counterpart. Each load can be rated once.',

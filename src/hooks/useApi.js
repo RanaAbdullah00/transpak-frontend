@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import api from '../services/api.js';
 import { unwrapBody } from '../utils/unwrapApi.js';
 import { formatUserError } from '../utils/userErrors.js';
+import { notifyError } from '../components/ui/ToastProvider.jsx';
 
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
@@ -11,10 +12,12 @@ export const useApi = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api(config);
+      const response = await api({ ...config, skipGlobalErrorToast: true });
       return unwrapBody(response.data);
     } catch (err) {
-      setError(formatUserError(err));
+      const msg = formatUserError(err);
+      setError(msg);
+      notifyError(msg);
       throw err;
     } finally {
       setLoading(false);

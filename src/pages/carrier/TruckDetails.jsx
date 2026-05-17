@@ -9,6 +9,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 import { uploadMediaFile } from '../../services/uploadMedia.js';
+import { syncTrucksAfterCreate } from '../../utils/truckListSync.js';
 
 const emptyForm = {
   id: null,
@@ -127,7 +128,18 @@ const TruckDetails = () => {
         });
       }
       reset();
-      refresh().catch(() => {});
+      const fetchList = async () => {
+        const data = await request({ method: 'GET', url: '/trucks/mine' });
+        const list = Array.isArray(data) ? data : [];
+        setTrucks(list);
+        return list;
+      };
+
+      if (!editing && saved?.id) {
+        await syncTrucksAfterCreate({ saved, fetchList, setTrucks });
+      } else {
+        await fetchList();
+      }
     } catch (err) {
       notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
     } finally {

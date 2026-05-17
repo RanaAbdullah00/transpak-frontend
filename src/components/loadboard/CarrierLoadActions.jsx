@@ -7,18 +7,23 @@ const CarrierLoadActions = ({ load, onAccept, onCounter, busy = false, disabled 
   const { t } = useLanguage();
   const [showCounter, setShowCounter] = useState(false);
   const [amount, setAmount] = useState('');
+  const [pending, setPending] = useState(false);
   const actionLock = useRef(false);
+  const counterLock = useRef(false);
 
   const listed = Number(load?.expectedPrice ?? 0);
-  const locked = busy || disabled;
+  const locked = busy || disabled || pending;
 
-  const runLocked = async (fn) => {
-    if (actionLock.current || busy || disabled) return;
-    actionLock.current = true;
+  const runLocked = async (fn, { counter = false } = {}) => {
+    const lockRef = counter ? counterLock : actionLock;
+    if (lockRef.current || busy || disabled || pending) return;
+    lockRef.current = true;
+    setPending(true);
     try {
       await fn();
     } finally {
-      actionLock.current = false;
+      lockRef.current = false;
+      setPending(false);
     }
   };
 
@@ -28,13 +33,16 @@ const CarrierLoadActions = ({ load, onAccept, onCounter, busy = false, disabled 
     });
 
   const handleCounter = () =>
-    runLocked(async () => {
-      const val = Number(amount);
-      if (!Number.isFinite(val) || val <= 0) return;
-      await onCounter?.(load, val);
-      setShowCounter(false);
-      setAmount('');
-    });
+    runLocked(
+      async () => {
+        const val = Number(amount);
+        if (!Number.isFinite(val) || val <= 0) return;
+        await onCounter?.(load, val);
+        setShowCounter(false);
+        setAmount('');
+      },
+      { counter: true }
+    );
 
   return (
     <div className="tp-carrier-load-actions d-flex flex-column gap-2 mt-auto">

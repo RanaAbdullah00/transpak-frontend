@@ -1,20 +1,82 @@
 import axios from 'axios';
-import { getApiRoot, API_BASE } from '../config/apiConfig.js';
+import { getApiRoot, API_BASE, resolveViteApiOrigin } from '../config/apiConfig.js';
+import { notifyError } from '../components/ui/ToastProvider.jsx';
+import { unwrapErrorDetail } from '../utils/unwrapApi.js';
+import { logApiFailure } from '../utils/apiDevLog.js';
 
 const BASE_URL = getApiRoot();
+
+const ALLOWED_API_PREFIXES = [
+  '/auth',
+  '/profile',
+  '/shipments',
+  '/loads',
+  '/bids',
+  '/fare',
+  '/carrier-space',
+  '/operations',
+  '/admin',
+  '/reviews',
+  '/ratings',
+  '/notifications',
+  '/chat',
+  '/trucks',
+  '/demo-video',
+  '/disputes',
+  '/translations',
+  '/upload',
+  '/health'
+];
+
+const AUTH_DEBUG =
+  import.meta.env.DEV || String(import.meta.env.VITE_AUTH_API_DEBUG || '').toLowerCase() === 'true';
+
+function assertProductionApiTarget(config) {
+  if (import.meta.env.DEV) return;
+  const base = String(config.baseURL || BASE_URL || '');
+  if (/localhost|127\.0\.0\.1/i.test(base)) {
+    throw new Error('Production build cannot call localhost API — set VITE_API_URL to Render URL');
+  }
+}
+
+function assertAllowedEndpoint(url) {
+  const path = String(url || '').split('?')[0];
+  if (!path || path === '/health') return;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  const ok = ALLOWED_API_PREFIXES.some((p) => normalized === p || normalized.startsWith(`${p}/`));
+  if (!ok && import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.warn('[api] Unlisted endpoint (verify backend route exists):', normalized);
+  }
+}
+
+function fullUrl(config) {
+  const url = config.url || '';
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${String(config.baseURL || '').replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`;
+}
+
+function handleApiFailure(error, config) {
+  logApiFailure(error, config);
+  if (config?.skipGlobalErrorToast) return;
+  const { displayMessage } = unwrapErrorDetail(error);
+  const endpoint = fullUrl(config || {});
+  const msg = displayMessage || `Request failed (${endpoint})`;
+  notifyError(msg);
+}
 
 const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
 });
 
-const AUTH_DEBUG =
-  import.meta.env.DEV || String(import.meta.env.VITE_AUTH_API_DEBUG || '').toLowerCase() === 'true';
-
 api.interceptors.request.use((config) => {
+  assertProductionApiTarget(config);
+  assertAllowedEndpoint(config.url);
+
   const token = localStorage.getItem('transpak_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -22,20 +84,17 @@ api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
   }
+
   const method = String(config.method || 'get').toUpperCase();
-  const url = config.url || '';
-  const fullUrl = /^https?:\/\//i.test(url)
-    ? url
-    : `${String(config.baseURL || '').replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`;
-  const isAuth = /\/api\/auth(\/|$)/i.test(fullUrl) || /\/auth(\/|$)/i.test(url);
-  if (isAuth && !/^https?:\/\//i.test(url) && url.startsWith('/')) {
+  const resolved = fullUrl(config);
+  const isAuth = /\/api\/auth(\/|$)/i.test(resolved) || /\/auth(\/|$)/i.test(config.url || '');
+
+  if (isAuth && !/^https?:\/\//i.test(config.url || '') && String(config.url || '').startsWith('/')) {
     // eslint-disable-next-line no-console
-    console.error(
-      '[api] relative auth path bypasses authService — use authService.js only:',
-      fullUrl
-    );
+    console.error('[api] relative auth path bypasses authService — use authService.js only:', resolved);
   }
-  if (isAuth) {
+
+  if (isAuth && AUTH_DEBUG) {
     const payload =
       config.data && typeof config.data === 'object' && !(config.data instanceof FormData)
         ? { ...config.data }
@@ -45,35 +104,36 @@ api.interceptors.request.use((config) => {
         if (payload[key] != null) payload[key] = '[redacted]';
       }
     }
-    if (AUTH_DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log('[api] auth request', { method, url: fullUrl, payload });
-    }
-    const postOnly =
-      /\/auth\/(register|login|otp\/|send-otp|verify-otp|resend-otp)/i.test(fullUrl) ||
-      /\/auth\/add-role$/i.test(fullUrl);
-    if (postOnly && method !== 'POST') {
-      // eslint-disable-next-line no-console
-      console.error('[api] auth POST-only route called with wrong method:', method, fullUrl);
-    }
+    // eslint-disable-next-line no-console
+    console.log('[api] auth request', { method, url: resolved, payload });
   }
+
   return config;
 });
 
 api.interceptors.response.use(
   (response) => {
     const body = response.data;
-    if (body && typeof body.success === 'boolean' && 'data' in body) {
-      return { ...response, data: body.data };
+    if (body && typeof body.success === 'boolean') {
+      if (body.success === false) {
+        const err = new Error(body.message || 'Request failed');
+        err.response = { status: response.status, data: body };
+        err.config = response.config;
+        handleApiFailure(err, response.config);
+        return Promise.reject(err);
+      }
+      if ('data' in body) {
+        return { ...response, data: body.data };
+      }
     }
     return response;
   },
   (error) => {
     if (!error.response && error.code === 'ERR_NETWORK') {
-      const target = API_BASE || BASE_URL;
+      const target = API_BASE || resolveViteApiOrigin() || BASE_URL;
       error.message = import.meta.env.DEV
-        ? `Cannot reach API (${target}). Start transpak-backend and set VITE_PROXY_TARGET in transpak-frontend/.env.`
-        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Rebuild frontend with VITE_API_URL set to your Render URL; ensure Render CORS allows your Cloudflare Pages domain.`;
+        ? `Cannot reach API (${target}). Start transpak-backend and set VITE_PROXY_TARGET.`
+        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Rebuild with correct VITE_API_URL.`;
     }
     const body = error.response?.data;
     if (body && typeof body === 'object') {
@@ -91,15 +151,7 @@ api.interceptors.response.use(
           body.code && !msg.includes(body.code) ? `${msg} (${body.code})` : msg;
       }
     }
-    if (AUTH_DEBUG && error.config?.url && /\/auth(\/|$)/i.test(error.config.url)) {
-      // eslint-disable-next-line no-console
-      console.error('[api] auth error', {
-        method: error.config?.method,
-        url: error.config?.url,
-        status: error.response?.status,
-        data: error.response?.data
-      });
-    }
+    handleApiFailure(error, error.config || {});
     return Promise.reject(error);
   }
 );

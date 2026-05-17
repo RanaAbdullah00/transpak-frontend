@@ -103,15 +103,30 @@ const AvailableLoads = ({ embedded = false }) => {
     return navigate(`/loads/${encodeURIComponent(load.id)}`);
   };
 
+  const optimisticallyRemoveLoad = (loadId) => {
+    setOfferBusyId(loadId);
+    setMyBidLoadIds((prev) => new Set(prev).add(String(loadId)));
+    setLoads((prev) => prev.filter((l) => String(l.id) !== String(loadId)));
+  };
+
+  const rollbackLoad = (load) => {
+    setOfferBusyId(null);
+    setMyBidLoadIds((prev) => {
+      const next = new Set(prev);
+      next.delete(String(load.id));
+      return next;
+    });
+    setLoads((prev) => (prev.some((l) => String(l.id) === String(load.id)) ? prev : [load, ...prev]));
+  };
+
   const handleCarrierAccept = async (load) => {
-    setOfferBusyId(load.id);
+    optimisticallyRemoveLoad(load.id);
     try {
       await acceptLoadAtListedFare(request, load);
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
-      setMyBidLoadIds((prev) => new Set(prev).add(String(load.id)));
-      setLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
       fetchMyBids().catch(() => {});
     } catch (err) {
+      rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
     } finally {
       setOfferBusyId(null);
@@ -119,14 +134,13 @@ const AvailableLoads = ({ embedded = false }) => {
   };
 
   const handleCarrierCounter = async (load, amount) => {
-    setOfferBusyId(load.id);
+    optimisticallyRemoveLoad(load.id);
     try {
       await submitCounterOffer(request, load, amount);
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
-      setMyBidLoadIds((prev) => new Set(prev).add(String(load.id)));
-      setLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
       fetchMyBids().catch(() => {});
     } catch (err) {
+      rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
     } finally {
       setOfferBusyId(null);

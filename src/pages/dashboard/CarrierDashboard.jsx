@@ -82,13 +82,24 @@ const CarrierDashboard = () => {
     })();
   }, [request]);
 
-  const handleCarrierAccept = async (load) => {
+  const optimisticallyRemoveLoad = (load) => {
     setOfferBusyId(load.id);
+    setOpenLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
+    return load;
+  };
+
+  const rollbackLoad = (load) => {
+    setOfferBusyId(null);
+    setOpenLoads((prev) => (prev.some((l) => String(l.id) === String(load.id)) ? prev : [load, ...prev]));
+  };
+
+  const handleCarrierAccept = async (load) => {
+    optimisticallyRemoveLoad(load);
     try {
       await acceptLoadAtListedFare(request, load);
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
-      setOpenLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
     } catch (err) {
+      rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
     } finally {
       setOfferBusyId(null);
@@ -96,12 +107,12 @@ const CarrierDashboard = () => {
   };
 
   const handleCarrierCounter = async (load, amount) => {
-    setOfferBusyId(load.id);
+    optimisticallyRemoveLoad(load);
     try {
       await submitCounterOffer(request, load, amount);
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
-      setOpenLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
     } catch (err) {
+      rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
     } finally {
       setOfferBusyId(null);
