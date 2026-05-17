@@ -9,7 +9,8 @@ export function createSocketClient({
   onNotification,
   onTracking,
   onChatMessage,
-  onChatSeen
+  onChatSeen,
+  onReconnect
 }) {
   const explicitSocket = typeof import.meta.env.VITE_SOCKET_URL === 'string' ? import.meta.env.VITE_SOCKET_URL.trim() : '';
   let url = explicitSocket;
@@ -39,7 +40,16 @@ export function createSocketClient({
     socket = io(url, {
       auth: { token },
       transports: ['websocket', 'polling'],
-      autoConnect: true
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 12,
+      reconnectionDelay: 800
+    });
+
+    let hadConnected = false;
+    socket.on('connect', () => {
+      if (hadConnected) onReconnect?.();
+      hadConnected = true;
     });
 
     socket.on('notification:new', (n) => onNotification?.(n));

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import StatsCards from '../../components/dashboard/StatsCards.jsx';
+import OperationsPanel from '../../components/dashboard/OperationsPanel.jsx';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
 import AnalyticsChart from '../../components/dashboard/AnalyticsChart.jsx';
 import LoadList from '../../components/loadboard/LoadList.jsx';
@@ -91,6 +92,7 @@ const ShipperDashboard = () => {
           )}
         </div>
       </div>
+      <OperationsPanel />
       <StatsCards stats={stats} />
       <div className="mt-3 row g-2">
         <div className="col-12 col-lg-6">

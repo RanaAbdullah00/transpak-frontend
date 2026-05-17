@@ -6,7 +6,7 @@ const LoadList = ({ loads, onBid }) => {
   const safeLoads = Array.isArray(loads) ? loads : [];
   if (!safeLoads.length) {
     return (
-      <div className="text-center py-5 px-3 rounded-xl" style={{ background: 'var(--pak-light-green-bg)' }}>
+      <div className="text-center py-5 px-3 rounded-xl tp-surface-muted">
         <p className="text-muted mb-0 fw-medium">No loads available</p>
         <p className="small text-muted mt-1 mb-0">Try adjusting filters or check back later.</p>
       </div>

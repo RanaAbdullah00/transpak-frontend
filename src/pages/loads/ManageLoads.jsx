@@ -11,7 +11,7 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { formatUserError } from '../../utils/userErrors.js';
 
 // Shipper screen to manage their posted loads (open/assigned/completed).
-const ManageLoads = () => {
+const ManageLoads = ({ embedded = false }) => {
   const { request, loading } = useApi();
   const { t } = useLanguage();
   const [loads, setLoads] = useState([]);
@@ -57,15 +57,17 @@ const ManageLoads = () => {
   };
 
   return (
-    <div className="container py-3">
-      <div className="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
-        <h5 className="mb-0">{t('pages.loads.manageTitle')}</h5>
-        <Link to="/loads/post">
-          <Button variant="primary" className="btn-sm px-3 rounded-lg">
-            + {t('pages.loads.postLoadCta')}
-          </Button>
-        </Link>
-      </div>
+    <div className={embedded ? '' : 'container py-3'}>
+      {!embedded ? (
+        <div className="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+          <h5 className="mb-0">{t('pages.loads.manageTitle')}</h5>
+          <Link to="/loads/post">
+            <Button variant="primary" className="btn-sm px-3 rounded-lg">
+              + {t('pages.loads.postLoadCta')}
+            </Button>
+          </Link>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="d-flex flex-column gap-3">
@@ -74,7 +76,7 @@ const ManageLoads = () => {
           <SkeletonCard rows={3} />
         </div>
       ) : normalizedLoads.length === 0 ? (
-        <div className="text-center py-5 px-3 rounded-xl" style={{ background: 'var(--pak-light-green-bg)' }}>
+        <div className="text-center py-5 px-3 rounded-xl tp-surface-muted">
           <p className="text-muted mb-2 fw-medium">{t('pages.loads.noLoadsTitle')}</p>
           <p className="small text-muted mb-3">{t('pages.loads.noLoadsBody')}</p>
           <Link to="/loads/post">

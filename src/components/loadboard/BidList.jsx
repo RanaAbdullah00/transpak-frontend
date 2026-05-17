@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import BidCard from './BidCard.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
@@ -23,8 +23,11 @@ const BidList = ({
     mode === 'carrier' ? t('pages.bids.emptyCarrier') : t('pages.bids.emptyShipper');
   const resolvedEmpty = emptyMessage ?? defaultEmpty;
 
-  const activeBids = bids.filter((bid) => !bid.status || bid.status === 'pending' || bid.status === 'suggested');
-  const acceptedBids = bids.filter((bid) => bid.status === 'accepted');
+  const { activeBids, acceptedBids } = useMemo(() => {
+    const active = bids.filter((bid) => !bid.status || bid.status === 'pending' || bid.status === 'suggested');
+    const accepted = bids.filter((bid) => bid.status === 'accepted');
+    return { activeBids: active, acceptedBids: accepted };
+  }, [bids]);
   const isShipper = mode === 'shipper';
   const isCarrier = mode === 'carrier';
 
@@ -78,5 +81,5 @@ const BidList = ({
   );
 };
 
-export default BidList;
+export default React.memo(BidList);
 

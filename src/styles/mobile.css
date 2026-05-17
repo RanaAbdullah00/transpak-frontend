@@ -1,29 +1,53 @@
-/* Mobile-first tweaks – everything here targets small screens by default. */
+/* Mobile + tablet responsive refinements */
+@media (max-width: 991.98px) {
+  .tp-main-shell {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
 
-@media (max-width: 400px) {
+  .tp-segment-tabs {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tp-segment-tabs__btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tp-ios-sheet-panel,
+  .tp-ios-sheet-panel--expanded {
+    max-height: min(92vh, 720px);
+  }
+
+  .tp-notifications-page .tp-notifications-surface {
+    padding: 0.5rem !important;
+  }
+
+  .tp-flow-timeline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tp-city-select__menu {
+    max-height: min(40vh, 280px);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .tp-bid-card .d-md-flex {
+    flex-direction: column !important;
+  }
+
+  .tp-filter-card .row > [class*='col-'] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
   .container,
   .container-fluid {
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
-
-  .card {
-    border-radius: 1.25rem;
-  }
-
-  h5,
-  h6 {
-    font-size: 1rem;
-  }
-
-  .navbar-brand span {
-    font-size: 1rem;
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
   }
 }
-
-@media (min-width: 768px) {
-  .mobile-bottom-nav {
-    display: none;
-  }
-}
-

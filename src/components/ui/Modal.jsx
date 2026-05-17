@@ -23,7 +23,8 @@ const Modal = ({ open, title, onClose, children, size = 'md', closeLabel = 'Clos
 
   if (!open) return null;
 
-  const maxWidth = size === 'lg' ? 720 : size === 'sm' ? 420 : 560;
+  const sizeClass =
+    size === 'lg' ? 'tp-max-w-modal-lg' : size === 'sm' ? 'tp-max-w-modal-sm' : 'tp-max-w-modal-md';
   const host = getPortalContainer();
   if (!host) return null;
 
@@ -35,8 +36,7 @@ const Modal = ({ open, title, onClose, children, size = 'md', closeLabel = 'Clos
       onClick={onClose}
     >
       <div
-        className="tp-modal-card tp-modal-card--enter"
-        style={{ maxWidth, maxHeight: 'min(85vh, 900px)', overflowY: 'auto' }}
+        className={`tp-modal-card tp-modal-card--enter ${sizeClass} tp-max-h-modal overflow-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="d-flex align-items-center justify-content-between mb-2 gap-2">
@@ -49,7 +49,7 @@ const Modal = ({ open, title, onClose, children, size = 'md', closeLabel = 'Clos
             ✕
           </button>
           <div className="fw-semibold flex-grow-1 text-center text-body">{title}</div>
-          <div style={{ width: 36 }} aria-hidden />
+          <div className="tp-modal-spacer" aria-hidden />
         </div>
         {children}
       </div>

@@ -58,8 +58,7 @@ const ConfirmActionModal = ({
       onClick={onClose}
     >
       <div
-        className="tp-modal-card tp-modal-card--enter p-4"
-        style={{ maxWidth: 520 }}
+        className="tp-modal-card tp-modal-card--enter p-4 tp-max-w-modal-md w-100"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="d-flex align-items-center justify-content-between mb-2">

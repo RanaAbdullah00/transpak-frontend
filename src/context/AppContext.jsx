@@ -103,10 +103,40 @@ export const AppProvider = ({ children }) => {
     };
   }, [user?.id]);
 
+  const refetchNotifications = useCallback(async () => {
+    const token = localStorage.getItem('transpak_token');
+    if (!token) return;
+    try {
+      const res = await api.get('/notifications');
+      const rows = res?.data;
+      if (!Array.isArray(rows)) return;
+      setNotifications(
+        rows.map((r) => ({
+          id: r.id || r._id,
+          senderId: r.senderId ?? null,
+          type: r.type != null && String(r.type).trim() !== '' ? String(r.type).trim() : null,
+          message: r.message || r.title || '',
+          roleType: sanitizeNotificationRoleType(r.roleType),
+          read: Boolean(r.read || r.isRead),
+          createdAt: r.createdAt
+        }))
+      );
+    } catch {
+      /* keep current */
+    }
+  }, []);
+
+  useEffect(() => {
+    const onRefresh = () => refetchNotifications();
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refetchNotifications]);
+
   useEffect(() => {
     const token = localStorage.getItem('transpak_token');
     const client = createSocketClient({
       token: token || undefined,
+      onReconnect: refetchNotifications,
       onNotification: (n) => addNotificationRef.current?.(n),
       onTracking: (p) => {
         const sig = `${p?.refKey}|${p?.tracking?.status}|${JSON.stringify(p?.tracking?.currentLocation ?? p?.tracking?.location)}|${(p?.history || []).length}`;
@@ -147,7 +177,7 @@ export const AppProvider = ({ children }) => {
       client.disconnect();
       socketRef.current = null;
     };
-  }, [user?.id]);
+  }, [user?.id, refetchNotifications]);
 
   const getSocket = useCallback(() => socketRef.current, []);
 

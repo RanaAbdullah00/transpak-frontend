@@ -7,8 +7,8 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { loginApi } from '../../services/authService.js';
 import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { unwrapResponseData, unwrapErrorCode } from '../../utils/unwrapApi.js';
-import { formatUserError } from '../../utils/userErrors.js';
+import { unwrapErrorCode } from '../../utils/unwrapApi.js';
+import { safeUnwrapAuthResponse, getAuthUiError, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import { FaEnvelope, FaLock } from 'react-icons/fa';
 
 const DEMO_ADMIN_EMAIL = 'mrabdullah0456@gmail.com';
@@ -43,7 +43,7 @@ const LoginForm = () => {
   const isDemoAdmin = emailNorm === DEMO_ADMIN_EMAIL;
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    blockNativeFormSubmit(e);
     if (!uiRolePref && !isDemoAdmin) {
       notifyError(t('errors.roleRequired'));
       return;
@@ -55,19 +55,15 @@ const LoginForm = () => {
         password: form.password,
         ...(isDemoAdmin ? {} : { roleHint: uiRolePref })
       });
-      const payload = unwrapResponseData(res) || {};
+      const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
       if (token) localStorage.setItem('transpak_token', token);
       if (user) login(payload);
       notifySuccess(t('auth.welcomeBack'));
       const activeRole = user?.activeRole ?? currentRole;
-      let path = '/dashboard';
-      if (activeRole === 'admin') path = '/admin/dashboard';
-      else if (activeRole === 'carrier') path = '/dashboard/carrier';
-      navigate(path, { replace: true });
+      navigate(safeDashboardPath(activeRole), { replace: true });
     } catch (err) {
       const code = unwrapErrorCode(err);
-      const raw = formatUserError(err, t, { fallback: t('errors.invalidCredentials') });
       if (code === 'EMAIL_NOT_VERIFIED') {
         notifyError(t('errors.emailNotVerified'));
         navigate('/verify-email', {
@@ -76,10 +72,11 @@ const LoginForm = () => {
         });
         return;
       }
+      const raw = getAuthUiError(err, t);
       const translated =
-        code === 'INVALID_CREDENTIALS' || raw === 'Invalid credentials'
+        code === 'INVALID_CREDENTIALS'
           ? t('errors.invalidCredentials')
-          : code === 'ACCOUNT_BLOCKED' || raw === 'Account is blocked'
+          : code === 'ACCOUNT_BLOCKED'
           ? t('errors.accountBlocked')
           : raw;
       notifyError(translated);
@@ -89,7 +86,7 @@ const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="tp-auth-login-form mt-3">
+    <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-login-form mt-3">
       <RoleSelector value={uiRolePref} onChange={setUiRolePref} />
       <div className="mb-2">
         <label className="form-label small">{t('auth.email')}</label>

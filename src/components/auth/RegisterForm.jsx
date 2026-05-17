@@ -7,10 +7,10 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { registerApi } from '../../services/authService.js';
 import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
-import { unwrapResponseData } from '../../utils/unwrapApi.js';
+import { safeUnwrapAuthResponse } from '../../utils/authApiSafe.js';
 import { getRegisterErrorToast } from '../../utils/authApiErrors.js';
 import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
-import { dashboardPathForRole } from '../../utils/dashboardPath.js';
+import { blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { FaUser, FaEnvelope, FaIdCard, FaLock } from 'react-icons/fa';
@@ -103,7 +103,7 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    blockNativeFormSubmit(e);
     setError('');
     setSuccess('');
     if (!validate()) return;
@@ -118,7 +118,7 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
         confirmPassword: form.confirmPassword,
         role: form.role
       });
-      const payload = unwrapResponseData(res) || {};
+      const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole, registrationKind, emailVerification } = payload;
       const mergedOrExisting = registrationKind === 'merged' || registrationKind === 'existing';
       const isPendingSignup = registrationKind === 'pending';
@@ -138,7 +138,7 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
         login(payload);
         onDone?.(user);
         const role = currentRole || user?.activeRole || user?.roles?.[0];
-        navigate(dashboardPathForRole(role), { replace: true });
+        navigate(safeDashboardPath(role), { replace: true });
         return;
       }
 
@@ -169,7 +169,7 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
   };
 
   return (
-    <form onSubmit={handleSubmit} className="tp-auth-register-form mt-2">
+    <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-register-form mt-2">
       {error && (
         <div className="alert alert-danger py-2 small" role="alert">
           {error}

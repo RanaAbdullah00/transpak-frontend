@@ -76,9 +76,9 @@ const Sidebar = () => {
         )}
         {isCarrier && (
           <>
-            <NavLink to="/loads" className={navLinkClass}>
+            <NavLink to="/loads/manage" className={navLinkClass}>
               <FaListUl />
-              {t('common.loads')}
+              {t('loadsHub.navOperations')}
             </NavLink>
             <NavLink to="/bids/mine" className={navLinkClass}>
               <FaGavel />
@@ -149,10 +149,7 @@ const Sidebar = () => {
           {t('nav.settings')}
         </NavLink>
       </nav>
-      <div
-        className="border-top flex-shrink-0 tp-sidebar-footer"
-        style={{ borderColor: 'var(--pak-border)' }}
-      >
+      <div className="border-top flex-shrink-0 tp-sidebar-footer tp-border-theme">
         <div className="p-3 pb-2">
           {user && (
             <button
@@ -164,17 +161,11 @@ const Sidebar = () => {
                 setProfileSheetOpen(true);
               }}
             >
-              <div
-                className="rounded-circle overflow-hidden border flex-shrink-0"
-                style={{ width: 36, height: 36, borderColor: 'var(--pak-border)' }}
-              >
+              <div className="tp-avatar-36 tp-border-theme rounded-circle overflow-hidden border flex-shrink-0">
                 {user.profileImage ? (
-                  <img src={user.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={user.profileImage} alt="" className="tp-img-cover" />
                 ) : (
-                  <div
-                    className="w-100 h-100 d-flex align-items-center justify-content-center tp-sidebar-avatar-placeholder fw-semibold"
-                    style={{ fontSize: 12 }}
-                  >
+                  <div className="w-100 h-100 d-flex align-items-center justify-content-center tp-sidebar-avatar-placeholder fw-semibold tp-badge-sm">
                     {(user.fullName || user.name || user.email || '?')
                       .split(/\s+/)
                       .filter(Boolean)
@@ -188,9 +179,11 @@ const Sidebar = () => {
               <div className="flex-grow-1 min-w-0">
                 <div className="fw-semibold text-truncate small">{user.name || t('common.userFallback')}</div>
                 {user.profileComplete ? (
-                  <span className="badge bg-success" style={{ fontSize: 9 }}>{t('nav.profileCompleteBadge')}</span>
+                  <span className="tp-role-badge">
+                    {isShipper ? t('auth.shipper') : isCarrier ? t('auth.carrier') : t('common.admin')}
+                  </span>
                 ) : (
-                  <span className="badge bg-danger" style={{ fontSize: 9 }}>{t('nav.profileIncompleteBadge')}</span>
+                  <span className="badge bg-danger tp-badge-xs">{t('nav.profileIncompleteBadge')}</span>
                 )}
               </div>
             </button>

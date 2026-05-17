@@ -117,7 +117,7 @@ const Navbar = () => {
                 >
                   <FaBell size={14} />
                   {unreadCount > 0 && (
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: 9 }}>
+                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger tp-badge-xs">
                       {unreadCount}
                     </span>
                   )}
@@ -156,7 +156,7 @@ const Navbar = () => {
                 >
                   <FaBell size={14} />
                   {unreadCount > 0 && (
-                    <span className="badge rounded-pill bg-danger" style={{ fontSize: 9 }}>{unreadCount}</span>
+                    <span className="badge rounded-pill bg-danger tp-badge-xs">{unreadCount}</span>
                   )}
                 </NavLink>
                 {showCommercialRoleAction && (

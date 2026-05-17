@@ -1,0 +1,20 @@
+import { lazy } from 'react';
+
+export const ShipperDashboard = lazy(() => import('../pages/dashboard/ShipperDashboard.jsx'));
+export const CarrierDashboard = lazy(() => import('../pages/dashboard/CarrierDashboard.jsx'));
+export const AdminDashboard = lazy(() => import('../pages/dashboard/AdminDashboard.jsx'));
+export const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage.jsx'));
+export const AdminUsers = lazy(() => import('../pages/admin/AdminUsers.jsx'));
+export const AdminLoads = lazy(() => import('../pages/admin/AdminLoads.jsx'));
+export const AdminRoleManagement = lazy(() => import('../pages/admin/AdminRoleManagement.jsx'));
+export const VerificationQueue = lazy(() => import('../pages/admin/VerificationQueue.jsx'));
+export const Disputes = lazy(() => import('../pages/admin/Disputes.jsx'));
+export const ShipmentControl = lazy(() => import('../pages/admin/ShipmentControl.jsx'));
+export const LoadsHub = lazy(() => import('../pages/loads/LoadsHub.jsx'));
+export const LoadDetails = lazy(() => import('../pages/loads/LoadDetails.jsx'));
+export const BidManagement = lazy(() => import('../pages/bids/BidManagement.jsx'));
+export const MyBids = lazy(() => import('../pages/bids/MyBids.jsx'));
+export const ShipmentTracking = lazy(() => import('../pages/shipments/ShipmentTracking.jsx'));
+export const Messages = lazy(() => import('../pages/messages/Messages.jsx'));
+export const TruckDetails = lazy(() => import('../pages/carrier/TruckDetails.jsx'));
+export const PublicProfile = lazy(() => import('../pages/profile/PublicProfile.jsx'));

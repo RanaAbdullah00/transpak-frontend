@@ -6,6 +6,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
+import { uploadMediaFile } from '../../services/uploadMedia.js';
 
 const emptyForm = {
   id: null,
@@ -20,19 +21,12 @@ const emptyForm = {
 const isTruckComplete = (t) =>
   t && (t.engineNumber || t.truckNumber) && (t.truckCardFrontImage || t.truckFrontImage) && (t.truckCardBackImage || t.truckBackImage);
 
-const fileToDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result || ''));
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
-
 const TruckDetails = () => {
   const { t, isUrdu } = useLanguage();
   const { request, loading } = useApi();
   const [trucks, setTrucks] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const editing = useMemo(() => Boolean(form.id), [form.id]);
 
   const refresh = useCallback(async () => {
@@ -137,8 +131,15 @@ const TruckDetails = () => {
                   onChange={async (e) => {
                     const f = e.target.files?.[0];
                     if (!f) return;
-                    const url = await fileToDataUrl(f);
-                    setForm((p) => ({ ...p, truckCardFrontImage: url }));
+                    setUploadingImage(true);
+                    try {
+                      const url = await uploadMediaFile(f);
+                      setForm((p) => ({ ...p, truckCardFrontImage: url }));
+                    } catch (err) {
+                      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+                    } finally {
+                      setUploadingImage(false);
+                    }
                   }}
                 />
                 {form.truckCardFrontImage ? (
@@ -160,8 +161,15 @@ const TruckDetails = () => {
                   onChange={async (e) => {
                     const f = e.target.files?.[0];
                     if (!f) return;
-                    const url = await fileToDataUrl(f);
-                    setForm((p) => ({ ...p, truckCardBackImage: url }));
+                    setUploadingImage(true);
+                    try {
+                      const url = await uploadMediaFile(f);
+                      setForm((p) => ({ ...p, truckCardBackImage: url }));
+                    } catch (err) {
+                      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+                    } finally {
+                      setUploadingImage(false);
+                    }
                   }}
                 />
                 {form.truckCardBackImage ? (
@@ -174,7 +182,7 @@ const TruckDetails = () => {
                 ) : null}
               </div>
               <div className="d-flex gap-2 flex-wrap">
-                <Button variant="primary" type="submit" disabled={loading}>
+                <Button variant="primary" type="submit" disabled={loading || uploadingImage}>
                   {loading ? (
                     <Loader light size="sm" />
                   ) : editing ? (

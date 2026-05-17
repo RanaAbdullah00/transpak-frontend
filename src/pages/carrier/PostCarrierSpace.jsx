@@ -1,0 +1,140 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Card from '../../components/ui/Card.jsx';
+import Button from '../../components/ui/Button.jsx';
+import CitySelect from '../../components/ui/CitySelect.jsx';
+import { useApi } from '../../hooks/useApi.js';
+import { useLanguage } from '../../hooks/useLanguage.js';
+import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { formatUserError } from '../../utils/userErrors.js';
+
+const PostCarrierSpace = () => {
+  const { t } = useLanguage();
+  const { request } = useApi();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    origin: '',
+    destination: '',
+    truckCapacityKg: '',
+    remainingSpaceKg: '',
+    vehicleType: 'Truck',
+    ratePerKg: '',
+    notes: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const onChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await request({
+        method: 'POST',
+        url: '/carrier-space',
+        data: {
+          origin: form.origin.trim(),
+          destination: form.destination.trim(),
+          truckCapacityKg: Number(form.truckCapacityKg),
+          remainingSpaceKg: Number(form.remainingSpaceKg),
+          vehicleType: form.vehicleType,
+          ratePerKg: form.ratePerKg ? Number(form.ratePerKg) : null,
+          notes: form.notes.trim() || null
+        }
+      });
+      notifySuccess(t('loadsHub.spaceListed'));
+      navigate('/loads/manage?tab=space', { replace: true });
+    } catch (err) {
+      notifyError(formatUserError(err, t, { fallback: t('loadsHub.spaceListFailed') }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="container py-3">
+      <h5 className="mb-3">{t('loadsHub.postCapacityTitle')}</h5>
+      <Card className="p-3">
+        <form onSubmit={submit}>
+          <div className="row g-2">
+            <div className="col-6">
+              <CitySelect
+                name="origin"
+                label={t('pages.postLoadForm.pickupCity')}
+                value={form.origin}
+                onChange={onChange}
+                required
+              />
+            </div>
+            <div className="col-6">
+              <CitySelect
+                name="destination"
+                label={t('pages.postLoadForm.dropoffCity')}
+                value={form.destination}
+                onChange={onChange}
+                required
+              />
+            </div>
+          </div>
+          <div className="row g-2 mt-1">
+            <div className="col-6">
+              <label className="form-label small">{t('loadsHub.totalCapacityKg')}</label>
+              <input
+                type="number"
+                name="truckCapacityKg"
+                className="form-control form-control-sm rounded-3"
+                min="1"
+                value={form.truckCapacityKg}
+                onChange={onChange}
+                required
+              />
+            </div>
+            <div className="col-6">
+              <label className="form-label small">{t('loadsHub.remainingKgLabel')}</label>
+              <input
+                type="number"
+                name="remainingSpaceKg"
+                className="form-control form-control-sm rounded-3"
+                min="1"
+                value={form.remainingSpaceKg}
+                onChange={onChange}
+                required
+              />
+            </div>
+          </div>
+          <div className="row g-2 mt-1">
+            <div className="col-6">
+              <label className="form-label small">{t('pages.postLoadForm.vehicleType')}</label>
+              <select name="vehicleType" className="form-select form-select-sm rounded-3" value={form.vehicleType} onChange={onChange}>
+                <option value="Truck">Truck</option>
+                <option value="Trailer">Trailer</option>
+                <option value="Container">Container</option>
+                <option value="Flatbed">Flatbed</option>
+              </select>
+            </div>
+            <div className="col-6">
+              <label className="form-label small">{t('loadsHub.ratePerKgLabel')}</label>
+              <input
+                type="number"
+                name="ratePerKg"
+                className="form-control form-control-sm rounded-3"
+                min="0"
+                value={form.ratePerKg}
+                onChange={onChange}
+              />
+            </div>
+          </div>
+          <div className="mt-2">
+            <label className="form-label small">{t('loadsHub.notes')}</label>
+            <textarea name="notes" className="form-control form-control-sm rounded-3" rows={2} value={form.notes} onChange={onChange} />
+          </div>
+          <Button variant="primary" type="submit" className="w-100 mt-3" disabled={loading}>
+            {t('loadsHub.publishCapacity')}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+};
+
+export default PostCarrierSpace;

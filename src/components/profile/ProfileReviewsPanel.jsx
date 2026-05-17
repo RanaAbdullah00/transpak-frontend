@@ -31,17 +31,17 @@ function RatingDistribution({ list, t }) {
       <div className="small text-muted text-uppercase fw-semibold mb-2">{t('reviews.ratingBreakdown')}</div>
       {[5, 4, 3, 2, 1].map((n) => (
         <div key={n} className="d-flex align-items-center gap-2 mb-1 small">
-          <span className="text-muted" style={{ width: '4.5rem' }}>
+          <span className="text-muted tp-w-rating-label">
             {n}★
           </span>
-          <div className="progress flex-grow-1 rounded-pill" style={{ height: 8 }}>
+          <div className="progress flex-grow-1 rounded-pill tp-progress-md">
             <div
-              className="progress-bar bg-warning"
+              className="progress-bar bg-warning tp-progress-bar"
               role="presentation"
-              style={{ width: `${(counts[n] / max) * 100}%` }}
+              style={{ '--tp-progress': `${(counts[n] / max) * 100}%` }}
             />
           </div>
-          <span className="text-muted text-end" style={{ width: '2rem' }}>
+          <span className="text-muted text-end tp-w-rating-count">
             {counts[n]}
           </span>
         </div>
@@ -78,7 +78,7 @@ const ProfileReviewsPanel = () => {
       setLoading(true);
       try {
         const data = await request({ url: `/reviews/${uid}` });
-        if (!cancelled) setList(Array.isArray(data) ? data : []);
+        if (!cancelled) setList(Array.isArray(data) ? data : data?.reviews || []);
       } catch {
         if (!cancelled) setList([]);
       } finally {

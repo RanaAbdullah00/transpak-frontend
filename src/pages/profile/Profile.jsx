@@ -14,8 +14,7 @@ const Profile = () => {
 
   const handleClose = () => {
     setOpen(false);
-    if (typeof window !== 'undefined' && window.history.length > 1) navigate(-1);
-    else navigate(dashboardPathForRole(user.activeRole ?? user.roles?.[0]));
+    navigate(dashboardPathForRole(user.activeRole ?? user.roles?.[0]), { replace: true });
   };
 
   return <ProfileSheet open={open} onClose={handleClose} />;

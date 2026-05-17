@@ -37,7 +37,8 @@ const PostLoad = () => {
           vehicleType: payload.vehicleType,
           expectedPrice: Number(payload.expectedPrice),
           pickupDate: payload.pickupDate,
-          deadlineHours: Number(payload.deadlineHours || 2)
+          deadlineHours: Number(payload.deadlineHours || 6),
+          distanceKm: payload.distanceKm
         }
       });
       notifySuccess(`Load ${loadData?.code || 'L-' + Date.now()} posted! Bidding open.`);

@@ -47,7 +47,10 @@ const MyBids = () => {
   }, [fetchBidsData]);
 
   useEffect(() => {
-    const interval = setInterval(fetchBidsData, 8000);
+    const tick = () => {
+      if (document.visibilityState === 'visible') fetchBidsData();
+    };
+    const interval = setInterval(tick, 25000);
     return () => clearInterval(interval);
   }, [fetchBidsData]);
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
+import ProfileLink from '../profile/ProfileLink.jsx';
 import { translateNotificationType } from '../../utils/i18nLabels.js';
 
 const NotificationItem = ({ notification, onClick }) => {
@@ -37,6 +38,11 @@ const NotificationItem = ({ notification, onClick }) => {
               {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}
             </span>
           </div>
+          {notification.senderId ? (
+            <div className="small mb-1">
+              <ProfileLink userId={notification.senderId} name={t('notifications.viewProfile')} />
+            </div>
+          ) : null}
           <div className="tp-notif-item__message small text-body">
             <TranslatedText text={notification.message} className="" />
           </div>

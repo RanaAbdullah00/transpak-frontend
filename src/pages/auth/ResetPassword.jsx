@@ -8,10 +8,8 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useAuthViewportLock } from '../../hooks/useAuthViewportLock.js';
 import { resetPasswordWithOtpApi } from '../../services/authService.js';
-import { unwrapResponseData } from '../../utils/unwrapApi.js';
-import { formatUserError } from '../../utils/userErrors.js';
+import { safeUnwrapAuthResponse, getAuthUiError, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { FaLock } from 'react-icons/fa';
 import { getDeliveryHint } from '../../utils/otpDelivery.js';
 
@@ -64,15 +62,15 @@ const ResetPassword = () => {
         password,
         confirmPassword
       });
-      const payload = unwrapResponseData(res) || {};
+      const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
       if (token) localStorage.setItem('transpak_token', token);
       if (user) login(payload);
       notifySuccess(t('auth.welcomeBack'));
       const role = currentRole || user?.activeRole || user?.roles?.[0];
-      navigate(dashboardPathForRole(role), { replace: true });
+      navigate(safeDashboardPath(role), { replace: true });
     } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('errors.generic') }));
+      notifyError(getAuthUiError(err, t));
     } finally {
       setLoading(false);
     }
@@ -109,7 +107,7 @@ const ResetPassword = () => {
                 {deliveryHint}
               </p>
             ) : null}
-            <form onSubmit={handleSubmit} className="tp-auth-register-form">
+            <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-register-form">
               <div className="mb-2">
                 <label className="form-label small">{t('auth.otpCodeLabel')}</label>
                 <input

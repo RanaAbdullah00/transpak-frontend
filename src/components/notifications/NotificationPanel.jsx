@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import NotificationItem from './NotificationItem.jsx';
+import Button from '../ui/Button.jsx';
 import { AppContext } from '../../context/AppContext.jsx';
 import api from '../../services/api.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -88,6 +89,17 @@ const NotificationPanel = () => {
     return { today: a, older: b };
   }, [sorted]);
 
+  const markAllRead = async () => {
+    try {
+      await api.patch('/notifications/read-all');
+      setPersisted((prev) => prev.map((n) => ({ ...n, read: true })));
+      sorted.forEach((n) => markNotificationRead(n.id || n._id));
+      window.dispatchEvent(new CustomEvent('tp_notifications_read'));
+    } catch {
+      /* ignore */
+    }
+  };
+
   const handleOpen = (n) => {
     markNotificationRead(n._id || n.id);
     const id = String(n.id || n._id || '');
@@ -117,9 +129,18 @@ const NotificationPanel = () => {
     );
   };
 
+  const unreadCount = sorted.filter((n) => !n.read && !n.isRead).length;
+
   return (
     <div className={`container py-3 position-relative tp-notifications-page ${isUrdu ? 'tp-rtl' : ''}`}>
-      <h5 className="mb-3 text-body fw-semibold">{t('common.notifications')}</h5>
+      <div className="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+        <h5 className="mb-0 text-body fw-semibold">{t('common.notifications')}</h5>
+        {unreadCount > 0 ? (
+          <Button variant="outline-primary" size="sm" className="rounded-lg" onClick={markAllRead}>
+            {t('pages.notificationsPanel.markAllRead')}
+          </Button>
+        ) : null}
+      </div>
       <div className="tp-notifications-surface rounded-3 p-2 p-md-3">
         {!sorted.length ? (
           <div className="text-center small py-5 px-3 tp-empty-state tp-notifications-empty">

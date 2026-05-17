@@ -16,6 +16,21 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('recharts')) return 'vendor-charts';
+            if (id.includes('socket.io') || id.includes('engine.io')) return 'vendor-socket';
+            if (id.includes('react-router')) return 'vendor-router';
+            if (id.includes('react-dom') || id.includes('/react/')) return 'vendor-react';
+            return 'vendor';
+          }
+        }
+      },
+      chunkSizeWarningLimit: 600
+    },
     server: {
       port: 5173,
       configureServer(server) {

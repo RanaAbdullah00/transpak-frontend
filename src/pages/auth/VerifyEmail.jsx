@@ -8,11 +8,9 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useAuthViewportLock } from '../../hooks/useAuthViewportLock.js';
 import { verifyRegisterOtpApi, resendRegisterOtpApi } from '../../services/authService.js';
-import { unwrapResponseData } from '../../utils/unwrapApi.js';
-import { formatUserError } from '../../utils/userErrors.js';
+import { safeUnwrapAuthResponse, getAuthUiError, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import { getOtpFlowErrorToast } from '../../utils/authApiErrors.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
 
 const VerifyEmail = () => {
@@ -65,15 +63,15 @@ const VerifyEmail = () => {
     setLoading(true);
     try {
       const res = await verifyRegisterOtpApi({ email, code: c });
-      const payload = unwrapResponseData(res) || {};
+      const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
       if (token) localStorage.setItem('transpak_token', token);
       if (user) login(payload);
       notifySuccess(t('auth.verifyEmailTitle'));
       const role = currentRole || user?.activeRole || user?.roles?.[0];
-      navigate(dashboardPathForRole(role), { replace: true });
+      navigate(safeDashboardPath(role), { replace: true });
     } catch (err) {
-      notifyError(getOtpFlowErrorToast(err, t) || formatUserError(err, t, { fallback: t('errors.generic') }));
+      notifyError(getOtpFlowErrorToast(err, t) || getAuthUiError(err, t));
     } finally {
       setLoading(false);
     }
@@ -84,7 +82,7 @@ const VerifyEmail = () => {
     setResendLoading(true);
     try {
       const res = await resendRegisterOtpApi({ email });
-      const data = unwrapResponseData(res) || {};
+      const data = safeUnwrapAuthResponse(res);
       if (data?.devOtp && import.meta.env.DEV) {
         notifySuccess(`Dev OTP: ${data.devOtp}`);
         const retry = Number(data?.retryAfterSeconds);
@@ -109,7 +107,7 @@ const VerifyEmail = () => {
         else setCooldown(45);
       }
     } catch (err) {
-      const raw = getOtpFlowErrorToast(err, t) || formatUserError(err, t, { fallback: t('errors.generic') });
+      const raw = getOtpFlowErrorToast(err, t) || getAuthUiError(err, t);
       const retryRaw =
         err?.response?.data?.data?.retryAfterSeconds ??
         err?.response?.data?.retryAfterSeconds ??
@@ -153,7 +151,7 @@ const VerifyEmail = () => {
                 {deliveryBanner.hint}
               </p>
             ) : null}
-            <form onSubmit={handleVerify} className="tp-auth-login-form" noValidate aria-busy={loading}>
+            <form action="#" method="post" onSubmit={handleVerify} className="tp-auth-login-form" noValidate aria-busy={loading}>
               <div className="mb-3">
                 <label className="form-label small" htmlFor="tp-otp-code">
                   {t('auth.otpCodeLabel')}

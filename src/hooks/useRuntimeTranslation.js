@@ -44,8 +44,12 @@ export function useTranslatedValue(text, { enabled = true } = {}) {
 
     let cancelled = false;
     (async () => {
-      const out = await translateDynamicText(raw, target);
-      if (!cancelled && myGen === gen.current) setDisplay(out);
+      try {
+        const out = await translateDynamicText(raw, target);
+        if (!cancelled && myGen === gen.current) setDisplay(out || raw);
+      } catch {
+        if (!cancelled && myGen === gen.current) setDisplay(raw);
+      }
     })();
 
     return () => {

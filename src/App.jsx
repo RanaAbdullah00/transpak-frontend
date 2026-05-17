@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { Suspense, useMemo, useContext } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth.js';
 import Splash from './pages/auth/Splash.jsx';
@@ -8,38 +8,43 @@ import VerifyEmail from './pages/auth/VerifyEmail.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
 import RoleSelection from './pages/auth/RoleSelection.jsx';
-import ShipperDashboard from './pages/dashboard/ShipperDashboard.jsx';
-import CarrierDashboard from './pages/dashboard/CarrierDashboard.jsx';
-import AdminDashboard from './pages/dashboard/AdminDashboard.jsx';
-import VerificationQueue from './pages/admin/VerificationQueue.jsx';
-import Disputes from './pages/admin/Disputes.jsx';
-import ShipmentControl from './pages/admin/ShipmentControl.jsx';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage.jsx';
-import AdminUsers from './pages/admin/AdminUsers.jsx';
-import AdminLoads from './pages/admin/AdminLoads.jsx';
-import AdminRoleManagement from './pages/admin/AdminRoleManagement.jsx';
+import {
+  ShipperDashboard,
+  CarrierDashboard,
+  AdminDashboard,
+  AdminDashboardPage,
+  AdminUsers,
+  AdminLoads,
+  AdminRoleManagement,
+  VerificationQueue,
+  Disputes,
+  ShipmentControl,
+  LoadsHub,
+  LoadDetails,
+  BidManagement,
+  MyBids,
+  ShipmentTracking,
+  Messages,
+  TruckDetails,
+  PublicProfile
+} from './routes/lazyPages.js';
 import PostLoad from './pages/loads/PostLoad.jsx';
 import ManageLoads from './pages/loads/ManageLoads.jsx';
+import PostCarrierSpace from './pages/carrier/PostCarrierSpace.jsx';
 import AvailableLoads from './pages/loads/AvailableLoads.jsx';
-import LoadDetails from './pages/loads/LoadDetails.jsx';
 import EditLoad from './pages/loads/EditLoad.jsx';
-import BidManagement from './pages/bids/BidManagement.jsx';
 import PlaceBid from './pages/bids/PlaceBid.jsx';
 import ApproveCarrier from './pages/bids/ApproveCarrier.jsx';
-import MyBids from './pages/bids/MyBids.jsx';
 import AcceptedLoads from './pages/loads/AcceptedLoads.jsx';
 import FleetMonitoring from './pages/fleet/FleetMonitoring.jsx';
 import AddTruck from './pages/fleet/AddTruck.jsx';
-import TruckDetails from './pages/carrier/TruckDetails.jsx';
 import CarrierVerification from './pages/auth/CarrierVerification.jsx';
-import ShipmentTracking from './pages/shipments/ShipmentTracking.jsx';
 import ShipmentHistory from './pages/shipments/ShipmentHistory.jsx';
 import Profile from './pages/profile/Profile.jsx';
 import Settings from './pages/settings/Settings.jsx';
 import Support from './pages/support/Support.jsx';
 import Feedback from './pages/support/Feedback.jsx';
 import Notifications from './pages/notifications/Notifications.jsx';
-import Messages from './pages/messages/Messages.jsx';
 import About from './pages/static/About.jsx';
 import Contact from './pages/static/Contact.jsx';
 import HomeEntry from './pages/landing/HomeEntry.jsx';
@@ -48,6 +53,9 @@ import Sidebar from './components/layout/Sidebar.jsx';
 import MobileNav from './components/layout/MobileNav.jsx';
 import Footer from './components/layout/Footer.jsx';
 import LoadingScreen from './components/ui/LoadingScreen.jsx';
+import ReviewPromptHost from './components/reviews/ReviewPromptHost.jsx';
+import SocketReconnectIndicator from './components/layout/SocketReconnectIndicator.jsx';
+import { AppContext } from './context/AppContext.jsx';
 import { dashboardPathForRole } from './utils/dashboardPath.js';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -99,6 +107,16 @@ function resolvePageBackground(pathname) {
   return 'unified';
 }
 
+function AppRealtimeChrome() {
+  const app = useContext(AppContext);
+  return (
+    <>
+      <SocketReconnectIndicator socket={app?.getSocket?.()} />
+      <ReviewPromptHost />
+    </>
+  );
+}
+
 function App() {
   const location = useLocation();
   const isAuthPage = ['/', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/splash', '/about', '/contact'].includes(
@@ -119,6 +137,7 @@ function App() {
             className={`flex-grow-1 container-fluid px-0 pb-5 pb-md-0 tp-main-shell min-h-0 min-w-0${isBareAuthMain ? ' tp-main-shell--bare-auth' : ''}`}
             data-tp-page-bg={pageBg}
           >
+              <Suspense fallback={<LoadingScreen />}>
               <Routes>
               {/* Auth */}
               <Route path="/splash" element={<Splash />} />
@@ -244,8 +263,16 @@ function App() {
               <Route
                 path="/loads/manage"
                 element={
-                  <ProtectedRoute allowedRoles={['shipper']}>
-                    <ManageLoads />
+                  <ProtectedRoute allowedRoles={['shipper', 'carrier']}>
+                    <LoadsHub />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/carrier/space/post"
+                element={
+                  <ProtectedRoute allowedRoles={['carrier']}>
+                    <PostCarrierSpace />
                   </ProtectedRoute>
                 }
               />
@@ -253,7 +280,7 @@ function App() {
                 path="/loads"
                 element={
                   <ProtectedRoute allowedRoles={['carrier']}>
-                    <AvailableLoads />
+                    <LoadsHub />
                   </ProtectedRoute>
                 }
               />
@@ -418,12 +445,22 @@ function App() {
                 }
               />
 
+              <Route
+                path="/profile/u/:id"
+                element={
+                  <ProtectedRoute>
+                    <PublicProfile />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </Suspense>
           </main>
         </div>
         {!isAuthPage && <MobileNav />}
         {!isAuthPage && <Footer />}
+        {!isAuthPage ? <AppRealtimeChrome /> : null}
       </div>
     </>
   );

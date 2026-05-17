@@ -1,13 +1,14 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import api from '../services/api.js';
-import { unwrapBody } from '../utils/unwrapApi.js';
+import { fetchProfileApi, patchActiveRoleApi } from '../services/authService.js';
+import { safeUnwrapAuthResponse } from '../utils/authApiSafe.js';
 
 export const AuthContext = createContext(null);
 
 function mergeSession(apiData) {
+  if (!apiData || typeof apiData !== 'object') return null;
   const user = apiData.user || apiData;
-  const id =
-    user.id || (user._id != null ? String(user._id) : null);
+  if (!user || typeof user !== 'object') return null;
+  const id = user.id || (user._id != null ? String(user._id) : null);
   const currentRole = apiData.currentRole ?? user.activeRole;
   const roles =
     Array.isArray(user.roles) && user.roles.length
@@ -46,6 +47,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback((apiData) => {
     const normalized = mergeSession(apiData);
+    if (!normalized) return;
     setUser(normalized);
     localStorage.setItem('transpak_user', JSON.stringify(normalized));
   }, []);
@@ -74,14 +76,11 @@ export const AuthProvider = ({ children }) => {
 
       if (token) {
         try {
-          const res = await api.get('/auth/profile');
-          const data = unwrapBody(res.data);
+          const res = await fetchProfileApi();
+          const data = safeUnwrapAuthResponse(res);
           if (!cancelled && data?.user) login(data);
-        } catch (e) {
-          const code = e?.response?.data?.code;
-          if (e?.response?.status === 403 && code === 'EMAIL_NOT_VERIFIED') {
-            if (!cancelled) logout();
-          }
+        } catch {
+          // Keep stored session on profile refresh failures (e.g. EMAIL_NOT_VERIFIED).
         }
       }
 
@@ -104,12 +103,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('transpak_user', JSON.stringify(optimistic));
 
     try {
-      const res = await api.patch('/auth/active-role', { activeRole: nextRole });
-      const data = unwrapBody(res.data);
-      if (data.token) localStorage.setItem('transpak_token', data.token);
+      const res = await patchActiveRoleApi(nextRole);
+      const data = safeUnwrapAuthResponse(res);
+      if (data?.token) localStorage.setItem('transpak_token', data.token);
       login(data);
     } catch (err) {
-      // Revert role if the backend update fails.
       setUser(prev);
       localStorage.setItem('transpak_user', JSON.stringify(prev));
       throw err;
