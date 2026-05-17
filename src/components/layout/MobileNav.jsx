@@ -21,7 +21,7 @@ const MobileNav = () => {
       ? { to: '/loads/manage', icon: <FaTools />, label: t('common.manage') }
       : { to: '/notifications', icon: <FaTools />, label: t('common.admin') };
 
-  const loadsPath = activeRole === 'shipper' ? '/loads/manage' : '/loads';
+  const loadsPath = '/loads/manage';
   const trackSlot =
     activeRole === 'admin'
       ? { to: '/admin/shipments', icon: <FaShippingFast />, label: t('nav.shipments') }

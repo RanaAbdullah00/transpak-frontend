@@ -29,9 +29,7 @@ import {
   PublicProfile
 } from './routes/lazyPages.js';
 import PostLoad from './pages/loads/PostLoad.jsx';
-import ManageLoads from './pages/loads/ManageLoads.jsx';
 import PostCarrierSpace from './pages/carrier/PostCarrierSpace.jsx';
-import AvailableLoads from './pages/loads/AvailableLoads.jsx';
 import EditLoad from './pages/loads/EditLoad.jsx';
 import PlaceBid from './pages/bids/PlaceBid.jsx';
 import ApproveCarrier from './pages/bids/ApproveCarrier.jsx';

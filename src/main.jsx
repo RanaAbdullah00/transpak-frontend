@@ -16,6 +16,10 @@ import { ToastProvider } from './components/ui/ToastProvider.jsx';
 import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import { verifyProductionDeploy } from './utils/verifyDeploy.js';
 
+const TRANSPAK_BUILD_ID = import.meta.env.VITE_APP_BUILD_ID || 'dev';
+// eslint-disable-next-line no-console
+console.log('TRANSPAK ACTIVE BUILD LOADED', TRANSPAK_BUILD_ID);
+
 verifyProductionDeploy();
 
 ReactDOM.createRoot(document.getElementById('root')).render(

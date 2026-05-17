@@ -21,6 +21,7 @@ export async function verifyProductionDeploy() {
     const apiBuild = body?.data?.build ?? null;
     const apiHeaderBuild = res.headers.get('X-TransPak-Build');
 
+    console.info('TRANSPAK ACTIVE BUILD LOADED', frontendBuild);
     console.info('[TransPak deploy]', {
       frontendBuild,
       apiUrl: apiOrigin,
