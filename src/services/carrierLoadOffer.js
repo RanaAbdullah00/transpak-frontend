@@ -1,8 +1,7 @@
 import { emitRealtimeRefresh } from '../utils/realtimeRefresh.js';
 
 /**
- * Carrier responds to open loads (accept listed fare or counter-offer).
- * Uses existing bid API — carriers do not use the Place Bid page flow.
+ * Carrier responds to open loads (accept listed fare, counter-offer, or pass).
  */
 export async function acceptLoadAtListedFare(request, load) {
   const amount = Number(load?.expectedPrice ?? 0);
@@ -40,5 +39,20 @@ export async function submitCounterOffer(request, load, counterAmount) {
     data: { amount }
   });
   emitRealtimeRefresh('bids');
-  return { ...bid, status: 'suggested', suggestedAmount: amount, suggestedBy: 'carrier' };
+  return {
+    ...bid,
+    status: 'counter_offered',
+    flowStatus: 'COUNTER_OFFERED',
+    suggestedAmount: amount,
+    suggestedBy: 'carrier'
+  };
+}
+
+export async function rejectLoadForCarrier(request, load) {
+  await request({
+    method: 'POST',
+    url: `/loads/${load.id}/pass`
+  });
+  emitRealtimeRefresh('loads');
+  return { ok: true };
 }

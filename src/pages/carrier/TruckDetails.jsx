@@ -36,9 +36,28 @@ const TruckDetails = () => {
   const editing = useMemo(() => Boolean(form.id), [form.id]);
 
   const activeRole = user?.activeRole ?? user?.roles?.[0];
-  const profileComplete = user?.profileComplete === true;
+  const [profileReady, setProfileReady] = useState(user?.profileComplete === true);
   const isCarrier = activeRole === 'carrier';
-  const canSubmit = profileComplete && isCarrier && !uploadingImage && !saving;
+  const canSubmit = profileReady && isCarrier && !uploadingImage && !saving;
+
+  useEffect(() => {
+    if (user?.profileComplete === true) {
+      setProfileReady(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = await request({ method: 'GET', url: '/profile' });
+        if (!cancelled) setProfileReady(Boolean(u?.is_profile_complete));
+      } catch {
+        if (!cancelled) setProfileReady(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.profileComplete, request]);
 
   const refresh = useCallback(async () => {
     setListLoading(true);
@@ -88,7 +107,7 @@ const TruckDetails = () => {
   const submit = async (e) => {
     e.preventDefault();
     if (!canSubmit) {
-      if (!profileComplete) notifyError(t('pages.truckDetailsPage.profileRequired'));
+      if (!profileReady) notifyError(t('pages.truckDetailsPage.profileRequired'));
       else if (!isCarrier) notifyError(t('pages.truckDetailsPage.carrierRoleRequired'));
       return;
     }

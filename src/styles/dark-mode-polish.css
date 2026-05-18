@@ -1,0 +1,188 @@
+/**
+ * Final dark-mode sweep — theme tokens + Bootstrap surfaces.
+ * Shipper/carrier accents (--tp-role-accent) remain visible in dark mode.
+ */
+
+body.dark-theme {
+  --input-bg: #111827;
+  --pak-card-bg: #1f2937;
+  color-scheme: dark;
+}
+
+body.dark-theme .modal-content,
+body.dark-theme .modal-header,
+body.dark-theme .modal-footer {
+  background-color: var(--card-bg, #1f2937);
+  border-color: var(--pak-border, #374151);
+  color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .modal-backdrop {
+  --bs-backdrop-bg: rgba(0, 0, 0, 0.72);
+}
+
+body.dark-theme .offcanvas,
+body.dark-theme .offcanvas-header,
+body.dark-theme .offcanvas-body {
+  background-color: var(--card-bg, #1f2937);
+  color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .list-group-item {
+  background-color: transparent;
+  border-color: var(--pak-border, #374151);
+  color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .list-group-item-action:hover,
+body.dark-theme .list-group-item-action:focus {
+  background-color: #334155;
+  color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .table-light,
+body.dark-theme .table thead,
+body.dark-theme thead.table-light th {
+  background-color: #1e293b !important;
+  color: #f0f0f0 !important;
+  border-color: #374151 !important;
+}
+
+body.dark-theme .table-striped > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-bg-type: #1a2332;
+}
+
+body.dark-theme .table-hover > tbody > tr:hover > * {
+  --bs-table-bg-state: #334155;
+}
+
+body.dark-theme .alert {
+  border-color: var(--pak-border, #374151);
+}
+
+body.dark-theme .alert-success {
+  background-color: color-mix(in srgb, #059669 22%, #1f2937);
+  color: #d1fae5;
+}
+
+body.dark-theme .alert-danger {
+  background-color: color-mix(in srgb, #dc2626 18%, #1f2937);
+  color: #fecaca;
+}
+
+body.dark-theme .alert-warning {
+  background-color: color-mix(in srgb, #d97706 18%, #1f2937);
+  color: #fde68a;
+}
+
+body.dark-theme .alert-info {
+  background-color: color-mix(in srgb, #0284c7 18%, #1f2937);
+  color: #bae6fd;
+}
+
+body.dark-theme .input-group-text {
+  background-color: #1e293b;
+  border-color: #374151;
+  color: #e2e8f0;
+}
+
+body.dark-theme .breadcrumb-item,
+body.dark-theme .breadcrumb-item a {
+  color: #94a3b8;
+}
+
+body.dark-theme .breadcrumb-item.active {
+  color: #f0f0f0;
+}
+
+body.dark-theme .tp-surface-muted,
+body.dark-theme .tp-empty-state {
+  background: color-mix(in srgb, var(--card-bg) 88%, #0f172a 12%);
+  border-color: var(--pak-border, #374151);
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.dark-theme .tp-load-card,
+body.dark-theme .tp-bid-card,
+body.dark-theme .tp-pipeline-card,
+body.dark-theme .tp-filter-card {
+  background-color: var(--card-bg, #1f2937);
+  border-color: var(--pak-border, #374151);
+}
+
+body.dark-theme .tp-segment-tabs {
+  background: color-mix(in srgb, var(--card-bg) 90%, #0f172a 10%);
+}
+
+body.dark-theme .tp-segment-tabs__btn--active {
+  background: #334155;
+  color: var(--tp-role-accent, var(--pak-primary));
+}
+
+body.dark-theme .ReactToastify__toast {
+  background: #1f2937 !important;
+  color: #f0f0f0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-theme .tp-toast-host .Toastify__toast-body {
+  color: #f0f0f0;
+}
+
+body.dark-theme .tp-profile-avatar-fallback,
+body.dark-theme .tp-sidebar-avatar-placeholder {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+body.dark-theme .btn-close {
+  filter: invert(1) grayscale(100%);
+}
+
+body.dark-theme .tp-demo-banner {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pak-primary) 25%, #1f2937), #1f2937);
+  border-color: var(--pak-border);
+  color: #f0f0f0;
+}
+
+body.dark-theme .tp-bid-timeline__step--pending .tp-bid-timeline__node {
+  background: #475569;
+  border-color: #64748b;
+}
+
+body.dark-theme .tp-bid-timeline__step--active .tp-bid-timeline__node {
+  background: color-mix(in srgb, var(--tp-role-accent, #38bdf8) 35%, #1e293b);
+  border-color: var(--tp-role-accent, #38bdf8);
+}
+
+body.dark-theme .tp-bid-timeline__step--success .tp-bid-timeline__node {
+  background: #059669;
+  border-color: #34d399;
+}
+
+body.dark-theme .tp-bid-timeline__step--rejected .tp-bid-timeline__node {
+  background: #b91c1c;
+  border-color: #f87171;
+}
+
+body.dark-theme .tp-bid-timeline__connector {
+  background: #475569;
+}
+
+body.dark-theme .card .card-body {
+  color: var(--text-primary, #f0f0f0);
+}
+
+@keyframes tp-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+body.dark-theme .rounded-2[aria-hidden] {
+  background-color: #334155 !important;
+}

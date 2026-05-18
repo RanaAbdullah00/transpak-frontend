@@ -7,7 +7,7 @@ import { useApi } from '../../hooks/useApi.js';
 import Loader from '../../components/ui/Loader.jsx';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
-import { acceptLoadAtListedFare, submitCounterOffer } from '../../services/carrierLoadOffer.js';
+import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 
@@ -43,7 +43,15 @@ const AvailableLoads = ({ embedded = false }) => {
       const data = await request({ method: 'GET', url: '/bids/mine' });
       const ids = new Set(
         (Array.isArray(data) ? data : [])
-          .filter((b) => ['pending', 'suggested', 'accepted'].includes(String(b.status || '').toLowerCase()))
+          .filter((b) =>
+            [
+              'pending_shipper_confirmation',
+              'counter_offered',
+              'pending',
+              'suggested',
+              'accepted'
+            ].includes(String(b.status || '').toLowerCase())
+          )
           .map((b) => String(b.loadId))
       );
       setMyBidLoadIds(ids);
@@ -125,6 +133,19 @@ const AvailableLoads = ({ embedded = false }) => {
       await acceptLoadAtListedFare(request, load);
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
       fetchMyBids().catch(() => {});
+    } catch (err) {
+      rollbackLoad(load);
+      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+    } finally {
+      setOfferBusyId(null);
+    }
+  };
+
+  const handleCarrierReject = async (load) => {
+    optimisticallyRemoveLoad(load.id);
+    try {
+      await rejectLoadForCarrier(request, load);
+      notifySuccess(t('pages.loads.carrierRejectSuccess'));
     } catch (err) {
       rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
@@ -276,6 +297,7 @@ const AvailableLoads = ({ embedded = false }) => {
           carrierMode={isCarrier}
           onCarrierAccept={handleCarrierAccept}
           onCarrierCounter={handleCarrierCounter}
+          onCarrierReject={handleCarrierReject}
           carrierBusyLoadId={offerBusyId}
         />
       )}

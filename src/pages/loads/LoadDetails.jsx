@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import LoadCard from '../../components/loadboard/LoadCard.jsx';
 import ProfileLink from '../../components/profile/ProfileLink.jsx';
-import FlowTimeline, { LOAD_BID_STEPS } from '../../components/ui/FlowTimeline.jsx';
+import BidTimeline from '../../components/bids/BidTimeline.jsx';
+import { getDemoGuideStep, isDemoModeEnabled } from '../../utils/demoMode.js';
 import BidList from '../../components/loadboard/BidList.jsx';
 import { SkeletonCard } from '../../components/ui/Skeleton.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -161,16 +162,15 @@ const LoadDetails = () => {
       </div>
       <LoadCard load={load} />
       <Card className="p-3 mt-3 tp-pipeline-card">
-        <FlowTimeline
-          steps={LOAD_BID_STEPS}
-          currentId={
-            load.status === 'closed'
-              ? 'completed'
-              : load.status === 'booked'
-              ? 'active'
-              : bids.some((b) => b.status === 'suggested' || b.status === 'pending')
-              ? 'bid_received'
-              : 'posted'
+        <h6 className="small text-muted text-uppercase mb-2">{t('bidTimeline.title')}</h6>
+        <BidTimeline
+          load={load}
+          bids={bids}
+          highlightStepId={
+            isDemoModeEnabled()
+              ? ['posted', 'carrier_accept', 'pending_confirmation', 'accepted', 'delivered'][getDemoGuideStep()] ||
+                null
+              : null
           }
         />
       </Card>

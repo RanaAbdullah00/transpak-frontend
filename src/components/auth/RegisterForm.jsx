@@ -20,7 +20,7 @@ const CNIC_REGEX = /^\d{5}-\d{7}-\d{1}$/;
 const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRoleProp = null, onDone }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { t, isUrdu } = useLanguage();
   const prefill = useMemo(() => prefillProp || location.state?.prefill || null, [prefillProp, location.state]);
   const upgradeRole = useMemo(() => upgradeRoleProp || location.state?.upgradeRole || null, [upgradeRoleProp, location.state]);
@@ -303,7 +303,13 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
           type="button"
           className="flex-sm-fill py-2 rounded-lg"
           disabled={loading}
-          onClick={() => (upgradeRole ? navigate(-1) : navigate('/login', { replace: false }))}
+          onClick={() => {
+            if (upgradeRole) {
+              navigate(safeDashboardPath(user?.activeRole ?? user?.roles?.[0]), { replace: true });
+              return;
+            }
+            navigate('/login', { replace: false });
+          }}
         >
           {t('auth.cancelRegistration')}
         </Button>

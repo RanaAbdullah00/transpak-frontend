@@ -1,4 +1,4 @@
-import { unwrapErrorDetail } from './unwrapApi.js';
+import { unwrapErrorCode, unwrapErrorDetail } from './unwrapApi.js';
 import { translations } from '../i18n/translations.js';
 
 const TECH =
@@ -42,6 +42,11 @@ export function formatUserError(err, t, options = {}) {
 
   if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') {
     return networkMessage(t);
+  }
+
+  const apiCode = unwrapErrorCode(err);
+  if (apiCode === 'COUNTER_LIMIT_REACHED' && t) {
+    return t('errors.counterLimitReached');
   }
 
   const { displayMessage, message } = unwrapErrorDetail(err);

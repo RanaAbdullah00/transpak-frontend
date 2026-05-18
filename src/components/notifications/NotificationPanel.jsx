@@ -33,7 +33,13 @@ const NotificationPanel = () => {
           ...r,
           id: r.id || r._id,
           roleType: sanitizeNotificationRoleType(r.roleType),
-          type: r.type != null && String(r.type).trim() !== '' ? String(r.type).trim() : null,
+          type:
+            r.type != null && String(r.type).trim() !== ''
+              ? String(r.type).trim()
+              : r.title != null && String(r.title).trim() !== ''
+              ? String(r.title).trim()
+              : null,
+          title: r.title || null,
           message: r.message || r.title || ''
         }))
       );

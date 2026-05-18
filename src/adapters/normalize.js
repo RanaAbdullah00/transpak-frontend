@@ -1,3 +1,5 @@
+import { normalizeBidStatus } from '../utils/bidStatus.js';
+
 // Data normalization adapters so UI never breaks on field mismatches.
 
 export const normalizeLoad = (raw) => {
@@ -44,7 +46,8 @@ export const normalizeBid = (raw) => {
     transitTime: raw.transitTime ?? raw.etaDays ?? 2,
     price,
     amount: price,
-    status: raw.status ?? 'pending',
+    status: normalizeBidStatus(raw.status ?? raw.flowStatus ?? 'pending'),
+    flowStatus: raw.flowStatus ?? null,
     suggestedAmount: raw.suggestedAmount != null ? Number(raw.suggestedAmount) : null,
     suggestedAt: raw.suggestedAt ?? null,
     suggestedBy: raw.suggestedBy ?? null,
@@ -57,15 +60,19 @@ export const normalizeBids = (arr) => (Array.isArray(arr) ? arr.map(normalizeBid
 export const normalizeNotification = (raw) => {
   if (!raw) return null;
   const rt = raw.roleType != null && String(raw.roleType).trim() !== '' ? String(raw.roleType).toLowerCase().trim() : null;
-  const ty = raw.type != null && String(raw.type).trim() !== '' ? String(raw.type).trim() : null;
+  const title = raw.title != null && String(raw.title).trim() !== '' ? String(raw.title).trim() : null;
+  const ty =
+    raw.type != null && String(raw.type).trim() !== ''
+      ? String(raw.type).trim()
+      : title;
   return {
     id: raw.id ?? raw._id ?? null,
     senderId: raw.senderId ?? null,
     receiverId: raw.receiverId ?? null,
     roleType: rt,
     type: ty,
-    message: raw.message ?? raw.title ?? '',
-    title: raw.title ?? null,
+    message: raw.message ?? title ?? '',
+    title,
     createdAt: raw.createdAt ?? new Date().toISOString(),
     read: Boolean(raw.read ?? raw.isRead)
   };

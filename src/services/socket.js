@@ -53,6 +53,10 @@ export function createSocketClient({
     });
 
     socket.on('notification:new', (n) => onNotification?.(n));
+    socket.on('notifications:batch', (payload) => {
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+      items.forEach((n) => onNotification?.(n));
+    });
     socket.on('tracking:update', (p) => onTracking?.(p));
     socket.on('chat:message', (m) => onChatMessage?.(m));
     socket.on('chat:seen', (p) => onChatSeen?.(p));

@@ -2,7 +2,15 @@ import React from 'react';
 import LoadCard from './LoadCard.jsx';
 
 // Vertical list of load cards with mobile spacing.
-const LoadList = ({ loads, onBid, carrierMode = false, onCarrierAccept, onCarrierCounter, carrierBusyLoadId = null }) => {
+const LoadList = ({
+  loads,
+  onBid,
+  carrierMode = false,
+  onCarrierAccept,
+  onCarrierCounter,
+  onCarrierReject,
+  carrierBusyLoadId = null
+}) => {
   const safeLoads = Array.isArray(loads) ? loads : [];
   if (!safeLoads.length) {
     return (
@@ -23,6 +31,7 @@ const LoadList = ({ loads, onBid, carrierMode = false, onCarrierAccept, onCarrie
           carrierMode={carrierMode}
           onCarrierAccept={onCarrierAccept}
           onCarrierCounter={onCarrierCounter}
+          onCarrierReject={onCarrierReject}
           carrierBusy={carrierBusyLoadId != null && String(carrierBusyLoadId) === String(load.id)}
         />
       ))}

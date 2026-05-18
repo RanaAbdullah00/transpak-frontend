@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Button from '../ui/Button.jsx';
 import CitySelect from '../ui/CitySelect.jsx';
+import VehicleTypeSelect from './VehicleTypeSelect.jsx';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useFareEstimate } from '../../hooks/useFareEstimate.js';
@@ -63,6 +64,10 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
       notifyError(t('pages.postLoadForm.deadlineInvalid'));
       return;
     }
+    if (minFare > 0 && enteredPrice + 0.01 < minFare) {
+      notifyError(t('pages.postLoadForm.fareBelowMinimum', { fare: Math.ceil(minFare).toLocaleString() }));
+      return;
+    }
     onSubmit?.({
       ...form,
       distanceKm: estimate?.distanceKm,
@@ -81,13 +86,12 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
       ? String(initialValues.pickupDate)
       : tomorrow;
 
-  const vType = (code) => {
-    if (code === 'Truck') return t('pages.truckForm.typeTruck');
-    if (code === 'Trailer') return t('pages.truckForm.typeTrailer');
-    if (code === 'Container') return t('pages.truckForm.typeContainer');
-    if (code === 'Flatbed') return t('pages.truckForm.typeFlatbed');
-    return code;
-  };
+  const minFare = Number(estimate?.minimumFare ?? estimate?.suggestedFare ?? 0);
+  const enteredPrice = Number(form.expectedPrice) || 0;
+  const bothCities = Boolean(form.origin?.trim() && form.destination?.trim());
+  const fareTooLow = minFare > 0 && enteredPrice > 0 && enteredPrice + 0.01 < minFare;
+  const awaitingFare = bothCities && !initialValues && (fareLoading || !estimate);
+  const submitDisabled = awaitingFare || fareTooLow;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -122,18 +126,36 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
           />
         </div>
       </div>
-      {estimate ? (
-        <p className="tp-fare-hint mt-2 mb-0" role="status">
-          {fareLoading
-            ? t('pages.postLoadForm.fareCalculating')
-            : t('pages.postLoadForm.fareHint', {
-                km: estimate.distanceKm,
-                fare: Number(estimate.suggestedFare || 0).toLocaleString()
-              })}
-        </p>
+      {bothCities ? (
+        <div className="tp-fare-hint mt-2 mb-0" role="status">
+          {fareLoading ? (
+            <p className="mb-0">{t('pages.postLoadForm.fareCalculating')}</p>
+          ) : estimate ? (
+            <>
+              <p className="mb-0">
+                {t('pages.postLoadForm.fareHint', {
+                  km: estimate.distanceKm,
+                  fare: Number(minFare || 0).toLocaleString()
+                })}
+              </p>
+              {estimate.fuelCost != null ? (
+                <p className="mb-0 small text-muted">
+                  {t('pages.postLoadForm.fareFuelHint', {
+                    fuel: Number(estimate.fuelCost || 0).toLocaleString()
+                  })}
+                </p>
+              ) : null}
+            </>
+          ) : null}
+          {fareTooLow ? (
+            <p className="mb-0 small text-danger mt-1">
+              {t('pages.postLoadForm.fareBelowMinimum', { fare: Math.ceil(minFare).toLocaleString() })}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       <div className="row g-2 mt-1">
-        <div className="col-6">
+        <div className="col-12">
           <label className="form-label small">{t('pages.postLoadForm.weightTons')}</label>
           <input
             type="number"
@@ -145,20 +167,9 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
             required
           />
         </div>
-        <div className="col-6">
-          <label className="form-label small">{t('pages.postLoadForm.vehicleType')}</label>
-          <select
-            name="vehicleType"
-            className="form-select form-select-sm rounded-3"
-            value={form.vehicleType}
-            onChange={handleChange}
-          >
-            <option value="Truck">{vType('Truck')}</option>
-            <option value="Trailer">{vType('Trailer')}</option>
-            <option value="Container">{vType('Container')}</option>
-            <option value="Flatbed">{vType('Flatbed')}</option>
-          </select>
-        </div>
+      </div>
+      <div className="mt-2">
+        <VehicleTypeSelect name="vehicleType" value={form.vehicleType} onChange={handleChange} />
       </div>
       <div className="row g-2 mt-1">
         <div className="col-6">
@@ -207,7 +218,12 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
           </div>
         </div>
       </div>
-      <Button variant="primary" className="w-100 mt-3 py-2 rounded-lg" type="submit">
+      <Button
+        variant="primary"
+        className="w-100 mt-3 py-2 rounded-lg"
+        type="submit"
+        disabled={submitDisabled}
+      >
         {primaryCta}
       </Button>
     </form>

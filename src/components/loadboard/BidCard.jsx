@@ -6,6 +6,8 @@ import ConfirmActionModal from '../ui/ConfirmActionModal.jsx';
 import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { translateBidStatus } from '../../utils/i18nLabels.js';
+import { isActiveBidStatus, isAwaitingShipper, isCounterOffered, normalizeBidStatus } from '../../utils/bidStatus.js';
 
 function formatHHMMSS(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -57,23 +59,15 @@ const BidCard = ({
 
   const remainingSeconds = Math.max(0, Math.floor((expiresAtMs - nowMs) / 1000));
   const isExpired = remainingSeconds <= 0 || bid.status === 'expired';
-  const statusBadgeLabel =
-    isExpired
-      ? t('bidCard.expired')
-      : bid.status === 'suggested'
-      ? t('bidCard.suggested')
-      : bid.status === 'accepted'
-      ? t('bidCard.accepted')
-      : bid.status === 'rejected'
-      ? t('bidCard.rejected')
-      : bid.status === 'pending'
-      ? t('bidCard.pending')
-      : (bid.status && String(bid.status).toUpperCase()) || t('bidCard.pending');
+  const canonStatus = normalizeBidStatus(bid.status);
+  const statusBadgeLabel = isExpired
+    ? t('bidCard.expired')
+    : translateBidStatus(t, canonStatus);
   const progressPct = Math.max(0, Math.min(100, Math.round((remainingSeconds / totalWindow) * 100)));
   const amount = Number(bid?.amount ?? bid?.price ?? 0);
   const suggestedAmount = bid?.suggestedAmount != null ? Number(bid.suggestedAmount) : null;
   const currency = bid?.currency || 'PKR';
-  const isSuggested = bid?.status === 'suggested';
+  const isSuggested = isCounterOffered(bid.status);
   const suggestedByShipper = isSuggested && bid?.suggestedBy === 'shipper';
   const suggestedByCarrier = isSuggested && bid?.suggestedBy === 'carrier';
   const displayAmount = suggestedAmount != null ? suggestedAmount : amount;
@@ -97,7 +91,7 @@ const BidCard = ({
     : false;
 
   const canReject = isShipper
-    ? showActions && bid.status === 'pending' && typeof onReject === 'function'
+    ? showActions && isAwaitingShipper(bid.status) && typeof onReject === 'function'
     : isCarrier
     ? showActions && suggestedByShipper && typeof onRejectSuggestion === 'function'
     : false;
@@ -271,5 +265,5 @@ const BidCard = ({
   );
 };
 
-export default BidCard;
+export default React.memo(BidCard);
 

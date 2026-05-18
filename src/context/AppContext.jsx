@@ -2,10 +2,26 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import { createSocketClient } from '../services/socket.js';
 import { normalizeNotification } from '../adapters/normalize.js';
 import { isRenderableClientNotification, sanitizeNotificationRoleType } from '../utils/notificationsFilter.js';
+import { notifyInfo } from '../components/ui/ToastProvider.jsx';
 import api from '../services/api.js';
 import { useAuth } from '../hooks/useAuth.js';
 
 export const AppContext = createContext(null);
+
+function mapNotificationRow(r) {
+  const title = r.title != null && String(r.title).trim() !== '' ? String(r.title).trim() : null;
+  const type = r.type != null && String(r.type).trim() !== '' ? String(r.type).trim() : title;
+  return {
+    id: r.id || r._id,
+    senderId: r.senderId ?? null,
+    type,
+    title,
+    message: r.message || title || '',
+    roleType: sanitizeNotificationRoleType(r.roleType),
+    read: Boolean(r.read || r.isRead),
+    createdAt: r.createdAt
+  };
+}
 
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
@@ -32,7 +48,7 @@ export const AppProvider = ({ children }) => {
     return () => trackingHandlers.current.delete(fn);
   }, []);
 
-  const addNotification = useCallback((notification) => {
+  const addNotification = useCallback((notification, { showToast = false } = {}) => {
     if (!isRenderableClientNotification(notification)) return;
     const base = normalizeNotification(notification) || notification;
     const normalized = {
@@ -56,9 +72,12 @@ export const AppProvider = ({ children }) => {
       if (dup) return prev;
       return [{ id: nid ?? `local-${Date.now()}`, read: Boolean(normalized.read), ...normalized }, ...prev];
     });
+    if (showToast && normalized.message) {
+      notifyInfo(normalized.message);
+    }
   }, []);
 
-  addNotificationRef.current = addNotification;
+  addNotificationRef.current = (n) => addNotification(n, { showToast: true });
 
   const markNotificationRead = useCallback((id) => {
     setNotifications((prev) =>
@@ -83,16 +102,7 @@ export const AppProvider = ({ children }) => {
         if (cancelled) return;
         const rows = res?.data;
         if (!Array.isArray(rows)) return;
-        const mapped = rows.map((r) => ({
-          id: r.id || r._id,
-          senderId: r.senderId ?? null,
-          type: r.type != null && String(r.type).trim() !== '' ? String(r.type).trim() : null,
-          message: r.message || r.title || '',
-          roleType: sanitizeNotificationRoleType(r.roleType),
-          read: Boolean(r.read || r.isRead),
-          createdAt: r.createdAt
-        }));
-        setNotifications(mapped);
+        setNotifications(rows.map(mapNotificationRow));
       } catch {
         // keep empty; socket may still deliver
       }
@@ -110,17 +120,7 @@ export const AppProvider = ({ children }) => {
       const res = await api.get('/notifications');
       const rows = res?.data;
       if (!Array.isArray(rows)) return;
-      setNotifications(
-        rows.map((r) => ({
-          id: r.id || r._id,
-          senderId: r.senderId ?? null,
-          type: r.type != null && String(r.type).trim() !== '' ? String(r.type).trim() : null,
-          message: r.message || r.title || '',
-          roleType: sanitizeNotificationRoleType(r.roleType),
-          read: Boolean(r.read || r.isRead),
-          createdAt: r.createdAt
-        }))
-      );
+      setNotifications(rows.map(mapNotificationRow));
     } catch {
       /* keep current */
     }
@@ -137,7 +137,13 @@ export const AppProvider = ({ children }) => {
     const client = createSocketClient({
       token: token || undefined,
       onReconnect: refetchNotifications,
-      onNotification: (n) => addNotificationRef.current?.(n),
+      onNotification: (n) => {
+        if (n?.items && Array.isArray(n.items)) {
+          n.items.forEach((item) => addNotificationRef.current?.(item));
+          return;
+        }
+        addNotificationRef.current?.(n);
+      },
       onTracking: (p) => {
         const sig = `${p?.refKey}|${p?.tracking?.status}|${JSON.stringify(p?.tracking?.currentLocation ?? p?.tracking?.location)}|${(p?.history || []).length}`;
         const now = Date.now();

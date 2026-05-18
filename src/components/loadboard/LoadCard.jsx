@@ -9,7 +9,15 @@ import TranslatedText from '../ui/TranslatedText.jsx';
 import CarrierLoadActions from './CarrierLoadActions.jsx';
 
 // Card representing a single load in the marketplace.
-const LoadCard = ({ load, onBid, carrierMode = false, onCarrierAccept, onCarrierCounter, carrierBusy = false }) => {
+const LoadCard = ({
+  load,
+  onBid,
+  carrierMode = false,
+  onCarrierAccept,
+  onCarrierCounter,
+  onCarrierReject,
+  carrierBusy = false
+}) => {
   const { t } = useLanguage();
   const expectedPrice = Number(load?.expectedPrice ?? 0);
   const distance = load?.distance ?? '—';
@@ -79,6 +87,7 @@ const LoadCard = ({ load, onBid, carrierMode = false, onCarrierAccept, onCarrier
           load={load}
           onAccept={onCarrierAccept}
           onCounter={onCarrierCounter}
+          onReject={onCarrierReject}
           busy={carrierBusy}
           disabled={Boolean(load.deadline && isDeadlinePast) || load.status !== 'open'}
         />
@@ -101,4 +110,4 @@ const LoadCard = ({ load, onBid, carrierMode = false, onCarrierAccept, onCarrier
   );
 };
 
-export default LoadCard;
+export default React.memo(LoadCard);

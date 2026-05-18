@@ -5,6 +5,7 @@ import './styles/global.css';
 import './styles/theme-tokens.css';
 import './styles/mobile.css';
 import './styles/theme-utilities.css';
+import './styles/dark-mode-polish.css';
 
 import { BrowserRouter } from 'react-router-dom';
 

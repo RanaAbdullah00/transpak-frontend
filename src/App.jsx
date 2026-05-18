@@ -55,6 +55,7 @@ import ReviewPromptHost from './components/reviews/ReviewPromptHost.jsx';
 import SocketReconnectIndicator from './components/layout/SocketReconnectIndicator.jsx';
 import RouteVerifier from './components/layout/RouteVerifier.jsx';
 import DeployMismatchBanner from './components/layout/DeployMismatchBanner.jsx';
+import DemoModeBanner from './components/demo/DemoModeBanner.jsx';
 import { AppContext } from './context/AppContext.jsx';
 import { dashboardPathForRole } from './utils/dashboardPath.js';
 
@@ -131,6 +132,7 @@ function App() {
 
       <div className="app-root d-flex flex-column min-vh-100 tp-app-surface tp-app-root-vh">
         <DeployMismatchBanner />
+        <DemoModeBanner />
         <RouteVerifier />
         {!isAuthPage && <Navbar />}
         <div className="d-flex flex-grow-1 tp-app-main-row min-w-0">

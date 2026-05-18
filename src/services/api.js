@@ -3,6 +3,7 @@ import { getApiRoot, API_BASE, resolveViteApiOrigin } from '../config/apiConfig.
 import { notifyError } from '../components/ui/ToastProvider.jsx';
 import { unwrapErrorDetail } from '../utils/unwrapApi.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
+import { resolveDemoMockResponse } from './demoMock.js';
 
 const BASE_URL = getApiRoot();
 
@@ -83,6 +84,20 @@ api.interceptors.request.use((config) => {
   }
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
+  }
+
+  const mockBody = resolveDemoMockResponse(config);
+  if (mockBody !== undefined) {
+    config.adapter = () =>
+      Promise.resolve({
+        data: mockBody,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+        request: {}
+      });
+    return config;
   }
 
   const method = String(config.method || 'get').toUpperCase();

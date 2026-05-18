@@ -3,7 +3,7 @@ import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
-const CarrierLoadActions = ({ load, onAccept, onCounter, busy = false, disabled = false }) => {
+const CarrierLoadActions = ({ load, onAccept, onCounter, onReject, busy = false, disabled = false }) => {
   const { t } = useLanguage();
   const [showCounter, setShowCounter] = useState(false);
   const [amount, setAmount] = useState('');
@@ -32,6 +32,11 @@ const CarrierLoadActions = ({ load, onAccept, onCounter, busy = false, disabled 
       await onAccept?.(load);
     });
 
+  const handleReject = () =>
+    runLocked(async () => {
+      await onReject?.(load);
+    });
+
   const handleCounter = () =>
     runLocked(
       async () => {
@@ -47,7 +52,7 @@ const CarrierLoadActions = ({ load, onAccept, onCounter, busy = false, disabled 
   return (
     <div className="tp-carrier-load-actions d-flex flex-column gap-2 mt-auto">
       <div className="row g-2">
-        <div className="col-6 col-sm-6">
+        <div className="col-4">
           <Button
             variant="success"
             size="sm"
@@ -58,7 +63,7 @@ const CarrierLoadActions = ({ load, onAccept, onCounter, busy = false, disabled 
             {busy ? <Loader light size="sm" /> : t('pages.loads.carrierAcceptBid')}
           </Button>
         </div>
-        <div className="col-6 col-sm-6">
+        <div className="col-4">
           <Button
             variant="outline-primary"
             size="sm"
@@ -67,6 +72,17 @@ const CarrierLoadActions = ({ load, onAccept, onCounter, busy = false, disabled 
             onClick={() => !locked && setShowCounter((v) => !v)}
           >
             {t('pages.loads.carrierSuggestCounter')}
+          </Button>
+        </div>
+        <div className="col-4">
+          <Button
+            variant="outline-danger"
+            size="sm"
+            className="w-100 rounded-lg tp-touch-target"
+            disabled={locked}
+            onClick={handleReject}
+          >
+            {busy ? <Loader light size="sm" /> : t('pages.loads.carrierRejectLoad')}
           </Button>
         </div>
       </div>
