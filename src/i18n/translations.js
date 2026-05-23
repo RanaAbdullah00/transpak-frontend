@@ -373,6 +373,16 @@ export const translations = {
       assigned: 'Assigned',
       unknown: 'Unknown'
     },
+    lifecycle: {
+      created: 'Created',
+      posted: 'Posted',
+      bid_open: 'Bids open',
+      bid_accepted: 'Bid accepted',
+      assigned: 'Assigned',
+      in_transit: 'In transit',
+      delivered: 'Delivered',
+      closed: 'Closed'
+    },
     bidStatus: {
       pending: 'Awaiting shipper',
       pending_shipper_confirmation: 'Awaiting shipper confirmation',
@@ -533,18 +543,24 @@ export const translations = {
         opsWonBids: 'Won bids',
         opsSpaceListings: 'Capacity listings',
         opsPendingSpace: 'Pending requests',
-        opsRemainingKg: 'Available kg'
+        opsRemainingKg: 'Available kg',
+        viewLiveTracking: 'View live map',
+        activeTripMode: 'Active trip',
+        activeTripSharing: 'Sharing live GPS with shipper',
+        openFullMap: 'Full-screen map'
       },
       tracking: {
         title: 'Shipment tracking',
         statusTimelineTitle: 'Status timeline',
         noIdHint:
           'Open tracking from a load or accepted shipment, or add the load code to the URL (for example /shipments/tracking/LOAD-CODE).',
+        trackByCodeCta: 'Browse loads to track',
         loading: 'Loading…',
         loadFailed: 'Could not load tracking.',
         timelineUpdate: 'Update',
         mapPoint: 'Point {{n}}',
-        lastReportedPosition: 'Last reported position'
+        lastReportedPosition: 'Last reported position',
+        locationStale: 'Driver location is outdated — waiting for a fresh GPS report.'
       },
       shipments: {
         tracking: 'Shipment Tracking',
@@ -896,10 +912,14 @@ export const translations = {
       },
       trackingMap: {
         title: 'Live map',
+        pickup: 'Pickup',
+        delivery: 'Delivery',
+        driver: 'Driver',
         unavailable: 'Location temporarily unavailable. The map updates when coordinates are available.',
         noCoords: 'No coordinates yet. Updates from tracking will appear here.',
         partialWarning:
-          'Location temporarily unavailable. Showing last known route; status may be unchanged.'
+          'Location temporarily unavailable. Showing last known route; status may be unchanged.',
+        geoDenied: 'Live GPS unavailable — showing route from pickup to delivery.'
       },
       notificationsPanel: {
         emptyTitle: 'No notifications yet',
@@ -1471,6 +1491,16 @@ export const translations = {
       assigned: 'تفویض شدہ',
       unknown: 'نامعلوم'
     },
+    lifecycle: {
+      created: 'بنایا گیا',
+      posted: 'پوسٹ شدہ',
+      bid_open: 'بڈز کھلے',
+      bid_accepted: 'بڈ قبول',
+      assigned: 'تفویض شدہ',
+      in_transit: 'راستے میں',
+      delivered: 'پہنچا دیا',
+      closed: 'بند'
+    },
     bidStatus: {
       pending: 'شپپر کا انتظار',
       pending_shipper_confirmation: 'شپپر کی تصدیق',
@@ -1589,11 +1619,13 @@ export const translations = {
         statusTimelineTitle: 'حیثیت کا خط زمانی',
         noIdHint:
           'لوڈ یا قبول شدہ شپمنٹ سے ٹریکنگ کھولیں، یا URL میں لوڈ کوڈ لگائیں (مثلاً /shipments/tracking/LOAD-CODE)۔',
+        trackByCodeCta: 'ٹریک کرنے کے لیے لوڈز دیکھیں',
         loading: 'لوڈ ہو رہا ہے…',
         loadFailed: 'ٹریکنگ لوڈ نہیں ہو سکی۔',
         timelineUpdate: 'اپ ڈیٹ',
         mapPoint: 'نقطہ {{n}}',
-        lastReportedPosition: 'آخری رپورٹ شدہ مقام'
+        lastReportedPosition: 'آخری رپورٹ شدہ مقام',
+        locationStale: 'ڈرائیور کی لوکیشن پرانی ہے — تازہ GPS کا انتظار ہے۔'
       },
       supportPage: {
         title: 'سپورٹ',
@@ -1937,11 +1969,15 @@ export const translations = {
       },
       trackingMap: {
         title: 'لائیو نقشہ',
+        pickup: 'پک اپ',
+        delivery: 'ڈیلیوری',
+        driver: 'ڈرائیور',
         unavailable:
           'مقام عارضی طور پر دستیاب نہیں۔ جب نقاط دستیاب ہوں گے نقشہ اپ ڈیٹ ہو گا۔',
         noCoords: 'ابھی کوئی نقاط نہیں۔ ٹریکنگ سے اپ ڈیٹس یہاں نظر آئیں گی۔',
         partialWarning:
-          'مقام عارضی طور پر دستیاب نہیں۔ آخری معلوم راستہ دکھایا جا رہا ہے؛ حیثیت بدل سکتی ہے۔'
+          'مقام عارضی طور پر دستیاب نہیں۔ آخری معلوم راستہ دکھایا جا رہا ہے؛ حیثیت بدل سکتی ہے۔',
+        geoDenied: 'لائیو GPS دستیاب نہیں — پک اپ سے ڈیلیوری کا راستہ دکھایا جا رہا ہے۔'
       },
       notificationsPanel: {
         emptyTitle: 'ابھی کوئی نوٹیفکیشن نہیں',
@@ -2044,7 +2080,11 @@ export const translations = {
         opsWonBids: 'جیتے بڈز',
         opsSpaceListings: 'گنجائش لسٹنگز',
         opsPendingSpace: 'زیر التواء درخواستیں',
-        opsRemainingKg: 'دستیاب kg'
+        opsRemainingKg: 'دستیاب kg',
+        viewLiveTracking: 'لائیو میپ دیکھیں',
+        activeTripMode: 'فعال سفر',
+        activeTripSharing: 'شپپر کے ساتھ لائیو GPS شیئر ہو رہا ہے',
+        openFullMap: 'مکمل اسکرین میپ'
       },
       support: {
         demoSectionTitle: 'پلیٹ فارم ڈیمو',

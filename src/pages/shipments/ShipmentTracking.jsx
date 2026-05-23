@@ -1,134 +1,82 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import TrackingMap from '../../components/shipment/TrackingMap.jsx';
 import RouteInfo from '../../components/shipment/RouteInfo.jsx';
 import ShipmentCard from '../../components/shipment/ShipmentCard.jsx';
 import StatusTimeline from '../../components/shipment/StatusTimeline.jsx';
 import ShipmentProgressBox from '../../components/shipment/ShipmentProgressBox.jsx';
-import api from '../../services/api.js';
-import { normalizeTracking } from '../../adapters/normalize.js';
-import { AppContext } from '../../context/AppContext.jsx';
+import LifecycleBadge from '../../components/shipment/LifecycleBadge.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { formatUserError } from '../../utils/userErrors.js';
-
-function mergeTrackingHistory(prev, incoming) {
-  if (!Array.isArray(incoming) || incoming.length === 0) return Array.isArray(prev) ? prev : [];
-  const keyOf = (ev) =>
-    `${String(ev?.time ?? '')}|${String(ev?.event ?? ev?.label ?? '')}|${String(ev?.location ?? ev?.note ?? '')}`;
-  const map = new Map();
-  for (const ev of [...incoming, ...(Array.isArray(prev) ? prev : [])]) {
-    const k = keyOf(ev);
-    if (!map.has(k)) map.set(k, ev);
-  }
-  return Array.from(map.values());
-}
+import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
+import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
+import Loader from '../../components/ui/Loader.jsx';
 
 const ShipmentTracking = () => {
   const { trackId } = useParams();
   const id = trackId?.trim() || '';
-  const { registerTrackingHandler } = useContext(AppContext) || {};
+  const { user } = useAuth();
   const { t } = useLanguage();
+  const isCarrier =
+    user?.activeRole === 'carrier' || (user?.roles || []).includes('carrier');
+  const shareLive = isCarrier && Boolean(id);
 
-  const [payload, setPayload] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    if (!id) {
-      setLoading(false);
-      setPayload(null);
-      setError('');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const res = await api.get(`/shipments/track/${encodeURIComponent(id)}`);
-      const raw = res?.data;
-      setPayload(normalizeTracking(raw) || null);
-    } catch (e) {
-      setError(formatUserError(e, t, { fallback: t('pages.tracking.loadFailed') }));
-      setPayload(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, t]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!registerTrackingHandler) return undefined;
-    return registerTrackingHandler((p) => {
-      if (!p || (p.refKey != null && String(p.refKey) !== String(id))) return;
-      setPayload((prev) => {
-        const prevCoords = prev?.liveTrackingMap?.coordinates;
-        const incCoords = p.liveTrackingMap?.coordinates;
-        const mergedCoords =
-          Array.isArray(incCoords) && incCoords.length > 0
-            ? incCoords
-            : Array.isArray(prevCoords) && prevCoords.length > 0
-              ? prevCoords
-              : incCoords || prevCoords || [];
-
-        const mergedHist =
-          Array.isArray(p.history) && p.history.length > 0
-            ? mergeTrackingHistory(prev?.history, p.history)
-            : prev?.history || [];
-
-        const merged = {
-          tracking: { ...(prev?.tracking || {}), ...(p.tracking || {}) },
-          history: mergedHist,
-          liveTrackingMap: {
-            ...(prev?.liveTrackingMap || {}),
-            ...(p.liveTrackingMap || {}),
-            coordinates: mergedCoords
-          }
-        };
-        return normalizeTracking(merged);
-      });
-    });
-  }, [registerTrackingHandler, id]);
+  const { trackingData: payload, loading, error, livePos, geoError } = useShipmentTracking({
+    trackRef: id,
+    shareLive,
+    enabled: Boolean(id)
+  });
 
   const tracking = payload?.tracking;
+  const originName = payload?.origin || '';
+  const destinationName = payload?.destination || '';
+
   const coords = useMemo(() => {
     const raw = payload?.liveTrackingMap?.coordinates || [];
-    return raw.filter(
-      (c) =>
-        Array.isArray(c) &&
-        c.length >= 2 &&
-        Number.isFinite(Number(c[0])) &&
-        Number.isFinite(Number(c[1]))
-    ).map((c) => [Number(c[0]), Number(c[1])]);
+    return raw
+      .filter(
+        (c) =>
+          Array.isArray(c) &&
+          c.length >= 2 &&
+          Number.isFinite(Number(c[0])) &&
+          Number.isFinite(Number(c[1]))
+      )
+      .map((c) => [Number(c[0]), Number(c[1])]);
   }, [payload?.liveTrackingMap?.coordinates]);
+
   const currentLocation = useMemo(() => {
-    const direct = tracking?.currentLocation;
-    if (Array.isArray(direct) && direct.length >= 2) return [Number(direct[0]), Number(direct[1])];
-    const loc = tracking?.location;
+    const direct = tracking?.currentLocation ?? tracking?.location;
+    if (shareLive && livePos) return livePos;
     if (
-      Array.isArray(loc) &&
-      loc.length >= 2 &&
-      Number.isFinite(Number(loc[0])) &&
-      Number.isFinite(Number(loc[1]))
+      Array.isArray(direct) &&
+      direct.length >= 2 &&
+      isLocationFresh(tracking?.locationUpdatedAt, payload?.ts ?? tracking?.ts)
     ) {
-      return [Number(loc[0]), Number(loc[1])];
+      return [Number(direct[0]), Number(direct[1])];
     }
     return null;
-  }, [tracking?.currentLocation, tracking?.location]);
+  }, [
+    tracking?.currentLocation,
+    tracking?.location,
+    tracking?.locationUpdatedAt,
+    tracking?.ts,
+    shareLive,
+    livePos,
+    payload?.ts
+  ]);
 
   const shipment = useMemo(
     () => ({
-      code: `#${id}`,
-      origin: t('common.emDash'),
-      destination: t('common.emDash'),
+      code: payload?.refKey ? `#${payload.refKey}` : `#${id}`,
+      origin: originName || t('common.emDash'),
+      destination: destinationName || t('common.emDash'),
       status: tracking?.status || 'posted',
       driverName: t('common.emDash'),
       vehicleReg: t('common.emDash'),
       eta: tracking?.eta || t('common.emDash'),
-      lastUpdate: payload?.history?.[0]?.time || t('common.emDash')
+      lastUpdate: tracking?.locationUpdatedAt || payload?.history?.[0]?.time || t('common.emDash')
     }),
-    [id, tracking, payload?.history, t]
+    [id, payload?.refKey, tracking, payload?.history, originName, destinationName, t]
   );
 
   const timelineEvents = useMemo(() => {
@@ -150,54 +98,84 @@ const ShipmentTracking = () => {
 
   const trackingDataForMap = useMemo(
     () => ({
+      ...payload,
+      origin: originName,
+      destination: destinationName,
       tracking: {
+        ...tracking,
         status: tracking?.status,
         eta: tracking?.eta,
         currentLocation,
-        locationUnavailable: tracking?.locationUnavailable
+        locationUnavailable: !currentLocation && !shareLive
       },
       liveTrackingMap: payload?.liveTrackingMap || { coordinates: coords }
     }),
-    [tracking, currentLocation, payload?.liveTrackingMap, coords]
+    [tracking, currentLocation, payload, coords, originName, destinationName, shareLive]
   );
 
   if (!id) {
     return (
-      <div className="container py-3">
+      <div className="container py-4 tp-tracking-page">
         <h5 className="mb-3 text-body">{t('pages.tracking.title')}</h5>
-        <p className="small tp-support-muted mb-0">{t('pages.tracking.noIdHint')}</p>
+        <div className="tp-empty-state rounded-3 border border-dashed p-4 text-center">
+          <p className="small tp-support-muted mb-3">{t('pages.tracking.noIdHint')}</p>
+          <Link to="/loads" className="btn btn-primary btn-sm">
+            {t('pages.tracking.trackByCodeCta')}
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (loading && !payload) {
     return (
-      <div className="container py-3">
+      <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
-        <p className="small text-muted">{t('pages.tracking.loading')}</p>
+        <div className="tp-tracking-skeleton rounded-3 border p-3 mb-3">
+          <div className="placeholder-glow mb-2">
+            <span className="placeholder col-5 rounded" />
+          </div>
+          <div className="placeholder-glow" style={{ minHeight: 320 }}>
+            <span className="placeholder col-12 rounded d-block h-100" style={{ minHeight: 320 }} />
+          </div>
+        </div>
+        <Loader />
       </div>
     );
   }
 
   if (error && !payload) {
     return (
-      <div className="container py-3">
+      <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
         <p className="text-danger small">{error}</p>
+        <Link to="/loads" className="btn btn-outline-primary btn-sm">
+          {t('pages.tracking.trackByCodeCta')}
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="container py-3">
-      <h5 className="mb-3">{t('pages.tracking.title')}</h5>
+    <div className="container-fluid px-2 px-md-3 py-3 tp-tracking-page tp-tracking-page--live">
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h5 className="mb-0">{t('pages.tracking.title')}</h5>
+        <LifecycleBadge stage={payload?.lifecycleStage || shipment.status} size="lg" />
+      </div>
       {error ? <p className="text-warning small mb-2">{error}</p> : null}
       <ShipmentCard shipment={shipment} />
       <div className="tp-tracking-progress mb-3">
         <ShipmentProgressBox status={shipment.status} eta={shipment.eta} />
       </div>
-      <div className="tp-tracking-map mb-3 overflow-hidden">
-        <TrackingMap trackingData={trackingDataForMap} currentLocation={currentLocation} />
+      <div className="tp-tracking-map tp-tracking-map--fullscreen mb-3 overflow-hidden rounded-3 border">
+        <TrackingMap
+          trackingData={trackingDataForMap}
+          currentLocation={currentLocation}
+          originName={originName}
+          destinationName={destinationName}
+          liveDriver={shareLive}
+          geoError={geoError}
+        />
       </div>
       <StatusTimeline currentStatus={shipment.status} events={timelineEvents} />
       <RouteInfo distance={null} duration={null} checkpoints={checkpoints} />

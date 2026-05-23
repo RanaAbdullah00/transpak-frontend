@@ -11,7 +11,9 @@ import { unwrapErrorCode } from '../../utils/unwrapApi.js';
 import { safeUnwrapAuthResponse, getAuthUiError, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import { FaEnvelope, FaLock } from 'react-icons/fa';
 
-const DEMO_ADMIN_EMAIL = 'mrabdullah0456@gmail.com';
+const DEMO_ADMIN_EMAIL = String(import.meta.env.VITE_DEMO_ADMIN_EMAIL || '')
+  .trim()
+  .toLowerCase();
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -40,7 +42,7 @@ const LoginForm = () => {
   };
 
   const emailNorm = form.email.trim().toLowerCase();
-  const isDemoAdmin = emailNorm === DEMO_ADMIN_EMAIL;
+  const isDemoAdmin = DEMO_ADMIN_EMAIL.length > 0 && emailNorm === DEMO_ADMIN_EMAIL;
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);

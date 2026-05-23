@@ -20,6 +20,7 @@ const ALLOWED_API_PREFIXES = [
   '/reviews',
   '/ratings',
   '/notifications',
+  '/feedback',
   '/chat',
   '/trucks',
   '/demo-video',

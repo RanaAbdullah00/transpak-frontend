@@ -30,6 +30,7 @@ export const AppProvider = ({ children }) => {
   const chatSeenHandlers = useRef(new Set());
   const trackingHandlers = useRef(new Set());
   const lastTrackingSig = useRef({ sig: '', t: 0 });
+  const lastTrackingTsByRef = useRef(new Map());
   const socketRef = useRef(null);
   const addNotificationRef = useRef(null);
 
@@ -145,7 +146,17 @@ export const AppProvider = ({ children }) => {
         addNotificationRef.current?.(n);
       },
       onTracking: (p) => {
-        const sig = `${p?.refKey}|${p?.tracking?.status}|${JSON.stringify(p?.tracking?.currentLocation ?? p?.tracking?.location)}|${(p?.history || []).length}`;
+        const refs = [p?.refKey, p?.loadId]
+          .map((v) => String(v ?? '').trim())
+          .filter(Boolean);
+        const ref = refs[0] || '';
+        const ts = Number(p?.ts);
+        if (refs.length && Number.isFinite(ts)) {
+          const lastTs = Math.max(...refs.map((r) => lastTrackingTsByRef.current.get(r) || 0));
+          if (ts < lastTs) return;
+          refs.forEach((r) => lastTrackingTsByRef.current.set(r, ts));
+        }
+        const sig = `${refs.join('|')}|${p?.tracking?.status}|${ts}|${JSON.stringify(p?.tracking?.currentLocation ?? p?.tracking?.location)}|${(p?.history || []).length}`;
         const now = Date.now();
         if (sig && lastTrackingSig.current.sig === sig && now - lastTrackingSig.current.t < 450) {
           return;

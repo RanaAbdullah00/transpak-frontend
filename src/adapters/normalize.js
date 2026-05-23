@@ -40,6 +40,7 @@ export const normalizeBid = (raw) => {
   return {
     id,
     loadId: raw.loadId ?? raw.load ?? null,
+    loadCode: raw.loadCode ?? raw.load_code ?? null,
     carrierId: raw.carrierId ?? raw.carrier ?? null,
     carrierName: raw.carrierName ?? raw.name ?? 'Carrier',
     vehicleType: raw.vehicleType ?? 'Truck',
@@ -100,10 +101,18 @@ export const normalizeTracking = (raw) => {
       eta: t.eta,
       locationUnavailable,
       location: safeLoc,
-      currentLocation: safeLoc
+      currentLocation: safeLoc,
+      locationUpdatedAt: t.locationUpdatedAt ?? null,
+      ts: raw.ts ?? t.ts ?? null
     },
     history: Array.isArray(raw.history) ? raw.history : [],
-    liveTrackingMap: raw.liveTrackingMap || { coordinates: [] }
+    liveTrackingMap: raw.liveTrackingMap || { coordinates: [] },
+    origin: raw.origin || null,
+    destination: raw.destination || null,
+    refKey: raw.refKey != null ? String(raw.refKey) : null,
+    loadId: raw.loadId != null ? String(raw.loadId) : null,
+    lifecycleStage: raw.lifecycleStage ?? null,
+    ts: raw.ts != null ? Number(raw.ts) : null
   };
 };
 

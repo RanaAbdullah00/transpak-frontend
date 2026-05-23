@@ -35,8 +35,9 @@ function normalizeAuthError(err, method) {
       err.message = body.code && !msg.includes(body.code) ? `${msg} (${body.code})` : msg;
     }
   }
-  // eslint-disable-next-line no-console
-  console.error('[auth-api] error', {
+  if (import.meta.env.DEV || import.meta.env.VITE_AUTH_API_DEBUG === 'true') {
+    // eslint-disable-next-line no-console
+    console.error('[auth-api] error', {
     method: err?.config?.method?.toUpperCase() || method,
     url: err?.config?.url,
     status: err?.response?.status,
@@ -44,7 +45,8 @@ function normalizeAuthError(err, method) {
     code: body?.code,
     error: body?.error,
     data: body
-  });
+    });
+  }
   return err;
 }
 
@@ -67,12 +69,15 @@ async function authRequest(method, authPath, body = undefined) {
 
   const url = getAuthApiUrl(authPath);
 
-  // eslint-disable-next-line no-console
-  console.log('[auth-api] request', {
-    method: httpMethod,
-    url,
-    payload: body !== undefined ? redactAuthPayload(body) : undefined
-  });
+  const authDebug = import.meta.env.DEV || import.meta.env.VITE_AUTH_API_DEBUG === 'true';
+  if (authDebug) {
+    // eslint-disable-next-line no-console
+    console.log('[auth-api] request', {
+      method: httpMethod,
+      url,
+      payload: body !== undefined ? redactAuthPayload(body) : undefined
+    });
+  }
 
   try {
     const config = {
@@ -86,13 +91,15 @@ async function authRequest(method, authPath, body = undefined) {
     }
 
     const res = await axios.request(config);
-    // eslint-disable-next-line no-console
-    console.log('[auth-api] response', {
-      method: httpMethod,
-      url,
-      status: res?.status,
-      ok: res?.status >= 200 && res?.status < 300
-    });
+    if (authDebug) {
+      // eslint-disable-next-line no-console
+      console.log('[auth-api] response', {
+        method: httpMethod,
+        url,
+        status: res?.status,
+        ok: res?.status >= 200 && res?.status < 300
+      });
+    }
     return unwrapAuthResponse(res);
   } catch (err) {
     throw normalizeAuthError(err, httpMethod);

@@ -5,6 +5,7 @@ import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { translateRoleLabel } from '../../utils/i18nLabels.js';
+import { resolveImageUrl } from '../../utils/imageUrl.js';
 
 const PublicProfile = () => {
   const { id } = useParams();
@@ -74,7 +75,7 @@ const PublicProfile = () => {
         <div className="d-flex flex-wrap gap-3 align-items-start">
           <div className="tp-avatar-lg rounded-circle overflow-hidden border flex-shrink-0">
             {profile.profileImage ? (
-              <img src={profile.profileImage} alt="" className="tp-img-cover" />
+              <img src={resolveImageUrl(profile.profileImage) || profile.profileImage} alt="" className="tp-img-cover" />
             ) : (
               <div className="tp-avatar-placeholder d-flex align-items-center justify-content-center h-100 w-100 fw-bold">
                 {String(profile.fullName || '?').slice(0, 2).toUpperCase()}

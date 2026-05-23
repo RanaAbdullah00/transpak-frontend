@@ -11,13 +11,13 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import { resolveImageUrl } from '../../utils/imageUrl.js';
 
 const CNIC_REGEX = /^[0-9]{5}-[0-9]{7}-[0-9]{1}$/;
 const PROFILE_FIELD_COUNT = 6;
 
 function imageFieldUrl(value) {
-  const s = typeof value === 'string' ? value.trim() : '';
-  return s || '';
+  return resolveImageUrl(value) || '';
 }
 
 function initialsFrom(name, email) {

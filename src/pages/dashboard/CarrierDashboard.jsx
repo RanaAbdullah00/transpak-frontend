@@ -9,6 +9,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import ActiveShipmentPanel from '../../components/dashboard/ActiveShipmentPanel.jsx';
+import ActiveTripBanner from '../../components/dashboard/ActiveTripBanner.jsx';
 import { FaTruck } from 'react-icons/fa';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { Link } from 'react-router-dom';
@@ -16,6 +17,8 @@ import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 import { acceptLoadAtListedFare, submitCounterOffer } from '../../services/carrierLoadOffer.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
+import { isActiveBidStatus, normalizeBidStatus } from '../../utils/bidStatus.js';
+import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 
 // Dashboard view tailored for carriers.
 const CarrierDashboard = () => {
@@ -25,6 +28,7 @@ const CarrierDashboard = () => {
   const activities = [];
 
   const [openLoads, setOpenLoads] = useState([]);
+  const [myBids, setMyBids] = useState([]);
   const [bidSummary, setBidSummary] = useState({ accepted: 0, pending: 0 });
   const [fleetCount, setFleetCount] = useState(0);
   const [offerBusyId, setOfferBusyId] = useState(null);
@@ -55,8 +59,17 @@ const CarrierDashboard = () => {
     }));
   }, [metrics.accepted, metrics.pending, t]);
 
-  const [trackingData] = useState(null);
-  const [loadingTracking] = useState(false);
+  const activeTrackRef = useMemo(() => {
+    const won = myBids.find((b) => normalizeBidStatus(b.status) === 'accepted');
+    return won?.loadCode || won?.loadId || null;
+  }, [myBids]);
+
+  const { trackingData, loading: loadingTracking, livePos, geoError } = useShipmentTracking({
+    trackRef: activeTrackRef,
+    shareLive: true,
+    enabled: Boolean(activeTrackRef)
+  });
+
   const { request } = useApi();
 
   useEffect(() => {
@@ -70,9 +83,10 @@ const CarrierDashboard = () => {
         const loadsArr = normalizeLoads(Array.isArray(loadsRaw) ? loadsRaw : []);
         setOpenLoads(loadsArr.slice(0, 6));
         const bids = Array.isArray(bidsRaw) ? bidsRaw : [];
+        setMyBids(bids);
         setBidSummary({
-          accepted: bids.filter((b) => String(b.status) === 'accepted').length,
-          pending: bids.filter((b) => String(b.status) === 'pending').length
+          accepted: bids.filter((b) => normalizeBidStatus(b.status) === 'accepted').length,
+          pending: bids.filter((b) => isActiveBidStatus(b.status)).length
         });
         setFleetCount(Array.isArray(trucksRaw) ? trucksRaw.length : 0);
       } catch {
@@ -174,9 +188,15 @@ const CarrierDashboard = () => {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className="mb-0">{t('pages.dashboard.myAssignedShipments')}</h6>
         </div>
+        {activeTrackRef ? (
+          <ActiveTripBanner trackingData={trackingData} trackRef={activeTrackRef} />
+        ) : null}
         <ActiveShipmentPanel
           trackingData={trackingData}
           loadingTracking={loadingTracking}
+          liveDriver={Boolean(activeTrackRef)}
+          liveLocation={livePos}
+          geoError={geoError}
           emptyState={
             <div className="text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed text-muted">
               <FaTruck className="fs-1 text-muted mb-3" />

@@ -21,7 +21,7 @@ const PlaceBid = () => {
 
   useEffect(() => {
     const role = user?.activeRole ?? user?.roles?.[0];
-    if (role === 'carrier') {
+    if (role === 'carrier' && !load) {
       notifyInfo(t('pages.loads.carrierUseFreightBoard'));
       navigate('/loads/manage', { replace: true, state: { tab: 'freight' } });
       return;
@@ -30,7 +30,7 @@ const PlaceBid = () => {
       notifyInfo(t('pages.placeBid.profileCompleteFirst'));
       navigate('/profile', { replace: true });
     }
-  }, [user, navigate, t]);
+  }, [user, navigate, t, load]);
 
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('PKR');

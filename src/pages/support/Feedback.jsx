@@ -23,12 +23,14 @@ const Feedback = () => {
     }
     setSubmitting(true);
     try {
-      await api.post('/notifications', {
-        title: form.subject.trim().slice(0, 120),
-        message: form.message.trim().slice(0, 2000),
-        roleType: 'support',
-        meta: { type: 'FEEDBACK' }
-      });
+      await api.post(
+        '/feedback',
+        {
+          subject: form.subject.trim(),
+          message: form.message.trim()
+        },
+        { skipGlobalErrorToast: true }
+      );
       notifySuccess(t('pages.feedbackPage.success'));
       setForm({ subject: '', message: '' });
     } catch (err) {

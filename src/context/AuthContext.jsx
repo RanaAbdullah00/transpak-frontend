@@ -79,8 +79,9 @@ export const AuthProvider = ({ children }) => {
           const res = await fetchProfileApi();
           const data = safeUnwrapAuthResponse(res);
           if (!cancelled && data?.user) login(data);
-        } catch {
-          // Keep stored session on profile refresh failures (e.g. EMAIL_NOT_VERIFIED).
+        } catch (err) {
+          const status = err?.response?.status;
+          if (status === 401) logout();
         }
       }
 

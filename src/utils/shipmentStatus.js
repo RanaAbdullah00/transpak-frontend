@@ -8,6 +8,7 @@ const LEGACY_TO_CANON = {
   picked: 'pickedup',
   intransit: 'intransit',
   in_transit: 'intransit',
+  assigned: 'booked',
   delivered: 'delivered',
   closed: 'closed',
   pending: 'posted',

@@ -1,0 +1,57 @@
+.tp-map-root {
+  width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgba(22, 163, 74, 0.15);
+}
+
+.tp-map-root .leaflet-container {
+  width: 100%;
+  min-height: clamp(220px, 45vh, 420px);
+  background: var(--tp-map-tile-bg, #e8f0ea);
+  font-family: inherit;
+}
+
+.tp-map-pin-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+
+.tp-map-pin {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-theme .tp-map-root {
+  border-color: rgba(74, 222, 128, 0.2);
+}
+
+body.dark-theme .tp-map-root .leaflet-container {
+  --tp-map-tile-bg: #1a2420;
+}
+
+body.dark-theme .tp-map-root .leaflet-tile {
+  filter: brightness(0.85) contrast(1.05);
+}
+
+.tp-tracking-map--fullscreen .tp-map-root .leaflet-container {
+  min-height: clamp(280px, 62vh, 560px);
+}
+
+.tp-dashboard-map-preview .tp-map-root .leaflet-container {
+  min-height: 200px;
+}
+
+.tp-active-trip-banner {
+  border-left: 4px solid var(--bs-primary);
+}
+
+body.dark-theme .leaflet-popup-content-wrapper,
+body.dark-theme .leaflet-popup-tip {
+  background: #1e293b;
+  color: #e2e8f0;
+}

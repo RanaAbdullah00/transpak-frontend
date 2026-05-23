@@ -18,6 +18,7 @@ import {
   FaClipboardCheck
 } from 'react-icons/fa';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { resolveImageUrl } from '../../utils/imageUrl.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
 import { SidebarProfileSheet } from '../profile/ProfileSheet.jsx';
@@ -164,7 +165,7 @@ const Sidebar = () => {
             >
               <div className="tp-avatar-36 tp-border-theme rounded-circle overflow-hidden border flex-shrink-0">
                 {user.profileImage ? (
-                  <img src={user.profileImage} alt="" className="tp-img-cover" />
+                  <img src={resolveImageUrl(user.profileImage) || user.profileImage} alt="" className="tp-img-cover" />
                 ) : (
                   <div className="w-100 h-100 d-flex align-items-center justify-content-center tp-sidebar-avatar-placeholder fw-semibold tp-badge-sm">
                     {(user.fullName || user.name || user.email || '?')
