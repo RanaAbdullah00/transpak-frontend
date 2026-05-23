@@ -11,6 +11,7 @@ import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import api from '../../services/api.js';
 import LanguageToggle from '../ui/LanguageToggle.jsx';
+import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -18,10 +19,10 @@ const Navbar = () => {
   const { user, setActiveRole } = useAuth();
   const app = React.useContext(AppContext);
   const [serverUnread, setServerUnread] = useState(0);
-  const ephemeralUnread = Array.isArray(app?.notifications)
+  const contextUnread = Array.isArray(app?.notifications)
     ? app.notifications.filter((n) => !(n.read || n.isRead)).length
     : 0;
-  const unreadCount = Math.max(serverUnread, ephemeralUnread);
+  const unreadCount = app?.notifications?.length ? contextUnread : serverUnread;
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -103,8 +104,9 @@ const Navbar = () => {
           >
             <FaBars />
           </button>
-          <Link to="/" className="navbar-brand fw-bold mb-0">
+          <Link to="/" className="navbar-brand fw-bold mb-0 d-flex align-items-center gap-2">
             <BrandLogo variant="mark" title={t('common.appName')} />
+            {user && <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />}
           </Link>
           <div className="d-flex align-items-center gap-2">
             <LanguageToggle className="rounded-lg" />
@@ -141,8 +143,9 @@ const Navbar = () => {
         className={`navbar navbar-expand-md navbar-light shadow-sm sticky-top d-none d-md-flex navbar-custom tp-navbar-surface ${isUrdu ? 'tp-rtl' : ''}`}
       >
         <div className="container-fluid px-3">
-          <Link to="/" className="navbar-brand d-flex align-items-center fw-bold">
+          <Link to="/" className="navbar-brand d-flex align-items-center gap-2 fw-bold">
             <BrandLogo title={t('common.appName')} />
+            {user && <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />}
           </Link>
 
           <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">

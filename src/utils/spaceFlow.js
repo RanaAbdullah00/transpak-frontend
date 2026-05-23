@@ -9,8 +9,4 @@ export function spaceStepId(status) {
   return 'request_sent';
 }
 
-export function emitRealtimeRefresh(scope = 'all') {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('tp:realtime-refresh', { detail: { scope } }));
-  }
-}
+export { emitRealtimeRefresh } from './realtimeRefresh.js';

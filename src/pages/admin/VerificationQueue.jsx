@@ -3,7 +3,7 @@ import Card from '../../components/ui/Card.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
-import { notifySuccess, notifyError } from '../../components/ui/ToastProvider.jsx';
+import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const VerificationQueue = () => {
   const { request, loading } = useApi();
@@ -12,10 +12,9 @@ const VerificationQueue = () => {
   useEffect(() => {
     (async () => {
       try {
-        const data = await request({ url: '/admin/users' });
+        const data = await request({ url: '/admin/users?verified=false' });
         setUsers(Array.isArray(data) ? data : []);
-      } catch (e) {
-        notifyError(e?.response?.data?.message || 'Failed to load verification queue');
+      } catch {
         setUsers([]);
       }
     })();
@@ -27,7 +26,7 @@ const VerificationQueue = () => {
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, verified } : u)));
       notifySuccess(verified ? 'User verified' : 'Verification removed');
     } catch {
-      notifyError('Failed to update verification');
+      /* useApi → notifyApiError */
     }
   };
 

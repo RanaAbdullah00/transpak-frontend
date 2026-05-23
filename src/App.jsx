@@ -11,10 +11,12 @@ import RoleSelection from './pages/auth/RoleSelection.jsx';
 import {
   ShipperDashboard,
   CarrierDashboard,
-  AdminDashboard,
   AdminDashboardPage,
   AdminUsers,
   AdminLoads,
+  AdminBids,
+  AdminNotifications,
+  AdminOtpLogs,
   AdminRoleManagement,
   VerificationQueue,
   Disputes,
@@ -55,7 +57,6 @@ import ReviewPromptHost from './components/reviews/ReviewPromptHost.jsx';
 import SocketReconnectIndicator from './components/layout/SocketReconnectIndicator.jsx';
 import RouteVerifier from './components/layout/RouteVerifier.jsx';
 import DeployMismatchBanner from './components/layout/DeployMismatchBanner.jsx';
-import DemoModeBanner from './components/demo/DemoModeBanner.jsx';
 import { AppContext } from './context/AppContext.jsx';
 import { dashboardPathForRole } from './utils/dashboardPath.js';
 
@@ -132,7 +133,6 @@ function App() {
 
       <div className="app-root d-flex flex-column min-vh-100 tp-app-surface tp-app-root-vh">
         <DeployMismatchBanner />
-        <DemoModeBanner />
         <RouteVerifier />
         {!isAuthPage && <Navbar />}
         <div className="d-flex flex-grow-1 tp-app-main-row min-w-0">
@@ -190,14 +190,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/dashboard/admin"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/dashboard/admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route
                 path="/admin/dashboard"
                 element={
@@ -251,6 +244,30 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <ShipmentControl />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/bids"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminBids />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/notifications"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminNotifications />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/otp-logs"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminOtpLogs />
                   </ProtectedRoute>
                 }
               />
@@ -385,7 +402,7 @@ function App() {
               <Route
                 path="/shipments/tracking/:trackId?"
                 element={
-                  <ProtectedRoute allowedRoles={['shipper', 'carrier']}>
+                  <ProtectedRoute allowedRoles={['shipper', 'carrier', 'admin']}>
                     <ShipmentTracking />
                   </ProtectedRoute>
                 }
@@ -393,7 +410,7 @@ function App() {
               <Route
                 path="/shipments/history"
                 element={
-                  <ProtectedRoute allowedRoles={['shipper', 'carrier']}>
+                  <ProtectedRoute allowedRoles={['shipper', 'carrier', 'admin']}>
                     <ShipmentHistory />
                   </ProtectedRoute>
                 }

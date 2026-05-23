@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { getApiRoot, API_BASE, resolveViteApiOrigin } from '../config/apiConfig.js';
-import { notifyError } from '../components/ui/ToastProvider.jsx';
+import { notifyApiError } from '../utils/notifySystem.js';
 import { unwrapErrorDetail } from '../utils/unwrapApi.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
-import { resolveDemoMockResponse } from './demoMock.js';
-
 const BASE_URL = getApiRoot();
 
 const ALLOWED_API_PREFIXES = [
@@ -27,6 +25,7 @@ const ALLOWED_API_PREFIXES = [
   '/disputes',
   '/translations',
   '/upload',
+  '/public',
   '/health'
 ];
 
@@ -64,7 +63,7 @@ function handleApiFailure(error, config) {
   const { displayMessage } = unwrapErrorDetail(error);
   const endpoint = fullUrl(config || {});
   const msg = displayMessage || `Request failed (${endpoint})`;
-  notifyError(msg);
+  notifyApiError(error, msg);
 }
 
 const api = axios.create({
@@ -85,20 +84,6 @@ api.interceptors.request.use((config) => {
   }
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
-  }
-
-  const mockBody = resolveDemoMockResponse(config);
-  if (mockBody !== undefined) {
-    config.adapter = () =>
-      Promise.resolve({
-        data: mockBody,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config,
-        request: {}
-      });
-    return config;
   }
 
   const method = String(config.method || 'get').toUpperCase();

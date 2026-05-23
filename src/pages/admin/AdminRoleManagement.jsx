@@ -69,7 +69,7 @@ const AdminRoleManagement = () => {
         url: `/admin/user/${id}/role`,
         data: { roles: [role], activeRole: role }
       });
-      const updated = res?.user;
+      const updated = res && typeof res === 'object' ? res : null;
       if (updated) {
         setRows((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
         setDrafts((d) => ({ ...d, [updated.id]: updated.activeRole || role }));

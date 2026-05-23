@@ -16,14 +16,16 @@ const MobileDrawer = ({ open, onClose }) => {
   const { user } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
   const app = React.useContext(AppContext);
-  const unreadCount = Array.isArray(app?.notifications) ? app.notifications.filter((n) => !n.read).length : 0;
+  const unreadCount = Array.isArray(app?.notifications)
+    ? app.notifications.filter((n) => !(n.read || n.isRead)).length
+    : 0;
   const activeRole = user?.activeRole ?? user?.roles?.[0];
 
   const dashboardPath =
     activeRole === 'carrier'
       ? '/dashboard/carrier'
       : activeRole === 'admin'
-      ? '/dashboard/admin'
+      ? '/admin/dashboard'
       : '/dashboard/shipper';
 
   const handleLogoutClick = () => {
@@ -92,6 +94,21 @@ const MobileDrawer = ({ open, onClose }) => {
               <>
                 <NavLink to="/admin/dashboard" className={linkClass} onClick={onClose}>
                   {t('nav.adminDashboard')}
+                </NavLink>
+                <NavLink to="/admin/users" className={linkClass} onClick={onClose}>
+                  {t('nav.adminUsers')}
+                </NavLink>
+                <NavLink to="/admin/loads" className={linkClass} onClick={onClose}>
+                  {t('nav.adminLoads')}
+                </NavLink>
+                <NavLink to="/admin/bids" className={linkClass} onClick={onClose}>
+                  {t('pages.admin.bidsTitle')}
+                </NavLink>
+                <NavLink to="/admin/notifications" className={linkClass} onClick={onClose}>
+                  {t('pages.admin.notificationsTitle')}
+                </NavLink>
+                <NavLink to="/admin/otp-logs" className={linkClass} onClick={onClose}>
+                  {t('pages.admin.otpLogsTitle')}
                 </NavLink>
                 <NavLink to="/admin/roles" className={linkClass} onClick={onClose}>
                   {t('nav.roleManagement')}

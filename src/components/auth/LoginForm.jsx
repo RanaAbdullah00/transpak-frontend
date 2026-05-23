@@ -4,12 +4,14 @@ import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import RoleSelector from './RoleSelector.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
-import { loginApi } from '../../services/authService.js';
-import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
+import { loginApi, fetchProfileApi } from '../../services/authService.js';
+import PasswordField from '../ui/PasswordField.jsx';
+import { notifySuccess } from '../ui/ToastProvider.jsx';
+import { notifyAuthError, notifyUserError } from '../../utils/notifySystem.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapErrorCode } from '../../utils/unwrapApi.js';
-import { safeUnwrapAuthResponse, getAuthUiError, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
+import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
+import { FaEnvelope } from 'react-icons/fa';
 
 const DEMO_ADMIN_EMAIL = String(import.meta.env.VITE_DEMO_ADMIN_EMAIL || '')
   .trim()
@@ -47,7 +49,7 @@ const LoginForm = () => {
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
     if (!uiRolePref && !isDemoAdmin) {
-      notifyError(t('errors.roleRequired'));
+      notifyUserError(t('errors.roleRequired'));
       return;
     }
     setLoading(true);
@@ -60,28 +62,29 @@ const LoginForm = () => {
       const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
       if (token) localStorage.setItem('transpak_token', token);
-      if (user) login(payload);
+      let session = payload;
+      try {
+        const profRes = await fetchProfileApi();
+        const prof = safeUnwrapAuthResponse(profRes);
+        if (prof?.user) session = prof;
+      } catch {
+        /* use login payload */
+      }
+      if (session?.user) login(session);
       notifySuccess(t('auth.welcomeBack'));
-      const activeRole = user?.activeRole ?? currentRole;
+      const activeRole = session?.user?.activeRole ?? session?.currentRole ?? user?.activeRole ?? currentRole;
       navigate(safeDashboardPath(activeRole), { replace: true });
     } catch (err) {
       const code = unwrapErrorCode(err);
       if (code === 'EMAIL_NOT_VERIFIED') {
-        notifyError(t('errors.emailNotVerified'));
+        notifyUserError(t('errors.emailNotVerified'));
         navigate('/verify-email', {
           replace: false,
           state: { email: emailNorm, deliveryHint: null }
         });
         return;
       }
-      const raw = getAuthUiError(err, t);
-      const translated =
-        code === 'INVALID_CREDENTIALS'
-          ? t('errors.invalidCredentials')
-          : code === 'ACCOUNT_BLOCKED'
-          ? t('errors.accountBlocked')
-          : raw;
-      notifyError(translated);
+      notifyAuthError(err, t, 'login');
     } finally {
       setLoading(false);
     }
@@ -109,20 +112,15 @@ const LoginForm = () => {
       </div>
       <div className="mb-3">
         <label className="form-label small">{t('auth.password')}</label>
-        <div className="input-group input-group-sm">
-          <span className="input-group-text tp-input-group-addon">
-            <FaLock className="tp-input-icon" />
-          </span>
-          <input
-            type="password"
-            name="password"
-            className={`form-control rounded-3 ${isUrdu ? 'text-end' : ''}`}
-            placeholder={t('auth.passwordPlaceholder')}
-            value={form.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <PasswordField
+          name="password"
+          value={form.password}
+          onChange={handleChange}
+          placeholder={t('auth.passwordPlaceholder')}
+          isUrdu={isUrdu}
+          required
+          autoComplete="current-password"
+        />
       </div>
       <Button
         variant="primary"

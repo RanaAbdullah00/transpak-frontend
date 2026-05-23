@@ -15,7 +15,8 @@ import {
   FaSignOutAlt,
   FaQuestionCircle,
   FaUserTag,
-  FaClipboardCheck
+  FaClipboardCheck,
+  FaBell
 } from 'react-icons/fa';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { resolveImageUrl } from '../../utils/imageUrl.js';
@@ -39,7 +40,7 @@ const Sidebar = () => {
   const isCarrier = activeRole === 'carrier';
   const isShipper = activeRole === 'shipper';
 
-  const dashboardPath = isShipper ? '/dashboard/shipper' : isCarrier ? '/dashboard/carrier' : '/dashboard/admin';
+  const dashboardPath = isShipper ? '/dashboard/shipper' : isCarrier ? '/dashboard/carrier' : '/admin/dashboard';
 
   return (
     <aside className="d-none d-md-block sidebar-fixed sidebar-aside d-flex flex-column">
@@ -118,6 +119,18 @@ const Sidebar = () => {
               <FaUserShield />
               {t('nav.adminUsers')}
             </NavLink>
+            <NavLink to="/admin/bids" className={navLinkClass}>
+              <FaGavel />
+              {t('pages.admin.bidsTitle')}
+            </NavLink>
+            <NavLink to="/admin/notifications" className={navLinkClass}>
+              <FaBell />
+              {t('pages.admin.notificationsTitle')}
+            </NavLink>
+            <NavLink to="/admin/otp-logs" className={navLinkClass}>
+              <FaClipboardCheck />
+              {t('pages.admin.otpLogsTitle')}
+            </NavLink>
             <NavLink to="/admin/roles" className={navLinkClass}>
               <FaUserTag />
               {t('nav.roleManagement')}
@@ -140,6 +153,10 @@ const Sidebar = () => {
             </NavLink>
           </>
         )}
+        <NavLink to="/notifications" className={navLinkClass}>
+          <FaBell />
+          {t('common.notifications')}
+        </NavLink>
         {!isAdmin && (
           <NavLink to="/support" className={navLinkClass}>
             <FaQuestionCircle />

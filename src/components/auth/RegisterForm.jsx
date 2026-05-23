@@ -4,16 +4,17 @@ import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import RoleSelector from './RoleSelector.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { registerApi } from '../../services/authService.js';
+import { registerApi, fetchProfileApi } from '../../services/authService.js';
 import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
+import { notifyAuthError } from '../../utils/notifySystem.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { safeUnwrapAuthResponse } from '../../utils/authApiSafe.js';
-import { getRegisterErrorToast } from '../../utils/authApiErrors.js';
 import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
 import { blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import { FaUser, FaEnvelope, FaIdCard, FaLock } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaIdCard } from 'react-icons/fa';
+import PasswordField from '../ui/PasswordField.jsx';
 
 const CNIC_REGEX = /^\d{5}-\d{7}-\d{1}$/;
 
@@ -135,9 +136,17 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
       const shouldAutoLogin = Boolean(token && user) && (upgradeRole || mergedOrExisting);
       if (shouldAutoLogin) {
         if (token) localStorage.setItem('transpak_token', token);
-        login(payload);
+        let session = payload;
+        try {
+          const profRes = await fetchProfileApi();
+          const prof = safeUnwrapAuthResponse(profRes);
+          if (prof?.user) session = prof;
+        } catch {
+          /* use register payload */
+        }
+        login(session);
         onDone?.(user);
-        const role = currentRole || user?.activeRole || user?.roles?.[0];
+        const role = session?.user?.activeRole ?? currentRole ?? user?.activeRole ?? user?.roles?.[0];
         navigate(safeDashboardPath(role), { replace: true });
         return;
       }
@@ -160,8 +169,7 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
         }
       });
     } catch (err) {
-      const translated = getRegisterErrorToast(err, t);
-      notifyError(translated);
+      notifyAuthError(err, t, 'register');
       setError(translated);
     } finally {
       setLoading(false);
@@ -265,36 +273,28 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
       </div>
       <div className="mb-3">
         <label className="form-label small">{t('auth.password')} *</label>
-        <div className="input-group input-group-sm">
-          <span className="input-group-text tp-input-group-addon">
-            <FaLock className="tp-input-icon" />
-          </span>
-          <input
-            type="password"
-            name="password"
-            className={`form-control rounded-3 ${errors.password ? 'is-invalid' : ''} ${isUrdu ? 'text-end' : ''}`}
-            placeholder={t('auth.passwordPlaceholder')}
-            value={form.password}
-            onChange={handleChange}
-          />
-        </div>
+        <PasswordField
+          name="password"
+          value={form.password}
+          onChange={handleChange}
+          placeholder={t('auth.passwordPlaceholder')}
+          invalid={Boolean(errors.password)}
+          isUrdu={isUrdu}
+          autoComplete="new-password"
+        />
         {errors.password && <div className="invalid-feedback">{errors.password}</div>}
       </div>
       <div className="mb-3">
         <label className="form-label small">{t('auth.confirmPassword')} *</label>
-        <div className="input-group input-group-sm">
-          <span className="input-group-text tp-input-group-addon">
-            <FaLock className="tp-input-icon" />
-          </span>
-          <input
-            type="password"
-            name="confirmPassword"
-            className={`form-control rounded-3 ${errors.confirmPassword ? 'is-invalid' : ''} ${isUrdu ? 'text-end' : ''}`}
-            placeholder={t('auth.reenterPasswordPlaceholder')}
-            value={form.confirmPassword}
-            onChange={handleChange}
-          />
-        </div>
+        <PasswordField
+          name="confirmPassword"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          placeholder={t('auth.reenterPasswordPlaceholder')}
+          invalid={Boolean(errors.confirmPassword)}
+          isUrdu={isUrdu}
+          autoComplete="new-password"
+        />
         {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
       </div>
       <div className="d-flex flex-column flex-sm-row gap-2">

@@ -8,6 +8,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifySuccess, notifyError, notifyInfo } from '../../components/ui/ToastProvider.jsx';
+import { notifyProfileIncomplete } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
 
 // Carrier bid placement page. Expects "load" object from AvailableLoads route state.
@@ -27,7 +28,7 @@ const PlaceBid = () => {
       return;
     }
     if (user && user.profileComplete === false) {
-      notifyInfo(t('pages.placeBid.profileCompleteFirst'));
+      notifyProfileIncomplete(t);
       navigate('/profile', { replace: true });
     }
   }, [user, navigate, t, load]);

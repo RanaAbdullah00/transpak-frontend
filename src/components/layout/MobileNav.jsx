@@ -12,16 +12,18 @@ const MobileNav = () => {
   const { t, isUrdu } = useLanguage();
 
   const activeRole = user?.activeRole ?? user?.roles?.[0];
-  const dashboardPath = activeRole === 'carrier' ? '/dashboard/carrier' : activeRole === 'admin' ? '/dashboard/admin' : '/dashboard/shipper';
+  const dashboardPath =
+    activeRole === 'carrier' ? '/dashboard/carrier' : activeRole === 'admin' ? '/admin/dashboard' : '/dashboard/shipper';
 
   const roleSlot =
     activeRole === 'carrier'
       ? { to: '/fleet', icon: <FaTools />, label: t('common.fleet') }
       : activeRole === 'shipper'
       ? { to: '/loads/manage', icon: <FaTools />, label: t('common.manage') }
-      : { to: '/notifications', icon: <FaTools />, label: t('common.admin') };
+      : { to: '/admin/dashboard', icon: <FaTools />, label: t('common.admin') };
 
-  const loadsPath = '/loads/manage';
+  const loadsPath =
+    activeRole === 'admin' ? '/admin/loads' : activeRole === 'carrier' ? '/loads' : '/loads/manage';
   const trackSlot =
     activeRole === 'admin'
       ? { to: '/admin/shipments', icon: <FaShippingFast />, label: t('nav.shipments') }

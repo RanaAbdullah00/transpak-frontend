@@ -1,10 +1,5 @@
 import { PAKISTAN_CITIES } from '../data/pakistanCities.js';
 
-/** Sample route endpoints for demos / empty state. */
-export const SAMPLE_LAHORE = [31.5204, 74.3587];
-export const SAMPLE_KARACHI = [24.8607, 67.0011];
-export const SAMPLE_ROUTE = [SAMPLE_LAHORE, SAMPLE_KARACHI];
-
 export function isLatLngPair(v) {
   if (Array.isArray(v) && v.length >= 2) {
     return Number.isFinite(Number(v[0])) && Number.isFinite(Number(v[1]));

@@ -1,12 +1,17 @@
 /* Role-aware dashboard accents (same green brand) */
 body.tp-role-shipper {
-  --tp-role-accent: #0d9488;
-  --tp-role-glow: rgba(13, 148, 136, 0.18);
+  --tp-role-accent: #2563eb;
+  --tp-role-glow: rgba(37, 99, 235, 0.2);
 }
 
 body.tp-role-carrier {
-  --tp-role-accent: #0284c7;
-  --tp-role-glow: rgba(2, 132, 199, 0.2);
+  --tp-role-accent: #059669;
+  --tp-role-glow: rgba(5, 150, 105, 0.22);
+}
+
+body.tp-role-admin {
+  --tp-role-accent: #334155;
+  --tp-role-glow: rgba(15, 23, 42, 0.35);
 }
 
 .tp-role-badge {

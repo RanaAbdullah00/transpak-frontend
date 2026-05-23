@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import LoadCard from '../../components/loadboard/LoadCard.jsx';
 import ProfileLink from '../../components/profile/ProfileLink.jsx';
 import BidTimeline from '../../components/bids/BidTimeline.jsx';
-import { getDemoGuideStep, isDemoModeEnabled } from '../../utils/demoMode.js';
 import BidList from '../../components/loadboard/BidList.jsx';
 import { SkeletonCard } from '../../components/ui/Skeleton.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -166,12 +165,7 @@ const LoadDetails = () => {
         <BidTimeline
           load={load}
           bids={bids}
-          highlightStepId={
-            isDemoModeEnabled()
-              ? ['posted', 'carrier_accept', 'pending_confirmation', 'accepted', 'delivered'][getDemoGuideStep()] ||
-                null
-              : null
-          }
+          highlightStepId={null}
         />
       </Card>
 

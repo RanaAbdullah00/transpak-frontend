@@ -27,7 +27,23 @@ export const normalizeLoad = (raw) => {
     expectedPrice: price,
     pickupDate: raw.pickupDate ?? raw.date ?? '',
     deadlineHours: raw.deadlineHours != null ? raw.deadlineHours : 2,
-    deadline: raw.deadline
+    deadlineMinutes:
+      raw.deadlineMinutes != null
+        ? Number(raw.deadlineMinutes)
+        : (raw.deadlineHours != null ? Number(raw.deadlineHours) * 60 : 120),
+    biddingEndsAt: raw.biddingEndsAt ?? raw.bidding_ends_at ?? null,
+    deadline:
+      raw.deadline ??
+      raw.biddingEndsAt ??
+      (() => {
+        const created = raw.createdAt ?? raw.created_at;
+        if (!created) return undefined;
+        const mins =
+          raw.deadlineMinutes != null
+            ? Number(raw.deadlineMinutes)
+            : Number(raw.deadlineHours != null ? raw.deadlineHours : 2) * 60;
+        return new Date(new Date(created).getTime() + mins * 60000).toISOString();
+      })()
   };
 };
 

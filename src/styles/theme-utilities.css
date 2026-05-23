@@ -119,15 +119,45 @@
 }
 
 .tp-active-role-badge--shipper {
-  color: #047857;
-  background: color-mix(in srgb, #10b981 16%, var(--card-bg));
-  border: 1px solid color-mix(in srgb, #10b981 40%, transparent);
+  color: #1d4ed8;
+  background: color-mix(in srgb, #2563eb 14%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, #2563eb 38%, transparent);
 }
 
 .tp-active-role-badge--carrier {
-  color: #0369a1;
-  background: color-mix(in srgb, #0ea5e9 16%, var(--card-bg));
-  border: 1px solid color-mix(in srgb, #0ea5e9 42%, transparent);
+  color: #047857;
+  background: color-mix(in srgb, #059669 14%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, #059669 40%, transparent);
+}
+
+.tp-active-role-badge--admin {
+  color: #e2e8f0;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid color-mix(in srgb, #94a3b8 35%, #0f172a);
+}
+
+.tp-active-role-badge--compact {
+  font-size: 0.62rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.tp-password-toggle {
+  background: var(--pak-card-bg);
+  border-color: var(--pak-border);
+  cursor: pointer;
+}
+
+.tp-password-toggle__icon {
+  color: #059669;
+  font-size: 0.95rem;
+}
+
+.tp-password-toggle:hover .tp-password-toggle__icon {
+  color: #047857;
+}
+
+.tp-dashboard--admin .tp-admin-stat-card {
+  border-left: 3px solid var(--tp-role-accent, #334155);
 }
 
 /* Role dashboards */

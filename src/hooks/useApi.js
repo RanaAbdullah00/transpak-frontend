@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import api from '../services/api.js';
 import { unwrapBody } from '../utils/unwrapApi.js';
 import { formatUserError } from '../utils/userErrors.js';
-import { notifyError } from '../components/ui/ToastProvider.jsx';
+import { notifyApiError } from '../utils/notifySystem.js';
 
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export const useApi = () => {
     } catch (err) {
       const msg = formatUserError(err);
       setError(msg);
-      notifyError(msg);
+      if (!config?.skipGlobalErrorToast) notifyApiError(err);
       throw err;
     } finally {
       setLoading(false);

@@ -5,10 +5,13 @@ import Loader from '../ui/Loader.jsx';
 import ProfileRateUsersPanel from './ProfileRateUsersPanel.jsx';
 import ProfileReviewsPanel from './ProfileReviewsPanel.jsx';
 import ProfileRolePanel from './ProfileRolePanel.jsx';
+import { fetchProfileApi } from '../../services/authService.js';
+import { safeUnwrapAuthResponse } from '../../utils/authApiSafe.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
+import { notifyError } from '../ui/ToastProvider.jsx';
+import { notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { resolveImageUrl } from '../../utils/imageUrl.js';
@@ -143,22 +146,44 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
         setCnicLocked(Boolean(updated.cnic_number));
         setProfileComplete(Boolean(updated.is_profile_complete));
         setFiles({ cnic_image: null, cnic_image_back: null, profile_image: null });
-        login({
-          user: {
-            ...user,
-            name: updated.full_name || user?.name,
-            fullName: updated.full_name || user?.fullName,
-            profileImage: updated.profile_image || user?.profileImage,
-            profileComplete: Boolean(updated.is_profile_complete)
-          },
-          currentRole: user?.activeRole,
-          roles: {
-            hasShipper: user?.hasShipper,
-            hasCarrier: user?.hasCarrier
+        try {
+          const profRes = await fetchProfileApi();
+          const prof = safeUnwrapAuthResponse(profRes);
+          if (prof?.user) login(prof);
+          else {
+            login({
+              user: {
+                ...user,
+                name: updated.full_name || user?.name,
+                fullName: updated.full_name || user?.fullName,
+                profileImage: updated.profile_image || user?.profileImage,
+                profileComplete: Boolean(updated.is_profile_complete)
+              },
+              currentRole: user?.activeRole,
+              roles: {
+                hasShipper: user?.hasShipper,
+                hasCarrier: user?.hasCarrier
+              }
+            });
           }
-        });
+        } catch {
+          login({
+            user: {
+              ...user,
+              name: updated.full_name || user?.name,
+              fullName: updated.full_name || user?.fullName,
+              profileImage: updated.profile_image || user?.profileImage,
+              profileComplete: Boolean(updated.is_profile_complete)
+            },
+            currentRole: user?.activeRole,
+            roles: {
+              hasShipper: user?.hasShipper,
+              hasCarrier: user?.hasCarrier
+            }
+          });
+        }
         onSaved?.();
-        notifySuccess(t('common.save'));
+        notifySystem(SystemNotifyType.PROFILE_UPDATED, t('common.save'));
         if (Array.isArray(updated.upload_failures) && updated.upload_failures.length) {
           notifyError(t('errors.fileUploadPartial'));
         }

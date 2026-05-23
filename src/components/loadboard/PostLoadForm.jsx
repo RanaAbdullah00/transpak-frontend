@@ -5,6 +5,7 @@ import VehicleTypeSelect from './VehicleTypeSelect.jsx';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useFareEstimate } from '../../hooks/useFareEstimate.js';
+import { isKnownCity } from '../../data/pakistanCities.js';
 
 const defaultForm = () => ({
   cargo: '',
@@ -14,7 +15,8 @@ const defaultForm = () => ({
   vehicleType: 'Truck',
   expectedPrice: '',
   pickupDate: '',
-  deadlineHours: '6'
+  deadlineValue: '6',
+  deadlineUnit: 'hours'
 });
 
 const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) => {
@@ -59,8 +61,18 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
       notifyError(t('pages.postLoadForm.pickupFutureError'));
       return;
     }
-    const hours = Number(form.deadlineHours);
-    if (!Number.isFinite(hours) || hours < 1 || hours > 168) {
+    if (!isKnownCity(form.origin) || !isKnownCity(form.destination)) {
+      notifyError(t('pages.postLoadForm.cityInvalid'));
+      return;
+    }
+    const val = Number(form.deadlineValue);
+    const unit = form.deadlineUnit === 'minutes' ? 'minutes' : 'hours';
+    const deadlineMinutes = unit === 'minutes' ? val : val * 60;
+    if (!Number.isFinite(val) || val < 1) {
+      notifyError(t('pages.postLoadForm.deadlineInvalid'));
+      return;
+    }
+    if (deadlineMinutes < 15 || deadlineMinutes > 72 * 60) {
       notifyError(t('pages.postLoadForm.deadlineInvalid'));
       return;
     }
@@ -70,6 +82,8 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
     }
     onSubmit?.({
       ...form,
+      deadlineMinutes,
+      deadlineHours: Math.ceil(deadlineMinutes / 60),
       distanceKm: estimate?.distanceKm,
       suggestedFare: estimate?.suggestedFare
     });
@@ -145,6 +159,14 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
                   })}
                 </p>
               ) : null}
+              {estimate.estimatedTravelHours != null ? (
+                <p className="mb-0 small text-muted">
+                  {t('pages.postLoadForm.fareTravelHint', {
+                    hours: estimate.estimatedTravelHours,
+                    minutes: estimate.estimatedTravelMinutes ?? Math.round(estimate.estimatedTravelHours * 60)
+                  })}
+                </p>
+              ) : null}
             </>
           ) : null}
           {fareTooLow ? (
@@ -201,17 +223,27 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null }) =>
           <div className="input-group input-group-sm">
             <input
               type="number"
-              name="deadlineHours"
+              name="deadlineValue"
               className="form-control rounded-3"
               min={1}
-              max={168}
+              max={form.deadlineUnit === 'minutes' ? 4320 : 72}
               step={1}
-              value={form.deadlineHours}
+              value={form.deadlineValue}
               onChange={handleChange}
               required
               aria-describedby="deadlineHelp"
             />
-            <span className="input-group-text rounded-3">{t('pages.postLoadForm.deadlineHoursUnit')}</span>
+            <select
+              name="deadlineUnit"
+              className="form-select form-select-sm rounded-3"
+              style={{ maxWidth: '7rem' }}
+              value={form.deadlineUnit}
+              onChange={handleChange}
+              aria-label={t('pages.postLoadForm.deadlineUnitAria')}
+            >
+              <option value="hours">{t('pages.postLoadForm.deadlineHoursUnit')}</option>
+              <option value="minutes">{t('pages.postLoadForm.deadlineMinutesUnit')}</option>
+            </select>
           </div>
           <div id="deadlineHelp" className="form-text">
             {t('pages.postLoadForm.deadlineHelp')}

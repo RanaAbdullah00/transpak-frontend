@@ -7,8 +7,9 @@ import AuthHeaderActions from '../../components/auth/AuthHeaderActions.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuthViewportLock } from '../../hooks/useAuthViewportLock.js';
 import { sendForgotPasswordOtpApi } from '../../services/authService.js';
-import { safeUnwrapAuthResponse, getAuthUiError, blockNativeFormSubmit } from '../../utils/authApiSafe.js';
+import { safeUnwrapAuthResponse, blockNativeFormSubmit } from '../../utils/authApiSafe.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { notifyAuthError } from '../../utils/notifySystem.js';
 import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
 import { FaEnvelope } from 'react-icons/fa';
 
@@ -47,7 +48,7 @@ const ForgotPassword = () => {
         }
       });
     } catch (err) {
-      notifyError(getAuthUiError(err, t));
+      notifyAuthError(err, t, 'otp');
     } finally {
       setLoading(false);
     }

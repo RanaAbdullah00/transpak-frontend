@@ -7,10 +7,10 @@ import AuthHeaderActions from '../../components/auth/AuthHeaderActions.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useAuthViewportLock } from '../../hooks/useAuthViewportLock.js';
-import { verifyRegisterOtpApi, resendRegisterOtpApi } from '../../services/authService.js';
-import { safeUnwrapAuthResponse, getAuthUiError, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
-import { getOtpFlowErrorToast } from '../../utils/authApiErrors.js';
+import { verifyRegisterOtpApi, resendRegisterOtpApi, fetchProfileApi } from '../../services/authService.js';
+import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { notifyAuthError } from '../../utils/notifySystem.js';
 import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
 
 const VerifyEmail = () => {
@@ -66,12 +66,20 @@ const VerifyEmail = () => {
       const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
       if (token) localStorage.setItem('transpak_token', token);
-      if (user) login(payload);
+      let session = payload;
+      try {
+        const profRes = await fetchProfileApi();
+        const prof = safeUnwrapAuthResponse(profRes);
+        if (prof?.user) session = prof;
+      } catch {
+        /* use verify payload */
+      }
+      if (session?.user) login(session);
       notifySuccess(t('auth.verifyEmailTitle'));
-      const role = currentRole || user?.activeRole || user?.roles?.[0];
+      const role = session?.user?.activeRole ?? currentRole ?? user?.activeRole ?? user?.roles?.[0];
       navigate(safeDashboardPath(role), { replace: true });
     } catch (err) {
-      notifyError(getOtpFlowErrorToast(err, t) || getAuthUiError(err, t));
+      notifyAuthError(err, t, 'otp');
     } finally {
       setLoading(false);
     }
@@ -107,14 +115,13 @@ const VerifyEmail = () => {
         else setCooldown(45);
       }
     } catch (err) {
-      const raw = getOtpFlowErrorToast(err, t) || getAuthUiError(err, t);
+      notifyAuthError(err, t, 'otp');
       const retryRaw =
         err?.response?.data?.data?.retryAfterSeconds ??
         err?.response?.data?.retryAfterSeconds ??
         err?.response?.data?.data?.retry_after_seconds;
       const retry = Number(retryRaw);
       if (Number.isFinite(retry) && retry > 0) setCooldown(retry);
-      notifyError(raw);
     } finally {
       setResendLoading(false);
     }

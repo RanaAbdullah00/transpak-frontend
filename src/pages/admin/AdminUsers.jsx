@@ -5,8 +5,7 @@ import ConfirmActionModal from '../../components/ui/ConfirmActionModal.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { formatUserError } from '../../utils/userErrors.js';
+import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const AdminUsers = () => {
   const { request } = useApi();
@@ -21,7 +20,6 @@ const AdminUsers = () => {
       const data = await request({ url: '/admin/users' });
       setUsers(Array.isArray(data) ? data : []);
     } catch (e) {
-      notifyError(formatUserError(e, t, { fallback: t('pages.admin.statsError') }));
       setUsers([]);
     } finally {
       setLoading(false);
@@ -38,8 +36,8 @@ const AdminUsers = () => {
       const u = res?.user;
       setUsers((prev) => prev.map((x) => (x.id === id ? { ...x, blocked: u?.blocked ?? blocked } : x)));
       notifySuccess(blocked ? t('pages.admin.userBlocked') : t('pages.admin.userUnblocked'));
-    } catch (e) {
-      notifyError(formatUserError(e, t, { fallback: t('pages.admin.updateFailed') }));
+    } catch {
+      /* useApi → notifyApiError */
     }
   };
 
@@ -49,8 +47,8 @@ const AdminUsers = () => {
       await request({ method: 'DELETE', url: `/admin/user/${userPendingDelete.id}` });
       setUsers((prev) => prev.filter((x) => x.id !== userPendingDelete.id));
       notifySuccess(t('pages.admin.userDeleted'));
-    } catch (e) {
-      notifyError(formatUserError(e, t, { fallback: t('pages.admin.deleteUserFailed') }));
+    } catch {
+      /* useApi → notifyApiError */
     }
   };
 

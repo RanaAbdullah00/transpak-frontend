@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import { createSocketClient } from '../services/socket.js';
 import { normalizeNotification } from '../adapters/normalize.js';
 import { isRenderableClientNotification, sanitizeNotificationRoleType } from '../utils/notificationsFilter.js';
-import { notifyInfo } from '../components/ui/ToastProvider.jsx';
+import { routeRealtimeNotification } from '../utils/notifySystem.js';
 import api from '../services/api.js';
 import { useAuth } from '../hooks/useAuth.js';
 
@@ -73,9 +73,7 @@ export const AppProvider = ({ children }) => {
       if (dup) return prev;
       return [{ id: nid ?? `local-${Date.now()}`, read: Boolean(normalized.read), ...normalized }, ...prev];
     });
-    if (showToast && normalized.message) {
-      notifyInfo(normalized.message);
-    }
+    if (showToast) routeRealtimeNotification(normalized);
   }, []);
 
   addNotificationRef.current = (n) => addNotification(n, { showToast: true });
@@ -206,6 +204,7 @@ export const AppProvider = ({ children }) => {
       registerChatMessageHandler,
       registerChatSeenHandler,
       registerTrackingHandler,
+      refetchNotifications,
       getSocket
     }),
     [
@@ -215,6 +214,7 @@ export const AppProvider = ({ children }) => {
       registerChatMessageHandler,
       registerChatSeenHandler,
       registerTrackingHandler,
+      refetchNotifications,
       getSocket
     ]
   );

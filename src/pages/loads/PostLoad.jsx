@@ -5,7 +5,8 @@ import Loader from '../../components/ui/Loader.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { AppContext } from '../../context/AppContext.jsx';
-import { notifySuccess, notifyError, notifyInfo } from '../../components/ui/ToastProvider.jsx';
+import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { notifyProfileIncomplete } from '../../utils/notifySystem.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
 // Screen for shippers to post new loads.
@@ -19,7 +20,7 @@ const PostLoad = () => {
 
   useEffect(() => {
     if (user && user.profileComplete === false) {
-      notifyInfo('Please complete your profile first to post loads.');
+      notifyProfileIncomplete(t);
       navigate('/profile', { replace: true });
     }
   }, [user, navigate]);
@@ -37,6 +38,7 @@ const PostLoad = () => {
           vehicleType: payload.vehicleType,
           expectedPrice: Number(payload.expectedPrice),
           pickupDate: payload.pickupDate,
+          deadlineMinutes: Number(payload.deadlineMinutes || (Number(payload.deadlineHours || 6) * 60)),
           deadlineHours: Number(payload.deadlineHours || 6),
           distanceKm: payload.distanceKm
         }
@@ -48,7 +50,7 @@ const PostLoad = () => {
       });
       navigate('/loads/manage');
     } catch (error) {
-      notifyError('Failed to post load. Please try again.');
+      /* useApi → notifyApiError */
     }
   };
 

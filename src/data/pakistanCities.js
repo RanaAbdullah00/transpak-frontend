@@ -1,4 +1,4 @@
-/** Major Pakistan cities for route + fare estimation (sync with backend data). */
+/** Pakistan cities — keep in sync with transpak-backend/data/pakistanCities.json */
 export const PAKISTAN_CITIES = [
   { name: 'Karachi', lat: 24.8607, lng: 67.0011 },
   { name: 'Lahore', lat: 31.5204, lng: 74.3587 },
@@ -24,12 +24,17 @@ export const PAKISTAN_CITIES = [
   { name: 'Nawabshah', lat: 26.2442, lng: 68.41 },
   { name: 'Chiniot', lat: 31.72, lng: 72.978 },
   { name: 'Kotri', lat: 25.365, lng: 68.308 },
+  { name: 'Kamoke', lat: 31.975, lng: 74.223 },
   { name: 'Hafizabad', lat: 32.0709, lng: 73.688 },
   { name: 'Kohat', lat: 33.5869, lng: 71.4425 },
   { name: 'Jacobabad', lat: 28.2819, lng: 68.4386 },
   { name: 'Shikarpur', lat: 27.9556, lng: 68.6382 },
   { name: 'Muzaffargarh', lat: 30.1575, lng: 71.1989 },
+  { name: 'Khanpur', lat: 28.6474, lng: 70.6569 },
+  { name: 'Gojra', lat: 31.1498, lng: 72.6832 },
+  { name: 'Mandi Bahauddin', lat: 32.587, lng: 73.4912 },
   { name: 'Abbottabad', lat: 34.1688, lng: 73.2215 },
+  { name: 'Turbat', lat: 26.0031, lng: 63.05 },
   { name: 'Dera Ghazi Khan', lat: 30.0458, lng: 70.64 },
   { name: 'Okara', lat: 30.8081, lng: 73.4458 },
   { name: 'Sahiwal', lat: 30.6667, lng: 73.1 },
@@ -39,21 +44,55 @@ export const PAKISTAN_CITIES = [
   { name: 'Skardu', lat: 35.2971, lng: 75.6333 },
   { name: 'Muzaffarabad', lat: 34.37, lng: 73.47 },
   { name: 'Gwadar', lat: 25.1264, lng: 62.3225 },
+  { name: 'Zhob', lat: 31.3417, lng: 69.4486 },
+  { name: 'Chaman', lat: 30.9177, lng: 66.4526 },
   { name: 'Attock', lat: 33.7667, lng: 72.3598 },
   { name: 'Vehari', lat: 30.0445, lng: 72.3556 },
+  { name: 'Kot Addu', lat: 30.4667, lng: 70.9667 },
+  { name: 'Wah Cantonment', lat: 33.7733, lng: 72.7458 },
+  { name: 'Taxila', lat: 33.746, lng: 72.8361 },
   { name: 'Rahim Yar Khan', lat: 28.42, lng: 70.3 },
   { name: 'Chakwal', lat: 32.9333, lng: 72.85 },
   { name: 'Khuzdar', lat: 27.8, lng: 66.6167 },
   { name: 'Pakpattan', lat: 30.35, lng: 73.4 },
+  { name: 'Tando Allahyar', lat: 25.4625, lng: 68.7194 },
+  { name: 'Ahmadpur East', lat: 29.1427, lng: 71.2577 },
   { name: 'Jhelum', lat: 32.9333, lng: 73.7333 },
+  { name: 'Kamalia', lat: 30.7333, lng: 72.65 },
+  { name: 'Umerkot', lat: 25.3616, lng: 69.7362 },
   { name: 'Badin', lat: 24.655, lng: 68.838 },
   { name: 'Thatta', lat: 24.747, lng: 67.9235 }
 ];
 
 export const CITY_NAMES = PAKISTAN_CITIES.map((c) => c.name);
 
-export function filterCities(query, limit = 12) {
-  const q = String(query || '').trim().toLowerCase();
+const CITY_NAME_SET = new Set(CITY_NAMES);
+
+function normCity(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+}
+
+export function isKnownCity(name) {
+  const raw = String(name || '').trim();
+  if (CITY_NAME_SET.has(raw)) return true;
+  const n = normCity(raw);
+  return PAKISTAN_CITIES.some((c) => normCity(c.name) === n);
+}
+
+export function resolveCityName(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return '';
+  if (CITY_NAME_SET.has(raw)) return raw;
+  const n = normCity(raw);
+  const hit = PAKISTAN_CITIES.find((c) => normCity(c.name) === n);
+  return hit?.name || raw;
+}
+
+export function filterCities(query, limit = 14) {
+  const q = normCity(query);
   if (!q) return CITY_NAMES.slice(0, limit);
-  return CITY_NAMES.filter((n) => n.toLowerCase().includes(q)).slice(0, limit);
+  return CITY_NAMES.filter((n) => normCity(n).includes(q)).slice(0, limit);
 }

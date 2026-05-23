@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
+import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const ShipmentControl = () => {
   const { request, loading } = useApi();
+  const { t } = useLanguage();
   const [shipments, setShipments] = useState([]);
 
   useEffect(() => {
@@ -15,69 +18,76 @@ const ShipmentControl = () => {
         const data = await request({ url: '/admin/shipments' });
         setShipments(Array.isArray(data) ? data : []);
       } catch (e) {
-        notifyError(e?.response?.data?.message || 'Failed to load shipments');
         setShipments([]);
       }
     })();
-  }, [request]);
+  }, [request, t]);
 
-  const mapLoadStatusToRow = (loadStatus) => {
-    if (loadStatus === 'assigned') return 'pending';
-    return loadStatus;
-  };
-
-  const updateStatus = async (id, status) => {
+  const updateStatus = async (id, status, force = false) => {
     try {
-      const data = await request({ method: 'PATCH', url: `/admin/shipments/${id}/status`, data: { status } });
-      const nextRow = data?.loadStatus != null ? mapLoadStatusToRow(data.loadStatus) : mapLoadStatusToRow(status);
-      setShipments((prev) => prev.map((s) => (s.id === id ? { ...s, status: nextRow } : s)));
-      notifySuccess('Shipment status updated');
+      const data = await request({
+        method: 'PATCH',
+        url: `/admin/shipments/${id}/status`,
+        data: { status, force }
+      });
+      const nextStatus = data?.status || status;
+      setShipments((prev) => prev.map((s) => (s.id === id ? { ...s, status: nextStatus } : s)));
+      notifySuccess(t('pages.admin.shipmentUpdated'));
     } catch {
-      notifyError('Failed to update shipment status');
+      /* useApi already surfaced the error */
     }
   };
 
   return (
-    <div className="container py-3">
-      <h5 className="mb-3">Shipment control</h5>
+    <section className="container py-3">
+      <h5 className="mb-3">{t('nav.shipments')}</h5>
       {loading ? (
-        <div className="d-flex justify-content-center py-5">
+        <p className="d-flex justify-content-center py-5">
           <Loader />
-        </div>
+        </p>
       ) : (
         shipments.map((s) => (
-          <Card key={s.id}>
-            <div className="d-flex justify-content-between align-items-start">
+          <Card key={s.id} className="mb-2">
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
               <div>
-                <div className="fw-semibold">{s.code}</div>
-                <div className="small text-muted">
+                <p className="fw-semibold mb-1">{s.code}</p>
+                <p className="small text-muted mb-1">
                   {s.origin} → {s.destination}
-                </div>
-                <div className="small mt-1">
-                  Status: <span className="fw-semibold">{s.status}</span>
-                </div>
+                </p>
+                <p className="small mb-1">
+                  {t('pages.admin.tableStatus')}: <span className="fw-semibold">{s.status}</span>
+                </p>
+                {s.code || s.loadId ? (
+                  <Link to={`/shipments/tracking/${encodeURIComponent(s.code || s.loadId)}`} className="small">
+                    {t('pages.admin.trackShipment')}
+                  </Link>
+                ) : null}
               </div>
               <div className="d-flex gap-2 flex-wrap justify-content-end">
-                <Button variant="outline-primary" className="btn-sm rounded-lg" onClick={() => updateStatus(s.id, 'booked')}>
-                  Booked
-                </Button>
-                <Button variant="outline-secondary" className="btn-sm rounded-lg" onClick={() => updateStatus(s.id, 'pickedup')}>
-                  Picked up
-                </Button>
-                <Button variant="primary" className="btn-sm rounded-lg" onClick={() => updateStatus(s.id, 'intransit')}>
-                  In transit
-                </Button>
-                <Button variant="success" className="btn-sm rounded-lg" onClick={() => updateStatus(s.id, 'delivered')}>
-                  Delivered
+                {['booked', 'pickedup', 'intransit', 'delivered'].map((st) => (
+                  <Button
+                    key={st}
+                    variant="outline-primary"
+                    className="btn-sm rounded-lg"
+                    onClick={() => updateStatus(s.id, st, false)}
+                  >
+                    {st}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline-danger"
+                  className="btn-sm rounded-lg"
+                  onClick={() => updateStatus(s.id, 'delivered', true)}
+                >
+                  {t('pages.admin.forceDelivered')}
                 </Button>
               </div>
             </div>
           </Card>
         ))
       )}
-    </div>
+    </section>
   );
 };
 
 export default ShipmentControl;
-

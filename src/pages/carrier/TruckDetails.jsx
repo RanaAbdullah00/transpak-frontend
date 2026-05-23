@@ -170,7 +170,7 @@ const TruckDetails = () => {
     <div className={`container py-3 tp-truck-page ${isUrdu ? 'tp-rtl' : ''}`}>
       <h5 className="mb-3">{t('pages.truckDetailsPage.title')}</h5>
 
-      {!profileComplete ? (
+      {!profileReady ? (
         <div className="alert alert-warning small mb-3 d-flex flex-wrap align-items-center gap-2 justify-content-between">
           <span>{t('pages.truckDetailsPage.profileRequired')}</span>
           <Link to="/profile" className="btn btn-warning btn-sm tp-touch-target">
@@ -178,7 +178,7 @@ const TruckDetails = () => {
           </Link>
         </div>
       ) : null}
-      {profileComplete && !isCarrier ? (
+      {profileReady && !isCarrier ? (
         <div className="alert alert-info small mb-3">{t('pages.truckDetailsPage.carrierRoleRequired')}</div>
       ) : null}
 

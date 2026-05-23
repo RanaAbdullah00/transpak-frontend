@@ -4,8 +4,7 @@ import Button from '../../components/ui/Button.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { formatUserError } from '../../utils/userErrors.js';
+import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { translateShipmentOrLoadStatus } from '../../utils/i18nLabels.js';
 
 const AdminLoads = () => {
@@ -19,8 +18,7 @@ const AdminLoads = () => {
       setLoading(true);
       const data = await request({ url: '/admin/loads' });
       setLoads(Array.isArray(data) ? data : []);
-    } catch (e) {
-      notifyError(formatUserError(e, t, { fallback: t('pages.admin.statsError') }));
+    } catch {
       setLoads([]);
     } finally {
       setLoading(false);
@@ -36,8 +34,8 @@ const AdminLoads = () => {
       await request({ method: 'DELETE', url: `/admin/loads/${id}` });
       setLoads((prev) => prev.filter((l) => l.id !== id));
       notifySuccess(t('pages.admin.loadDeleted'));
-    } catch (e) {
-      notifyError(formatUserError(e, t, { fallback: t('pages.admin.deleteLoadFailed') }));
+    } catch {
+      /* useApi → notifyApiError */
     }
   };
 

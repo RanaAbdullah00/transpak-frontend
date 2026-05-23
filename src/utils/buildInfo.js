@@ -12,8 +12,10 @@ export function initTranspakBuildInfo() {
     window.__TRANSPAK_BUILD__ = payload;
   }
 
-  // eslint-disable-next-line no-console
-  console.log('TRANSPAK ACTIVE BUILD LOADED', buildId);
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.info('[transpak] build', buildId);
+  }
 
   return buildId;
 }

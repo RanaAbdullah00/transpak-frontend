@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../../components/layout/BrandLogo.jsx';
 import LanguageToggle from '../../components/ui/LanguageToggle.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { resolveViteApiOrigin } from '../../config/apiConfig.js';
 
 const Section = ({ id, className = '', children }) => (
   <section id={id} className={`tp-landing-section ${className}`.trim()}>
@@ -12,6 +13,43 @@ const Section = ({ id, className = '', children }) => (
 
 const Landing = () => {
   const { t, isUrdu } = useLanguage();
+  const [freightStats, setFreightStats] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const origin = resolveViteApiOrigin();
+    if (!origin) return undefined;
+    (async () => {
+      try {
+        const res = await fetch(`${origin}/api/public/stats`, { credentials: 'omit' });
+        const json = await res.json();
+        const data = json?.data ?? json;
+        if (!cancelled && data && typeof data === 'object') setFreightStats(data);
+      } catch {
+        /* keep i18n fallbacks */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const kpiValues = [
+    freightStats?.openLoads ?? t('pages.landing.previewKpi1Val'),
+    freightStats?.activeShipments ?? t('pages.landing.previewKpi2Val'),
+    freightStats?.bidsToday ?? t('pages.landing.previewKpi3Val')
+  ];
+  const liveMetrics = [
+    { label: t('pages.landing.previewKpi1Label'), value: freightStats?.openLoads ?? '—' },
+    { label: t('pages.landing.previewKpi2Label'), value: freightStats?.activeShipments ?? '—' },
+    { label: t('pages.landing.previewKpi3Label'), value: freightStats?.bidsToday ?? '—' },
+    { label: t('pages.landing.platformMetricCarriers'), value: freightStats?.carriersActive ?? '—' }
+  ];
+  const trustItems = [
+    t('pages.landing.trustStrip1'),
+    t('pages.landing.trustStrip2'),
+    t('pages.landing.trustStrip3')
+  ];
 
   return (
     <div className={`tp-landing min-vh-100 d-flex flex-column ${isUrdu ? 'tp-rtl' : ''}`}>
@@ -79,7 +117,7 @@ const Landing = () => {
                       {[1, 2, 3].map((n) => (
                         <div key={n} className="col">
                           <div className="tp-landing-dash__kpi tp-landing-surface-inset rounded-3 text-center px-1 py-2 h-100">
-                            <div className="tp-landing-dash__kpi-val fw-bold text-body lh-1">{t(`pages.landing.previewKpi${n}Val`)}</div>
+                            <div className="tp-landing-dash__kpi-val fw-bold text-body lh-1">{kpiValues[n - 1]}</div>
                             <div className="tp-landing-dash__kpi-label small text-muted text-truncate mt-1">{t(`pages.landing.previewKpi${n}Label`)}</div>
                           </div>
                         </div>
@@ -135,6 +173,36 @@ const Landing = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section className="tp-landing-trust border-top border-bottom bg-body-secondary">
+          <div className="container py-3">
+            <ul className="tp-landing-trust__list list-unstyled mb-0 d-flex flex-column flex-md-row flex-wrap gap-2 gap-md-4 justify-content-center small">
+              {trustItems.map((item) => (
+                <li key={item} className="tp-landing-trust__item d-flex align-items-center gap-2">
+                  <span className="tp-landing-trust__dot" aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Section>
+
+        <Section className="tp-landing-section--rhythm">
+          <div className="container tp-landing-section__inner">
+            <h2 className="h4 fw-bold text-body mb-1">{t('pages.landing.platformLiveTitle')}</h2>
+            <p className="text-muted small mb-3">{t('pages.landing.platformLiveSub')}</p>
+            <div className="row g-2 g-md-3">
+              {liveMetrics.map((m) => (
+                <div key={m.label} className="col-6 col-lg-3">
+                  <div className="tp-landing-live-metric rounded-3 border bg-body p-3 h-100 text-center">
+                    <div className="h4 fw-bold text-primary mb-0">{m.value}</div>
+                    <div className="small text-muted mt-1">{m.label}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </Section>
@@ -247,6 +315,27 @@ const Landing = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </Section>
+
+        <Section className="tp-landing-cta-band tp-landing-section--rhythm">
+          <div className="container">
+            <div className="tp-landing-cta-band__inner rounded-4 p-4 p-md-5 text-center text-md-start">
+              <div className="row align-items-center g-3">
+                <div className="col-md-8">
+                  <h2 className="h5 fw-bold text-white mb-2">{t('pages.landing.ctaBandTitle')}</h2>
+                  <p className="small text-white text-opacity-90 mb-0">{t('pages.landing.ctaBandBody')}</p>
+                </div>
+                <div className="col-md-4 d-flex flex-wrap gap-2 justify-content-center justify-content-md-end">
+                  <Link to="/signup" className="btn btn-light btn-sm rounded-pill px-4 fw-semibold">
+                    {t('pages.landing.ctaBandPrimary')}
+                  </Link>
+                  <Link to="/login" className="btn btn-outline-light btn-sm rounded-pill px-4">
+                    {t('pages.landing.ctaBandSecondary')}
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </Section>

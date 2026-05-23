@@ -68,7 +68,10 @@ export const AuthProvider = ({ children }) => {
               : [rest.activeRole].filter(Boolean);
           const activeRole = rest.activeRole || roles?.[0] || null;
           const id = rest.id || (rest._id != null ? String(rest._id) : null);
-          if (!cancelled) setUser({ ...rest, id, roles, activeRole });
+          if (!cancelled) {
+            const merged = mergeSession({ user: parsed, currentRole: activeRole });
+            setUser(merged || { ...rest, id, roles, activeRole, profileComplete: Boolean(rest.profileComplete ?? rest.is_profile_complete) });
+          }
         } catch {
           localStorage.removeItem('transpak_user');
         }
@@ -107,7 +110,15 @@ export const AuthProvider = ({ children }) => {
       const res = await patchActiveRoleApi(nextRole);
       const data = safeUnwrapAuthResponse(res);
       if (data?.token) localStorage.setItem('transpak_token', data.token);
-      login(data);
+      let session = data;
+      try {
+        const profRes = await fetchProfileApi();
+        const prof = safeUnwrapAuthResponse(profRes);
+        if (prof?.user) session = prof;
+      } catch {
+        /* use role-patch payload */
+      }
+      login(session);
     } catch (err) {
       setUser(prev);
       localStorage.setItem('transpak_user', JSON.stringify(prev));
@@ -119,6 +130,10 @@ export const AuthProvider = ({ children }) => {
     const role = user?.activeRole || '';
     if (role) document.body.dataset.role = role;
     else delete document.body.dataset.role;
+    document.body.classList.remove('tp-role-shipper', 'tp-role-carrier', 'tp-role-admin');
+    if (role === 'shipper') document.body.classList.add('tp-role-shipper');
+    else if (role === 'carrier') document.body.classList.add('tp-role-carrier');
+    else if (role === 'admin') document.body.classList.add('tp-role-admin');
   }, [user?.activeRole]);
 
   const value = {

@@ -117,4 +117,3 @@ const Map = ({
 };
 
 export default Map;
-export { SAMPLE_ROUTE, SAMPLE_LAHORE, SAMPLE_KARACHI } from '../utils/mapCoords.js';

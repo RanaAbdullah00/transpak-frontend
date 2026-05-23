@@ -4418,6 +4418,23 @@ body.dark-theme .tp-landing-details.tp-landing-details--elevated[open] {
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
 }
 
+.tp-landing-trust__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pak-primary);
+  flex-shrink: 0;
+}
+
+.tp-landing-live-metric {
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+
+.tp-landing-cta-band__inner {
+  background: linear-gradient(135deg, #1d4ed8 0%, #059669 55%, #0f172a 100%);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+}
+
 .tp-landing-footer {
   background: color-mix(in srgb, var(--pak-card-bg) 94%, var(--pak-border) 6%);
 }

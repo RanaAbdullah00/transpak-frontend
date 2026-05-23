@@ -2,10 +2,12 @@ import { lazy } from 'react';
 
 export const ShipperDashboard = lazy(() => import('../pages/dashboard/ShipperDashboard.jsx'));
 export const CarrierDashboard = lazy(() => import('../pages/dashboard/CarrierDashboard.jsx'));
-export const AdminDashboard = lazy(() => import('../pages/dashboard/AdminDashboard.jsx'));
 export const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage.jsx'));
 export const AdminUsers = lazy(() => import('../pages/admin/AdminUsers.jsx'));
 export const AdminLoads = lazy(() => import('../pages/admin/AdminLoads.jsx'));
+export const AdminBids = lazy(() => import('../pages/admin/AdminBids.jsx'));
+export const AdminNotifications = lazy(() => import('../pages/admin/AdminNotifications.jsx'));
+export const AdminOtpLogs = lazy(() => import('../pages/admin/AdminOtpLogs.jsx'));
 export const AdminRoleManagement = lazy(() => import('../pages/admin/AdminRoleManagement.jsx'));
 export const VerificationQueue = lazy(() => import('../pages/admin/VerificationQueue.jsx'));
 export const Disputes = lazy(() => import('../pages/admin/Disputes.jsx'));

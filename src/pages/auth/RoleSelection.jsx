@@ -7,7 +7,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { notifyError } from '../../components/ui/ToastProvider.jsx';
-import { getAuthUiError } from '../../utils/authApiSafe.js';
+import { notifyAuthError } from '../../utils/notifySystem.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
 import { lockOverlayScroll } from '../../utils/overlayScrollLock.js';
 
@@ -122,7 +122,7 @@ const RoleSelection = () => {
         });
       }
     } catch (err) {
-      notifyError(getAuthUiError(err, t));
+      notifyAuthError(err, t, 'login');
     } finally {
       setSwitching(false);
     }
