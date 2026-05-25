@@ -1,6 +1,12 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import { execSync } from 'node:child_process';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const reactRoot = path.resolve(__dirname, 'node_modules/react');
+const reactDomRoot = path.resolve(__dirname, 'node_modules/react-dom');
 
 function resolveBuildId() {
   const fromCi =
@@ -33,6 +39,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+      alias: {
+        react: reactRoot,
+        'react-dom': reactDomRoot,
+        'react/jsx-runtime': path.join(reactRoot, 'jsx-runtime.js'),
+        'react/jsx-dev-runtime': path.join(reactRoot, 'jsx-dev-runtime.js')
+      }
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-router-dom', 'react/jsx-runtime']
+    },
     define: {
       'import.meta.env.VITE_APP_BUILD_ID': JSON.stringify(appBuildId)
     },
@@ -42,8 +60,17 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
             if (id.includes('socket.io') || id.includes('engine.io')) return 'vendor-socket';
-            if (id.includes('react-router')) return 'vendor-router';
-            if (id.includes('react-dom') || id.includes('/react/')) return 'vendor-react';
+            if (
+              /node_modules[\\/]react(-dom)?[\\/]/.test(id) ||
+              id.includes('react-router') ||
+              id.includes('react-leaflet') ||
+              id.includes('@react-leaflet') ||
+              id.includes('react-toastify') ||
+              id.includes('react-icons') ||
+              id.includes('react-phone-input')
+            ) {
+              return 'vendor-react';
+            }
             return 'vendor';
           }
         }

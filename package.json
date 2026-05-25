@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "check:react": "node scripts/verify-single-react.mjs",
+    "prebuild": "node scripts/verify-single-react.mjs",
     "build": "vite build",
     "deploy:check": "node ../scripts/check-production-sync.mjs",
     "deploy:qa": "node ../scripts/final-production-qa.mjs",
@@ -14,8 +16,8 @@
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
     "leaflet": "^1.9.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-icons": "^5.3.0",
     "react-leaflet": "^4.2.1",
     "react-phone-input-2": "^2.15.1",
@@ -35,5 +37,35 @@
     "globals": "^17.4.0",
     "msw": "^2.12.11",
     "vite": "^6.0.1"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@react-leaflet/core": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    },
+    "react-leaflet": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    },
+    "react-router": {
+      "react": "18.3.1"
+    },
+    "react-router-dom": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    },
+    "react-toastify": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    },
+    "react-phone-input-2": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    },
+    "react-icons": {
+      "react": "18.3.1"
+    }
   }
 }
