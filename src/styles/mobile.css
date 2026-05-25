@@ -55,9 +55,12 @@
 
 @media (max-width: 767.98px) {
   .tp-load-card,
-  .tp-truck-form-card,
-  .tp-filter-card {
+  .tp-truck-form-card {
     overflow: hidden;
+  }
+
+  .tp-filter-card {
+    overflow: visible;
   }
 
   .tp-carrier-load-actions .row {

@@ -1,8 +1,63 @@
 .tp-map-root {
+  position: relative;
   width: 100%;
   border-radius: 0.75rem;
   overflow: hidden;
   border: 1px solid rgba(22, 163, 74, 0.15);
+}
+
+.tp-map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
+.tp-map-overlay--loading {
+  background: rgba(248, 250, 252, 0.75);
+  color: var(--tp-muted, #64748b);
+}
+
+.tp-map-overlay--warn {
+  top: auto;
+  bottom: 0;
+  height: auto;
+  min-height: 2.5rem;
+  background: rgba(254, 243, 199, 0.95);
+  color: #92400e;
+  border-top: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+body.dark-theme .tp-map-overlay--loading {
+  background: rgba(15, 23, 42, 0.72);
+  color: #94a3b8;
+}
+
+body.dark-theme .tp-map-overlay--warn {
+  background: rgba(69, 26, 3, 0.92);
+  color: #fcd34d;
+  border-top-color: rgba(251, 191, 36, 0.35);
+}
+
+.tp-map-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--tp-muted, #64748b);
+  background: rgba(248, 250, 252, 0.92);
+  pointer-events: none;
 }
 
 .tp-map-root .leaflet-container {

@@ -1,6 +1,16 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaListUl, FaTruck, FaTools, FaShippingFast } from 'react-icons/fa';
+import {
+  FaHome,
+  FaListUl,
+  FaTruck,
+  FaTools,
+  FaUserShield,
+  FaClipboardCheck,
+  FaExclamationTriangle,
+  FaBell,
+  FaShippingFast
+} from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
@@ -12,22 +22,53 @@ const MobileNav = () => {
   const { t, isUrdu } = useLanguage();
 
   const activeRole = user?.activeRole ?? user?.roles?.[0];
+
+  if (activeRole === 'admin') {
+    return (
+      <nav className={`mobile-bottom-nav d-md-none tp-admin-mobile-nav ${isUrdu ? 'tp-rtl' : ''}`}>
+        <div className="nav nav-pills border-top mobile-nav-inner tp-admin-mobile-nav__scroll">
+          <NavLink to="/admin/dashboard" className={mobileNavClass} end>
+            <FaHome />
+            <span>{t('nav.adminDashboard')}</span>
+          </NavLink>
+          <NavLink to="/admin/users" className={mobileNavClass}>
+            <FaUserShield />
+            <span>{t('nav.adminUsers')}</span>
+          </NavLink>
+          <NavLink to="/admin/verification" className={mobileNavClass}>
+            <FaClipboardCheck />
+            <span>{t('nav.verification')}</span>
+          </NavLink>
+          <NavLink to="/admin/loads" className={mobileNavClass}>
+            <FaListUl />
+            <span>{t('nav.adminModeration')}</span>
+          </NavLink>
+          <NavLink to="/admin/shipments" className={mobileNavClass}>
+            <FaShippingFast />
+            <span>{t('nav.shipments')}</span>
+          </NavLink>
+          <NavLink to="/admin/disputes" className={mobileNavClass}>
+            <FaExclamationTriangle />
+            <span>{t('nav.disputes')}</span>
+          </NavLink>
+          <NavLink to="/admin/notifications" className={mobileNavClass}>
+            <FaBell />
+            <span>{t('nav.notifications')}</span>
+          </NavLink>
+        </div>
+      </nav>
+    );
+  }
+
   const dashboardPath =
-    activeRole === 'carrier' ? '/dashboard/carrier' : activeRole === 'admin' ? '/admin/dashboard' : '/dashboard/shipper';
+    activeRole === 'carrier' ? '/dashboard/carrier' : '/dashboard/shipper';
 
   const roleSlot =
     activeRole === 'carrier'
       ? { to: '/fleet', icon: <FaTools />, label: t('common.fleet') }
-      : activeRole === 'shipper'
-      ? { to: '/loads/manage', icon: <FaTools />, label: t('common.manage') }
-      : { to: '/admin/dashboard', icon: <FaTools />, label: t('common.admin') };
+      : { to: '/loads/manage', icon: <FaTools />, label: t('common.manage') };
 
-  const loadsPath =
-    activeRole === 'admin' ? '/admin/loads' : activeRole === 'carrier' ? '/loads' : '/loads/manage';
-  const trackSlot =
-    activeRole === 'admin'
-      ? { to: '/admin/shipments', icon: <FaShippingFast />, label: t('nav.shipments') }
-      : { to: '/shipments/tracking', icon: <FaTruck />, label: t('common.track') };
+  const loadsPath = activeRole === 'carrier' ? '/loads' : '/loads/manage';
 
   return (
     <nav className={`mobile-bottom-nav d-md-none ${isUrdu ? 'tp-rtl' : ''}`}>
@@ -40,9 +81,9 @@ const MobileNav = () => {
           <FaListUl />
           <span>{t('common.loads')}</span>
         </NavLink>
-        <NavLink to={trackSlot.to} className={mobileNavClass} end>
-          {trackSlot.icon}
-          <span>{trackSlot.label}</span>
+        <NavLink to="/shipments/tracking" className={mobileNavClass} end>
+          <FaTruck />
+          <span>{t('common.track')}</span>
         </NavLink>
         <NavLink to={roleSlot.to} className={mobileNavClass}>
           {roleSlot.icon}
@@ -54,4 +95,3 @@ const MobileNav = () => {
 };
 
 export default MobileNav;
-

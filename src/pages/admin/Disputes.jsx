@@ -3,10 +3,12 @@ import Card from '../../components/ui/Card.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
-import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { useLanguage } from '../../hooks/useLanguage.js';
+import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const Disputes = () => {
   const { request, loading } = useApi();
+  const { t } = useLanguage();
   const [disputes, setDisputes] = useState([]);
 
   useEffect(() => {
@@ -14,8 +16,7 @@ const Disputes = () => {
       try {
         const data = await request({ url: '/admin/disputes' });
         setDisputes(Array.isArray(data) ? data : []);
-      } catch (e) {
-        notifyError(e?.response?.data?.message || 'Failed to load disputes');
+      } catch {
         setDisputes([]);
       }
     })();
@@ -25,28 +26,32 @@ const Disputes = () => {
     try {
       await request({ method: 'PATCH', url: `/admin/disputes/${id}/resolve` });
       setDisputes((prev) => prev.map((d) => (d.id === id ? { ...d, status: 'resolved' } : d)));
-      notifySuccess('Dispute resolved');
+      notifySuccess(t('pages.admin.disputeResolved'));
     } catch {
-      notifyError('Failed to resolve dispute');
+      /* useApi → notifyApiError */
     }
   };
 
   return (
     <div className="container py-3">
-      <h5 className="mb-3">Disputes</h5>
+      <h5 className="mb-3">{t('pages.admin.disputesTitle')}</h5>
       {loading ? (
         <div className="d-flex justify-content-center py-5">
           <Loader />
         </div>
+      ) : disputes.length === 0 ? (
+        <div className="text-muted text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed">
+          {t('pages.admin.emptyDisputes')}
+        </div>
       ) : (
         disputes.map((d) => (
           <Card key={d.id}>
-            <div className="d-flex justify-content-between align-items-start">
+            <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
               <div>
                 <div className="fw-semibold">{d.loadCode}</div>
                 <div className="small text-muted">{d.reason}</div>
                 <div className="small mt-1">
-                  Status: <span className="fw-semibold">{d.status}</span>
+                  {t('pages.admin.disputeStatus')}: <span className="fw-semibold">{d.status}</span>
                 </div>
               </div>
               <Button
@@ -55,7 +60,7 @@ const Disputes = () => {
                 disabled={d.status !== 'open'}
                 onClick={() => resolve(d.id)}
               >
-                Resolve
+                {t('pages.admin.disputeResolve')}
               </Button>
             </div>
           </Card>
@@ -66,4 +71,3 @@ const Disputes = () => {
 };
 
 export default Disputes;
-

@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card.jsx';
 import Button from '../../components/ui/Button.jsx';
-import CitySelect from '../../components/ui/CitySelect.jsx';
+import CitySelect from '../../components/ui/CitySearchSelect.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 
 const PostCarrierSpace = () => {
@@ -105,12 +106,7 @@ const PostCarrierSpace = () => {
           <div className="row g-2 mt-1">
             <div className="col-6">
               <label className="form-label small">{t('pages.postLoadForm.vehicleType')}</label>
-              <select name="vehicleType" className="form-select form-select-sm rounded-3" value={form.vehicleType} onChange={onChange}>
-                <option value="Truck">Truck</option>
-                <option value="Trailer">Trailer</option>
-                <option value="Container">Container</option>
-                <option value="Flatbed">Flatbed</option>
-              </select>
+              <VehicleTypeDropdown name="vehicleType" value={form.vehicleType} onChange={onChange} />
             </div>
             <div className="col-6">
               <label className="form-label small">{t('loadsHub.ratePerKgLabel')}</label>

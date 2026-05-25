@@ -8,7 +8,9 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
-import CarrierSpaceCard from './CarrierSpaceCard.jsx';
+import { getVehicleTypeLabel } from '../../data/vehicleTypes.js';
+import VehicleTypeDropdown from '../loadboard/VehicleTypeDropdown.jsx';
+import CitySelect from '../ui/CitySearchSelect.jsx';
 import SpaceSentRequestsPanel from './SpaceSentRequestsPanel.jsx';
 
 const DEFAULT_FILTERS = {
@@ -22,7 +24,7 @@ const DEFAULT_FILTERS = {
 };
 
 const CapacityMarketplace = () => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { request, loading } = useApi();
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS }));
   const [listings, setListings] = useState([]);
@@ -69,12 +71,17 @@ const CapacityMarketplace = () => {
     const badges = [];
     if (filters.origin) badges.push({ key: 'origin', label: `${t('loadsHub.filterOrigin')}: ${filters.origin}` });
     if (filters.destination) badges.push({ key: 'destination', label: `${t('loadsHub.filterDestination')}: ${filters.destination}` });
-    if (filters.vehicleType) badges.push({ key: 'vehicleType', label: filters.vehicleType });
+    if (filters.vehicleType) {
+      badges.push({
+        key: 'vehicleType',
+        label: getVehicleTypeLabel(filters.vehicleType, lang === 'ur' ? 'ur' : 'en')
+      });
+    }
     if (filters.minCapacityKg) badges.push({ key: 'minCapacityKg', label: `≥ ${filters.minCapacityKg} kg` });
     if (filters.maxCapacityKg) badges.push({ key: 'maxCapacityKg', label: `≤ ${filters.maxCapacityKg} kg` });
     if (filters.availableFrom) badges.push({ key: 'availableFrom', label: filters.availableFrom });
     return badges;
-  }, [filters, t]);
+  }, [filters, t, lang]);
 
   const empty = useMemo(() => !loading && listings.length === 0, [loading, listings.length]);
 
@@ -106,33 +113,27 @@ const CapacityMarketplace = () => {
       <div className="tp-filter-card mb-2">
         <div className="row g-2">
           <div className="col-6 col-md-3">
-            <input
-              className="form-control form-control-sm rounded-3"
+            <CitySelect
+              name="origin"
               placeholder={t('loadsHub.filterOrigin')}
               value={filters.origin}
               onChange={(e) => setField('origin', e.target.value)}
             />
           </div>
           <div className="col-6 col-md-3">
-            <input
-              className="form-control form-control-sm rounded-3"
+            <CitySelect
+              name="destination"
               placeholder={t('loadsHub.filterDestination')}
               value={filters.destination}
               onChange={(e) => setField('destination', e.target.value)}
             />
           </div>
           <div className="col-6 col-md-3">
-            <select
-              className="form-select form-select-sm rounded-3"
+            <VehicleTypeDropdown
               value={filters.vehicleType}
               onChange={(e) => setField('vehicleType', e.target.value)}
-            >
-              <option value="">{t('pages.loads.vehicleType')}</option>
-              <option>Truck</option>
-              <option>Trailer</option>
-              <option>Container</option>
-              <option>Flatbed</option>
-            </select>
+              includeAllOption
+            />
           </div>
           <div className="col-6 col-md-3">
             <input

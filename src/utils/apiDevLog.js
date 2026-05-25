@@ -9,6 +9,22 @@ function redactPayload(data) {
   return copy;
 }
 
+/** Dev-only structured API success log. */
+export function logApiSuccess(config, data) {
+  if (!import.meta.env.DEV) return;
+  const method = String(config?.method || 'get').toUpperCase();
+  const url = config?.url || '';
+  const base = config?.baseURL || '';
+  const full = /^https?:\/\//i.test(url) ? url : `${base}${url}`;
+  // eslint-disable-next-line no-console
+  console.info('[api] request ok', {
+    method,
+    endpoint: full,
+    payload: redactPayload(config?.data),
+    response: data
+  });
+}
+
 /** Dev-only structured API failure log (never logs tokens). */
 export function logApiFailure(error, config) {
   if (!import.meta.env.DEV) return;

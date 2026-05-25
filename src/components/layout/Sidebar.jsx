@@ -7,19 +7,15 @@ import {
   FaListUl,
   FaGavel,
   FaCheckCircle,
-  FaUserShield,
-  FaExclamationTriangle,
   FaShippingFast,
   FaHistory,
   FaCog,
   FaSignOutAlt,
   FaQuestionCircle,
-  FaUserTag,
-  FaClipboardCheck,
-  FaBell
+  FaClipboardCheck
 } from 'react-icons/fa';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { resolveImageUrl } from '../../utils/imageUrl.js';
+import SafeAvatar from '../ui/SafeAvatar.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
 import { SidebarProfileSheet } from '../profile/ProfileSheet.jsx';
@@ -36,11 +32,10 @@ const Sidebar = () => {
   const [profileSheetOpen, setProfileSheetOpen] = React.useState(false);
 
   const activeRole = user?.activeRole ?? user?.roles?.[0];
-  const isAdmin = activeRole === 'admin';
   const isCarrier = activeRole === 'carrier';
   const isShipper = activeRole === 'shipper';
 
-  const dashboardPath = isShipper ? '/dashboard/shipper' : isCarrier ? '/dashboard/carrier' : '/admin/dashboard';
+  const dashboardPath = isShipper ? '/dashboard/shipper' : '/dashboard/carrier';
 
   return (
     <aside className="d-none d-md-block sidebar-fixed sidebar-aside d-flex flex-column">
@@ -79,7 +74,7 @@ const Sidebar = () => {
         )}
         {isCarrier && (
           <>
-            <NavLink to="/loads/manage" className={navLinkClass}>
+            <NavLink to="/loads" className={navLinkClass}>
               <FaListUl />
               {t('loadsHub.navOperations')}
             </NavLink>
@@ -109,60 +104,10 @@ const Sidebar = () => {
             </NavLink>
           </>
         )}
-        {isAdmin && (
-          <>
-            <NavLink to="/admin/dashboard" className={navLinkClass}>
-              <FaTachometerAlt />
-              {t('nav.adminDashboard')}
-            </NavLink>
-            <NavLink to="/admin/users" className={navLinkClass}>
-              <FaUserShield />
-              {t('nav.adminUsers')}
-            </NavLink>
-            <NavLink to="/admin/bids" className={navLinkClass}>
-              <FaGavel />
-              {t('pages.admin.bidsTitle')}
-            </NavLink>
-            <NavLink to="/admin/notifications" className={navLinkClass}>
-              <FaBell />
-              {t('pages.admin.notificationsTitle')}
-            </NavLink>
-            <NavLink to="/admin/otp-logs" className={navLinkClass}>
-              <FaClipboardCheck />
-              {t('pages.admin.otpLogsTitle')}
-            </NavLink>
-            <NavLink to="/admin/roles" className={navLinkClass}>
-              <FaUserTag />
-              {t('nav.roleManagement')}
-            </NavLink>
-            <NavLink to="/admin/loads" className={navLinkClass}>
-              <FaListUl />
-              {t('nav.adminLoads')}
-            </NavLink>
-            <NavLink to="/admin/verification" className={navLinkClass}>
-              <FaUserShield />
-              {t('nav.verification')}
-            </NavLink>
-            <NavLink to="/admin/disputes" className={navLinkClass}>
-              <FaExclamationTriangle />
-              {t('nav.disputes')}
-            </NavLink>
-            <NavLink to="/admin/shipments" className={navLinkClass}>
-              <FaShippingFast />
-              {t('nav.shipments')}
-            </NavLink>
-          </>
-        )}
-        <NavLink to="/notifications" className={navLinkClass}>
-          <FaBell />
-          {t('common.notifications')}
-        </NavLink>
-        {!isAdmin && (
-          <NavLink to="/support" className={navLinkClass}>
+        <NavLink to="/support" className={navLinkClass}>
             <FaQuestionCircle />
             {t('common.support')}
           </NavLink>
-        )}
         <NavLink to="/settings" className={navLinkClass}>
           <FaCog />
           {t('nav.settings')}
@@ -181,19 +126,12 @@ const Sidebar = () => {
               }}
             >
               <div className="tp-avatar-36 tp-border-theme rounded-circle overflow-hidden border flex-shrink-0">
-                {user.profileImage ? (
-                  <img src={resolveImageUrl(user.profileImage) || user.profileImage} alt="" className="tp-img-cover" />
-                ) : (
-                  <div className="w-100 h-100 d-flex align-items-center justify-content-center tp-sidebar-avatar-placeholder fw-semibold tp-badge-sm">
-                    {(user.fullName || user.name || user.email || '?')
-                      .split(/\s+/)
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((s) => s[0])
-                      .join('')
-                      .toUpperCase() || '?'}
-                  </div>
-                )}
+                <SafeAvatar
+                  src={user.profileImage}
+                  name={user.fullName || user.name}
+                  email={user.email}
+                  fallbackClassName="w-100 h-100 d-flex align-items-center justify-content-center tp-sidebar-avatar-placeholder fw-semibold tp-badge-sm"
+                />
               </div>
               <div className="flex-grow-1 min-w-0">
                 <div className="fw-semibold text-truncate small">{user.name || t('common.userFallback')}</div>

@@ -26,3 +26,16 @@ export function isCounterOffered(raw) {
 export function isAwaitingShipper(raw) {
   return normalizeBidStatus(raw) === BID_STATUS.PENDING_SHIPPER;
 }
+
+export function isBidExpired(bid) {
+  if (!bid) return false;
+  if (String(bid.status || '').toLowerCase() === 'expired') return true;
+  const exp = bid.expiresAt ? new Date(bid.expiresAt).getTime() : null;
+  if (!exp || Number.isNaN(exp)) return false;
+  if (Date.now() <= exp) return false;
+  return isActiveBidStatus(bid.status);
+}
+
+export function filterActiveBids(bids) {
+  return (Array.isArray(bids) ? bids : []).filter((b) => !isBidExpired(b));
+}

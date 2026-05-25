@@ -2,6 +2,8 @@
   /* Overlay stack (low → high): app · layout/nav · drawer · sheets · modals · loading · toasts */
   --tp-z-base: 0;
   --tp-z-sticky-nav: 1020;
+  --tp-z-navbar: 1030;
+  --tp-z-dropdown: 1200;
   --tp-z-drawer: 1500;
   --tp-z-sheet: 10040;
   --tp-z-modal: 10050;
@@ -802,6 +804,37 @@ body.dark-theme .sidebar-aside .nav-link.active {
   border-radius: 1.25rem;
   padding: 0.75rem;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+
+.tp-admin-mobile-nav__scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tp-admin-mobile-nav__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tp-admin-mobile-nav__scroll .nav-link {
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+  font-size: 0.65rem;
+}
+
+body.tp-role-admin .tp-admin-mobile-nav {
+  border-top-color: color-mix(in srgb, var(--pak-border) 80%, #334155);
+}
+
+.tp-route-summary,
+.tp-dashboard-map-preview {
+  overflow: visible;
+  position: relative;
 }
 
 .tp-wallet-card {
@@ -1140,7 +1173,254 @@ html[dir='rtl'] .sidebar-fixed {
   color: var(--pak-primary);
 }
 
-/* Brand logo — TRANS (contrast) + PAK (green) + multimodal icons */
+/* TP mark — rounded box, italic T + green P */
+.tp-brand-mark-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.tp-brand-mark-wrap--compact .tp-brand-mark {
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0.28rem 0.42rem;
+  font-size: 1.05rem;
+}
+
+.tp-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.04em;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  padding: 0.35rem 0.5rem;
+  min-width: 2.65rem;
+  min-height: 2.65rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--pak-card-bg, #fff) 88%, #f1f5f9);
+  border: 1px solid color-mix(in srgb, var(--pak-border, #e2e8f0) 90%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--pak-primary, #15803d) 8%, transparent);
+}
+
+body.dark-theme .tp-brand-mark {
+  background: color-mix(in srgb, var(--tp-bg, #0f172a) 75%, #1e293b);
+  border-color: color-mix(in srgb, var(--pak-primary) 35%, transparent);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.35);
+}
+
+.tp-brand-mark--compact {
+  font-size: 1.15rem;
+}
+
+.tp-brand-mark__tagline {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.tp-brand-mark__t {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 800;
+  color: #0a0a0a;
+}
+
+body.dark-theme .tp-brand-mark__t {
+  color: #f8fafc;
+}
+
+.tp-brand-mark__p {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  color: var(--pak-primary, #15803d);
+}
+
+body.dark-theme .tp-brand-mark__p {
+  color: #4ade80;
+}
+
+.tp-brand-logo--mark {
+  gap: 0.55rem !important;
+}
+
+.tp-brand-logo--mark .tp-brand-mark-wrap {
+  flex-shrink: 0;
+}
+
+.tp-admin-sidebar {
+  background: color-mix(in srgb, var(--card-bg) 96%, #0f172a 4%);
+}
+
+body.tp-role-admin .tp-main-shell {
+  --tp-role-accent: #334155;
+}
+
+/* Navbar notification dropdown */
+.tp-notif-dropdown__panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: var(--tp-z-dropdown);
+  width: min(22rem, calc(100vw - 1.5rem));
+  height: min(28rem, 70vh);
+  max-height: min(28rem, 70vh);
+  background: var(--pak-card-bg, #fff);
+  border-color: var(--pak-border) !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tp-notif-dropdown__head {
+  flex-shrink: 0;
+}
+
+.tp-notif-dropdown__scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--pak-primary) 35%, transparent) transparent;
+}
+
+.tp-notif-dropdown__scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tp-notif-dropdown__scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--pak-primary) 35%, transparent);
+  border-radius: 999px;
+}
+
+.tp-notif-role-block__label {
+  color: var(--bs-secondary-color);
+  letter-spacing: 0.04em;
+  font-size: 0.65rem;
+}
+
+body.dark-theme .tp-notif-dropdown__panel {
+  background: var(--tp-bg, #0f172a);
+  border-color: color-mix(in srgb, var(--pak-primary) 25%, transparent) !important;
+}
+
+/* Unified header height */
+:root {
+  --tp-header-h: 3.25rem;
+}
+
+.tp-navbar-surface,
+.tp-auth-v2__top--bar,
+.tp-landing-nav .container {
+  min-height: var(--tp-header-h);
+}
+
+.tp-brand-logo--mark .tp-brand-mark {
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0.28rem 0.42rem;
+  font-size: 1.05rem;
+}
+
+.navbar-custom .navbar-brand {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+body.tp-notif-panel-open {
+  overflow: hidden;
+}
+
+.tp-notif-dropdown__panel--open {
+  animation: tpNotifPanelIn 0.18s ease-out both;
+}
+
+@keyframes tpNotifPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tp-role-switch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--tp-bg, #0f172a) 35%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.tp-role-switch-overlay__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: var(--pak-card-bg, #fff);
+  border: 1px solid var(--pak-border);
+}
+
+body.dark-theme .tp-role-switch-overlay__card {
+  background: var(--tp-bg, #0f172a);
+}
+
+.tp-auth-v2__header-brand .tp-brand-mark,
+.tp-landing-nav__brand .tp-brand-mark {
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0.28rem 0.42rem;
+  font-size: 1.05rem;
+}
+
+.tp-drawer-brand .tp-brand-mark {
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0.28rem 0.42rem;
+  font-size: 1.05rem;
+}
+
+.tp-footer-brand .tp-brand-mark {
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  padding: 0.22rem 0.36rem;
+  font-size: 0.95rem;
+}
+
+
+.tp-fare-negotiate .form-range {
+  accent-color: var(--pak-primary, #15803d);
+}
+
+.tp-route-summary {
+  background: color-mix(in srgb, var(--pak-primary, #15803d) 6%, var(--pak-card-bg, #fff));
+  border: 1px solid color-mix(in srgb, var(--pak-primary) 22%, var(--pak-border));
+}
+
+.tp-route-summary__label {
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+}
+
+body.dark-theme .tp-route-summary {
+  background: color-mix(in srgb, var(--pak-primary) 12%, var(--tp-bg, #0f172a));
+}
+
+/* Brand logo — TRANS (contrast) + PAK (green) */
 .tp-brand-logo {
   display: inline-flex;
   flex-direction: column;
@@ -1239,17 +1519,16 @@ body.dark-theme .tp-brand-logo__mode-icon {
   flex-direction: row !important;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.3rem 0.5rem;
-  border-radius: 0.65rem;
-  background: color-mix(in srgb, var(--pak-card-bg) 70%, rgba(22, 163, 74, 0.08));
-  border: 1px solid color-mix(in srgb, var(--pak-primary) 32%, var(--pak-border));
-  box-shadow: 0 3px 18px color-mix(in srgb, var(--pak-primary) 14%, transparent);
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 body.dark-theme .tp-brand-logo.tp-brand-logo--mark {
-  background: color-mix(in srgb, var(--tp-bg) 82%, rgba(34, 197, 94, 0.12));
-  border-color: color-mix(in srgb, var(--pak-primary) 42%, transparent);
-  box-shadow: 0 4px 26px rgba(0, 0, 0, 0.35);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .tp-brand-logo--mark .tp-brand-logo__icons--mark {
@@ -1790,6 +2069,7 @@ body.dark-theme .tp-main-shell:not(.tp-main-shell--bare-auth)::before {
 }
 
 .tp-navbar-surface {
+  z-index: var(--tp-z-navbar);
   background: color-mix(in srgb, var(--pak-card-bg) 78%, transparent) !important;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

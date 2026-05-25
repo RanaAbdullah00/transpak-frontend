@@ -1,71 +1,67 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { useDashboardMetrics } from '../../hooks/useDashboardMetrics.js';
 import StatsCards from '../../components/dashboard/StatsCards.jsx';
-import OperationsPanel from '../../components/dashboard/OperationsPanel.jsx';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
-import AnalyticsChart from '../../components/dashboard/AnalyticsChart.jsx';
 import LoadList from '../../components/loadboard/LoadList.jsx';
 import ActiveShipmentPanel from '../../components/dashboard/ActiveShipmentPanel.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
+import Loader from '../../components/ui/Loader.jsx';
 
-// Dashboard view tailored for shippers.
 const ShipperDashboard = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const profileComplete = user?.profileComplete === true;
-  const activities = [];
-
+  const { ops, loadingOps, activities } = useDashboardMetrics();
   const [mineLoads, setMineLoads] = useState([]);
+  const [loadingLoads, setLoadingLoads] = useState(true);
+  const { request } = useApi();
 
-  const metrics = useMemo(() => {
-    const list = mineLoads;
-    const total = list.length;
-    const active = list.filter((l) => ['open', 'booked'].includes(String(l.status || '').toLowerCase())).length;
-    const done = list.filter((l) => String(l.status || '').toLowerCase() === 'closed').length;
-    const rev = list
-      .filter((l) => String(l.status || '').toLowerCase() === 'closed')
-      .reduce((s, l) => s + Number(l.expectedPrice || 0), 0);
-    return { total, active, done, rev };
-  }, [mineLoads]);
-
-  const stats = useMemo(
-    () => [
-      { label: t('pages.dashboard.statTotalLoads'), value: metrics.total },
-      { label: t('pages.dashboard.statActiveShipments'), value: metrics.active },
-      { label: t('pages.dashboard.statCompletedDeliveries'), value: metrics.done },
-      {
-        label: t('pages.dashboard.statDeliveredValue'),
-        value: metrics.rev ? metrics.rev.toLocaleString() : '0',
-        subLabel: t('pages.dashboard.statDeliveredValueSub')
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingLoads(true);
+    setMineLoads([]);
+    (async () => {
+      try {
+        const data = await request({ url: '/loads/mine', skipGlobalErrorToast: true });
+        if (!cancelled) setMineLoads(normalizeLoads(Array.isArray(data) ? data : []));
+      } catch {
+        if (!cancelled) setMineLoads([]);
+      } finally {
+        if (!cancelled) setLoadingLoads(false);
       }
-    ],
-    [metrics, t]
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [request, user?.activeRole]);
+
+  const earnings = useMemo(
+    () =>
+      mineLoads
+        .filter((l) => String(l.status || '').toLowerCase() === 'closed')
+        .reduce((s, l) => s + Number(l.expectedPrice || 0), 0),
+    [mineLoads]
   );
 
-  const chartData = useMemo(() => {
-    const loads = Array.isArray(mineLoads) ? mineLoads : [];
-    if (!loads.length) return [];
-    const now = new Date();
-    const weekMs = 7 * 24 * 60 * 60 * 1000;
-    const windowWeeks = 4;
-    const from = new Date(now.getTime() - windowWeeks * weekMs);
-    const buckets = Array.from({ length: windowWeeks }, (_, i) => ({
-      name: t('pages.dashboard.chartWeekLabel', { n: i + 1 }),
-      value: 0
-    }));
-    for (const l of loads) {
-      const dt = l?.createdAt ? new Date(l.createdAt) : null;
-      if (!dt || Number.isNaN(dt.getTime()) || dt < from) continue;
-      const idx = Math.min(windowWeeks - 1, Math.max(0, Math.floor((dt.getTime() - from.getTime()) / weekMs)));
-      buckets[idx].value += 1;
-    }
-    return buckets;
-  }, [mineLoads, t]);
+  const stats = useMemo(() => {
+    const s = ops?.shipper;
+    return [
+      { label: t('pages.dashboard.statActiveShipments'), value: s?.activeShipments ?? 0 },
+      { label: t('pages.dashboard.statCompletedDeliveries'), value: s?.completedDeliveries ?? 0 },
+      { label: t('pages.dashboard.statPendingBids'), value: s?.pendingBids ?? 0 },
+      {
+        label: t('pages.dashboard.statDeliveredValue'),
+        value: earnings ? earnings.toLocaleString() : '0',
+        subLabel: t('pages.dashboard.statDeliveredValueSub')
+      }
+    ];
+  }, [ops?.shipper, earnings, t]);
 
   const openLoads = useMemo(() => mineLoads.filter((l) => l.status === 'open'), [mineLoads]);
 
@@ -79,19 +75,6 @@ const ShipperDashboard = () => {
     shareLive: false,
     enabled: Boolean(activeTrackRef)
   });
-
-  const { request } = useApi();
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await request({ method: 'GET', url: '/loads/mine' });
-        setMineLoads(normalizeLoads(Array.isArray(data) ? data : []));
-      } catch {
-        setMineLoads([]);
-      }
-    })();
-  }, [request]);
 
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--shipper">
@@ -108,47 +91,48 @@ const ShipperDashboard = () => {
               {t('pages.dashboard.incompleteProfileCta')}
             </Link>
           )}
+          <Link to="/loads/post" className="btn btn-primary btn-sm rounded-lg">
+            {t('pages.loads.postLoadCta')}
+          </Link>
         </div>
       </div>
-      <OperationsPanel />
-      <StatsCards stats={stats} />
-      <div className="mt-3 row g-2">
-        <div className="col-12 col-lg-6">
-          <div className="d-flex justify-content-between align-items-center mb-1">
-            <div className="small text-muted">{t('pages.dashboard.monthlyView')}</div>
-            <select className="form-select form-select-sm w-auto" defaultValue="this" aria-label={t('pages.dashboard.monthlyView')}>
-              <option value="this">{t('pages.dashboard.monthThis')}</option>
-              <option value="last">{t('pages.dashboard.monthLast')}</option>
-            </select>
-          </div>
-          <AnalyticsChart
-            data={chartData}
-            label={t('pages.dashboard.chartWeeklyLoads')}
-            legend={t('pages.dashboard.chartLegendLoads')}
-            emptyHint={t('pages.dashboard.chartEmptyShipper')}
-          />
+
+      {loadingOps ? (
+        <div className="text-center py-3">
+          <Loader />
         </div>
-        <div className="col-12 col-lg-6">
+      ) : (
+        <StatsCards stats={stats} />
+      )}
+
+      <div className="mt-3 row g-3">
+        <div className="col-12 col-lg-7">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <h6 className="mb-0">{t('pages.dashboard.openLoads')}</h6>
+            <Link to="/loads/manage" className="small text-decoration-none">
+              {t('common.viewAll')}
+            </Link>
+          </div>
+          {loadingLoads ? (
+            <div className="text-center py-4">
+              <Loader />
+            </div>
+          ) : (
+            <LoadList loads={openLoads.length ? openLoads : mineLoads.slice(0, 5)} />
+          )}
+        </div>
+        <div className="col-12 col-lg-5">
           <ActivityFeed activities={activities} />
         </div>
       </div>
-      <div className="mt-3">
-        <div className="d-flex justify-content-between align-items-center mb-1">
-          <h6 className="mb-0">{t('pages.dashboard.openLoads')}</h6>
-        </div>
-        <LoadList loads={openLoads.length ? openLoads : mineLoads.slice(0, 5)} />
-      </div>
+
       <div className="mt-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="mb-0">{t('pages.dashboard.myActiveShipments')}</h6>
-        </div>
+        <h6 className="mb-3">{t('pages.dashboard.myActiveShipments')}</h6>
         <ActiveShipmentPanel
           trackingData={trackingData}
           loadingTracking={loadingTracking}
           trackHref={
-            activeTrackRef
-              ? `/shipments/tracking/${encodeURIComponent(activeTrackRef)}`
-              : null
+            activeTrackRef ? `/shipments/tracking/${encodeURIComponent(activeTrackRef)}` : null
           }
           emptyState={
             <div className="text-muted text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed">

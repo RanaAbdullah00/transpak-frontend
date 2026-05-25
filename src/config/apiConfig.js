@@ -1,29 +1,28 @@
 /**
  * Resolves backend origin from VITE_API_URL (strips accidental /api/auth/... paths).
+ * In local dev without VITE_API_URL, returns '' so callers use same-origin `/api` via Vite proxy.
  */
 
 function trimUrl(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-/** Origin from import.meta.env.VITE_API_URL */
+/** Origin from import.meta.env.VITE_API_URL (empty string = dev proxy relative mode). */
 export function resolveViteApiOrigin() {
   const raw = trimUrl(import.meta.env.VITE_API_URL);
   if (!raw) {
+    if (import.meta.env.DEV) {
+      return '';
+    }
     const proxy = trimUrl(import.meta.env.VITE_PROXY_TARGET);
-    if (proxy && import.meta.env.DEV) {
+    if (proxy) {
       try {
         return new URL(proxy).origin;
       } catch {
         return proxy.replace(/\/api\/?.*$/i, '').replace(/\/$/, '');
       }
     }
-    if (import.meta.env.DEV && typeof window !== 'undefined') {
-      return window.location.origin;
-    }
-    if (!import.meta.env.DEV) {
-      console.error('[api] VITE_API_URL is missing — production build must set it to your Render API URL.');
-    }
+    console.error('[api] VITE_API_URL is missing — production build must set it to your Render API URL.');
     return '';
   }
 
@@ -47,12 +46,15 @@ export function resolveViteApiOrigin() {
 }
 
 export function getApiBase() {
-  return resolveViteApiOrigin();
+  const origin = resolveViteApiOrigin();
+  if (origin) return origin;
+  if (import.meta.env.DEV && typeof window !== 'undefined') return window.location.origin;
+  return '';
 }
 
 export function getApiRoot() {
-  const base = resolveViteApiOrigin();
-  if (base) return `${base.replace(/\/$/, '')}/api`;
+  const origin = resolveViteApiOrigin();
+  if (origin) return `${origin.replace(/\/$/, '')}/api`;
   return '/api';
 }
 
@@ -61,16 +63,20 @@ export function getApiRoot() {
  * @param {string} authPath e.g. '/auth/register' (must not include /api prefix)
  */
 export function getAuthApiUrl(authPath) {
-  const origin = resolveViteApiOrigin();
-  if (!origin) {
-    throw new Error('VITE_API_URL is not set — cannot build auth API URL');
-  }
-
   let path = String(authPath || '').trim();
   if (!path.startsWith('/')) path = `/${path}`;
   path = path.replace(/^\/api/, '');
   if (!path.startsWith('/auth')) {
     throw new Error(`Invalid auth path "${authPath}" — must resolve under /auth`);
+  }
+
+  const origin = resolveViteApiOrigin();
+  if (!origin) {
+    const url = `/api${path}`;
+    if (/\/api\/api\//i.test(url)) {
+      throw new Error(`Invalid auth URL (duplicate /api): ${url}`);
+    }
+    return url;
   }
 
   const url = `${origin.replace(/\/$/, '')}/api${path}`;

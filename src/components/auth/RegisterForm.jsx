@@ -7,6 +7,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { registerApi, fetchProfileApi } from '../../services/authService.js';
 import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
 import { notifyAuthError } from '../../utils/notifySystem.js';
+import { formatUserError } from '../../utils/userErrors.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { safeUnwrapAuthResponse } from '../../utils/authApiSafe.js';
 import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
@@ -170,7 +171,7 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
       });
     } catch (err) {
       notifyAuthError(err, t, 'register');
-      setError(translated);
+      setError(formatUserError(err, t, { fallback: t('errors.generic') }));
     } finally {
       setLoading(false);
     }

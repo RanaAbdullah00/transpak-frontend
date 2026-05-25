@@ -32,7 +32,10 @@ export function createSocketClient({
   }
 
   if (!url) {
-    console.warn('[socket] No backend URL — set VITE_API_URL (or VITE_SOCKET_URL) in production');
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn('[socket] No backend URL — set VITE_API_URL (or VITE_SOCKET_URL) in production');
+    }
     return { socket: null, disconnect: () => {} };
   }
 
@@ -48,7 +51,12 @@ export function createSocketClient({
 
     let hadConnected = false;
     socket.on('connect', () => {
-      if (hadConnected) onReconnect?.();
+      if (hadConnected) {
+        onReconnect?.();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
+        }
+      }
       hadConnected = true;
     });
 

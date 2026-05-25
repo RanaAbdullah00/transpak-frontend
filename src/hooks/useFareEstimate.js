@@ -1,17 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApi } from './useApi.js';
 import { useDebouncedValue } from './useDebouncedValue.js';
+import { estimateLocalFare } from '../utils/localFareEstimate.js';
+import { isKnownCity, resolveCityName } from '../data/pakistanCities.js';
 
 export function useFareEstimate({ origin, destination, vehicleType, enabled = true }) {
   const { request } = useApi();
   const debouncedOrigin = useDebouncedValue(origin, 400);
   const debouncedDest = useDebouncedValue(destination, 400);
-  const [estimate, setEstimate] = useState(null);
+  const [apiEstimate, setApiEstimate] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const localEstimate = useMemo(() => {
+    if (!enabled) return null;
+    const o = resolveCityName(debouncedOrigin);
+    const d = resolveCityName(debouncedDest);
+    if (!o || !d || !isKnownCity(o) || !isKnownCity(d)) return null;
+    return estimateLocalFare(o, d, vehicleType);
+  }, [debouncedOrigin, debouncedDest, vehicleType, enabled]);
 
   useEffect(() => {
     if (!enabled || !debouncedOrigin?.trim() || !debouncedDest?.trim()) {
-      setEstimate(null);
+      setApiEstimate(null);
       return undefined;
     }
     let cancelled = false;
@@ -27,9 +37,9 @@ export function useFareEstimate({ origin, destination, vehicleType, enabled = tr
             vehicleType: vehicleType || 'Truck'
           }
         });
-        if (!cancelled) setEstimate(data);
+        if (!cancelled) setApiEstimate(data);
       } catch {
-        if (!cancelled) setEstimate(null);
+        if (!cancelled) setApiEstimate(null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -39,5 +49,8 @@ export function useFareEstimate({ origin, destination, vehicleType, enabled = tr
     };
   }, [debouncedOrigin, debouncedDest, vehicleType, enabled, request]);
 
-  return { estimate, loading };
+  const estimate = apiEstimate ?? localEstimate;
+  const usedLocalFallback = Boolean(!apiEstimate && localEstimate);
+
+  return { estimate, loading: loading && !estimate, usedLocalFallback };
 }

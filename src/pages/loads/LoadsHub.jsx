@@ -12,12 +12,12 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 const LoadsHub = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [params, setParams] = useSearchParams();
   const activeRole = user?.activeRole ?? user?.roles?.[0];
   const isShipper = activeRole === 'shipper';
   const isCarrier = activeRole === 'carrier';
 
-  const defaultTab = isCarrier ? 'freight' : 'posted';
+  const [params, setParams] = useSearchParams();
+  const defaultTab = isShipper ? 'posted' : 'freight';
   const tab = params.get('tab') || defaultTab;
 
   const tabs = useMemo(() => {
@@ -27,14 +27,8 @@ const LoadsHub = () => {
         { id: 'market', label: t('loadsHub.capacityMarket') }
       ];
     }
-    if (isCarrier) {
-      return [
-        { id: 'space', label: t('loadsHub.myCapacity') },
-        { id: 'freight', label: t('loadsHub.freightBoard') }
-      ];
-    }
     return [];
-  }, [isShipper, isCarrier, t]);
+  }, [isShipper, t]);
 
   useEffect(() => {
     document.body.classList.remove('tp-role-shipper', 'tp-role-carrier');
@@ -45,13 +39,41 @@ const LoadsHub = () => {
     };
   }, [isShipper, isCarrier]);
 
-  const setTab = (id) => {
-    setParams({ tab: id }, { replace: true });
-  };
-
   if (!isShipper && !isCarrier) {
     return <div className="container py-3 text-muted">{t('loadsHub.roleRequired')}</div>;
   }
+
+  if (isCarrier) {
+    return (
+      <div className="container py-3">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h5 className="mb-1">{t('loadsHub.carrierPageTitle')}</h5>
+            <p className="text-muted small mb-0">{t('loadsHub.carrierOpsSubtitle')}</p>
+          </div>
+          <Link to="/carrier/space/post">
+            <Button variant="outline-primary" className="btn-sm rounded-lg">
+              + {t('loadsHub.listCapacity')}
+            </Button>
+          </Link>
+        </div>
+
+        <section className="mb-4">
+          <h6 className="mb-2">{t('loadsHub.freightBoard')}</h6>
+          <AvailableLoads embedded />
+        </section>
+
+        <section className="pt-3 border-top tp-border-theme">
+          <h6 className="mb-2">{t('loadsHub.myCapacity')}</h6>
+          <MySpaceListings />
+        </section>
+      </div>
+    );
+  }
+
+  const setTab = (id) => {
+    setParams({ tab: id }, { replace: true });
+  };
 
   return (
     <div className="container py-3">
@@ -62,27 +84,18 @@ const LoadsHub = () => {
         </div>
         <div className="d-flex gap-2 flex-wrap align-items-center">
           <SegmentTabs tabs={tabs} active={tab} onChange={setTab} />
-          {isShipper && tab === 'posted' ? (
+          {tab === 'posted' ? (
             <Link to="/loads/post">
               <Button variant="primary" className="btn-sm rounded-lg">
                 + {t('pages.loads.postLoadCta')}
               </Button>
             </Link>
           ) : null}
-          {isCarrier && tab === 'space' ? (
-            <Link to="/carrier/space/post">
-              <Button variant="primary" className="btn-sm rounded-lg">
-                + {t('loadsHub.listCapacity')}
-              </Button>
-            </Link>
-          ) : null}
         </div>
       </div>
 
-      {isShipper && tab === 'posted' ? <ManageLoads embedded /> : null}
-      {isShipper && tab === 'market' ? <CapacityMarketplace /> : null}
-      {isCarrier && tab === 'space' ? <MySpaceListings /> : null}
-      {isCarrier && tab === 'freight' ? <AvailableLoads embedded /> : null}
+      {tab === 'posted' ? <ManageLoads embedded /> : null}
+      {tab === 'market' ? <CapacityMarketplace /> : null}
     </div>
   );
 };

@@ -5,7 +5,9 @@ import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { translateRoleLabel } from '../../utils/i18nLabels.js';
-import { resolveImageUrl } from '../../utils/imageUrl.js';
+import SafeAvatar from '../../components/ui/SafeAvatar.jsx';
+import SafeImage from '../../components/ui/SafeImage.jsx';
+import VehicleTypeLabel from '../../components/loadboard/VehicleTypeLabel.jsx';
 
 const PublicProfile = () => {
   const { id } = useParams();
@@ -74,13 +76,11 @@ const PublicProfile = () => {
       <Card className="p-4 mb-3">
         <div className="d-flex flex-wrap gap-3 align-items-start">
           <div className="tp-avatar-lg rounded-circle overflow-hidden border flex-shrink-0">
-            {profile.profileImage ? (
-              <img src={resolveImageUrl(profile.profileImage) || profile.profileImage} alt="" className="tp-img-cover" />
-            ) : (
-              <div className="tp-avatar-placeholder d-flex align-items-center justify-content-center h-100 w-100 fw-bold">
-                {String(profile.fullName || '?').slice(0, 2).toUpperCase()}
-              </div>
-            )}
+            <SafeAvatar
+              src={profile.profileImage}
+              name={profile.fullName}
+              fallbackClassName="tp-avatar-placeholder d-flex align-items-center justify-content-center h-100 w-100 fw-bold"
+            />
           </div>
           <div className="flex-grow-1 min-w-0">
             <h4 className="mb-1">{profile.fullName}</h4>
@@ -131,12 +131,23 @@ const PublicProfile = () => {
               <div key={tr.id} className="col-6 col-md-4">
                 <div className="tp-truck-thumb rounded-3 overflow-hidden border">
                   {tr.truckCardFrontImage ? (
-                    <img src={tr.truckCardFrontImage} alt="" className="tp-img-cover tp-truck-thumb__img" loading="lazy" />
+                    <SafeImage
+                      src={tr.truckCardFrontImage}
+                      alt=""
+                      className="tp-img-cover tp-truck-thumb__img"
+                      fallback={
+                        <div className="tp-truck-thumb__placeholder small text-muted p-3">
+                          <VehicleTypeLabel value={tr.truckType} />
+                        </div>
+                      }
+                    />
                   ) : (
-                    <div className="tp-truck-thumb__placeholder small text-muted p-3">{tr.truckType}</div>
+                    <div className="tp-truck-thumb__placeholder small text-muted p-3">
+                      <VehicleTypeLabel value={tr.truckType} />
+                    </div>
                   )}
                   <div className="small p-2">
-                    {tr.truckType} · {tr.licensePlate}
+                    <VehicleTypeLabel value={tr.truckType} /> · {tr.licensePlate}
                   </div>
                 </div>
               </div>

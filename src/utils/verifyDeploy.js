@@ -48,14 +48,17 @@ export async function verifyProductionDeploy() {
       };
     }
 
-    console.info('[TransPak deploy]', {
-      frontendBuild,
-      apiUrl: apiOrigin,
-      apiVersion,
-      apiBuild,
-      uptime,
-      db: body?.data?.db
-    });
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.info('[TransPak deploy]', {
+        frontendBuild,
+        apiUrl: apiOrigin,
+        apiVersion,
+        apiBuild,
+        uptime,
+        db: body?.data?.db
+      });
+    }
 
     if (!apiVersion && !apiBuild) {
       console.warn('[TransPak deploy] API missing version/build — stale Render deploy.');

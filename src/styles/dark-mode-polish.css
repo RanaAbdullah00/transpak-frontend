@@ -95,6 +95,12 @@ body.dark-theme .breadcrumb-item.active {
   color: #f0f0f0;
 }
 
+body.dark-theme .tp-image-fallback {
+  background: color-mix(in srgb, var(--card-bg) 90%, #0f172a 10%);
+  border-color: var(--pak-border, #374151);
+  color: var(--text-secondary, #94a3b8);
+}
+
 body.dark-theme .tp-surface-muted,
 body.dark-theme .tp-empty-state {
   background: color-mix(in srgb, var(--card-bg) 88%, #0f172a 12%);
@@ -171,6 +177,71 @@ body.dark-theme .tp-bid-timeline__connector {
 
 body.dark-theme .card .card-body {
   color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .form-select,
+body.dark-theme select.form-select,
+body.dark-theme .form-control,
+body.dark-theme .form-control-sm {
+  background-color: var(--input-bg, #111827);
+  border-color: var(--pak-border, #374151);
+  color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .form-select option,
+body.dark-theme select option {
+  background-color: #1f2937;
+  color: #f0f0f0;
+}
+
+body.dark-theme .form-select:focus,
+body.dark-theme .form-control:focus {
+  background-color: var(--input-bg, #111827);
+  border-color: var(--tp-role-accent, #38bdf8);
+  color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .tp-city-select__menu {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-theme .tp-city-select__item {
+  color: #f0f0f0;
+}
+
+body.dark-theme .tp-city-select__item:hover,
+body.dark-theme .tp-city-select__item--active {
+  background: #334155;
+  color: #f0f0f0;
+}
+
+body.dark-theme .tp-fare-hint {
+  background: color-mix(in srgb, var(--card-bg) 90%, #0f172a 10%);
+  border: 1px solid var(--pak-border, #374151);
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  color: var(--text-primary, #f0f0f0);
+}
+
+body.dark-theme .tp-stat-card,
+body.dark-theme .tp-kpi-tile {
+  background-color: var(--card-bg, #1f2937);
+  border-color: var(--pak-border, #374151);
+}
+
+body.dark-theme .leaflet-container {
+  background: #0f172a;
+}
+
+body.dark-theme .tp-error-boundary__detail {
+  white-space: pre-wrap;
+  background: #111827;
+  color: #e2e8f0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #374151;
 }
 
 @keyframes tp-skeleton-pulse {

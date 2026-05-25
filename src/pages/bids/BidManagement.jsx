@@ -39,10 +39,10 @@ const BidManagement = () => {
   const handleReject = async (bid) => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject` });
-      notifySuccess('Bid rejected.');
+      notifySuccess(t('pages.bids.bidRejected'));
       fetchBidsData();
     } catch (err) {
-      notifyError(err?.response?.data?.error || 'Reject failed');
+      notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectFailed') }));
     }
   };
 

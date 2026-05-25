@@ -1,4 +1,31 @@
 import React from 'react';
+import { useLanguage } from '../../hooks/useLanguage.js';
+
+function ErrorBoundaryFallback({ error, onReset }) {
+  const { t } = useLanguage();
+  const showDetail = import.meta.env.DEV;
+
+  return (
+    <div className="container py-4">
+      <div className="card border-0 shadow-sm rounded-xl tp-error-boundary">
+        <div className="card-body">
+          <h5 className="mb-2">{t('common.errorBoundaryTitle')}</h5>
+          <p className="small text-muted mb-2">
+            {showDetail ? t('common.errorBoundaryDevBody') : t('common.errorBoundaryBody')}
+          </p>
+          {showDetail ? (
+            <pre className="small mb-0 tp-error-boundary__detail">
+              {String(error?.message || error || 'Unknown error')}
+            </pre>
+          ) : null}
+          <button type="button" className="btn btn-primary btn-sm mt-3 rounded-lg" onClick={onReset}>
+            {t('common.errorBoundaryRetry')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -11,7 +38,10 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('TransPak UI crashed:', error, info);
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.error('TransPak UI crashed:', error, info);
+    }
   }
 
   handleReset = () => {
@@ -20,30 +50,7 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="container py-4">
-          <div className="card border-0 shadow-sm rounded-xl">
-            <div className="card-body">
-              <h5 className="mb-2">Something went wrong</h5>
-              <p className="small text-muted mb-2">The UI crashed while rendering.</p>
-              <pre
-                className="small mb-0"
-                style={{
-                  whiteSpace: 'pre-wrap',
-                  background: 'rgba(15, 23, 42, 0.04)',
-                  padding: '10px',
-                  borderRadius: '8px'
-                }}
-              >
-                {String(this.state.error?.message || this.state.error || 'Unknown error')}
-              </pre>
-              <button className="btn btn-primary btn-sm mt-3 rounded-lg" onClick={this.handleReset}>
-                Try again
-              </button>
-            </div>
-          </div>
-        </div>
-      );
+      return <ErrorBoundaryFallback error={this.state.error} onReset={this.handleReset} />;
     }
 
     return this.props.children;
@@ -51,4 +58,3 @@ class ErrorBoundary extends React.Component {
 }
 
 export default ErrorBoundary;
-

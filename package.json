@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "deploy:check": "node ../scripts/check-production-sync.mjs",
+    "deploy:qa": "node ../scripts/final-production-qa.mjs",
     "preview": "vite preview",
     "lint": "eslint src"
   },
@@ -20,7 +21,6 @@
     "react-phone-input-2": "^2.15.1",
     "react-router-dom": "^6.28.0",
     "react-toastify": "^11.0.5",
-    "recharts": "^2.12.7",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {

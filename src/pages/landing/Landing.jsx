@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import BrandLogo from '../../components/layout/BrandLogo.jsx';
 import LanguageToggle from '../../components/ui/LanguageToggle.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { resolveViteApiOrigin } from '../../config/apiConfig.js';
+import { getApiUrl } from '../../config/apiConfig.js';
 
 const Section = ({ id, className = '', children }) => (
   <section id={id} className={`tp-landing-section ${className}`.trim()}>
@@ -17,11 +17,9 @@ const Landing = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const origin = resolveViteApiOrigin();
-    if (!origin) return undefined;
     (async () => {
       try {
-        const res = await fetch(`${origin}/api/public/stats`, { credentials: 'omit' });
+        const res = await fetch(getApiUrl('/public/stats'), { credentials: 'omit' });
         const json = await res.json();
         const data = json?.data ?? json;
         if (!cancelled && data && typeof data === 'object') setFreightStats(data);

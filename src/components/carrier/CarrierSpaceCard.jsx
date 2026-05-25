@@ -3,6 +3,7 @@ import Card from '../ui/Card.jsx';
 import Badge from '../ui/Badge.jsx';
 import Button from '../ui/Button.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import VehicleTypeLabel from '../loadboard/VehicleTypeLabel.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 
 const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
@@ -31,7 +32,7 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
         {listing.origin} → {listing.destination}
       </div>
       <div className="small text-muted mb-2">
-        {listing.vehicleType || 'Truck'} · {t('loadsHub.remainingKg', { kg: rem.toLocaleString() })} /{' '}
+        <VehicleTypeLabel value={listing.vehicleType || 'Truck'} /> · {t('loadsHub.remainingKg', { kg: rem.toLocaleString() })} /{' '}
         {cap.toLocaleString()} kg
       </div>
       <div className="progress tp-progress-thin mb-2">

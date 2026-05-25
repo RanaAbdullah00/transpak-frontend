@@ -9,6 +9,9 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
+import { filterOpenLoads } from '../../utils/loadBidding.js';
+import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
+import CitySelect from '../../components/ui/CitySearchSelect.jsx';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 
 const AvailableLoads = ({ embedded = false }) => {
@@ -62,7 +65,7 @@ const AvailableLoads = ({ embedded = false }) => {
 
   useEffect(() => {
     fetchMyBids();
-  }, [fetchMyBids]);
+  }, [fetchMyBids, activeRole]);
 
   useEffect(() => {
     const onRefresh = (e) => {
@@ -96,7 +99,8 @@ const AvailableLoads = ({ embedded = false }) => {
           }
         });
         const normalized = normalizeLoads(data);
-        const filtered = normalized.filter((l) => !myBidLoadIds.has(String(l.id)));
+        const openOnly = filterOpenLoads(normalized);
+        const filtered = openOnly.filter((l) => !myBidLoadIds.has(String(l.id)));
         setLoads(filtered);
       } catch {
         notifyError(t('pages.loads.failedLoadDetail'));
@@ -104,7 +108,14 @@ const AvailableLoads = ({ embedded = false }) => {
       }
     };
     fetchAvailableLoads();
-  }, [debouncedFilters, request, myBidLoadIds, t]);
+  }, [debouncedFilters, request, myBidLoadIds, t, activeRole]);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setLoads((prev) => filterOpenLoads(prev));
+    }, 60000);
+    return () => clearInterval(tick);
+  }, []);
 
   const handleBid = (load) => {
     if (isCarrier) return;
@@ -180,18 +191,16 @@ const AvailableLoads = ({ embedded = false }) => {
       <div className="tp-filter-card mb-2">
         <div className="row g-2">
           <div className="col-6 col-md-3">
-            <input
+            <CitySelect
               name="origin"
-              className="form-control form-control-sm rounded-3"
               placeholder={t('pages.loads.origin')}
               value={filters.origin}
               onChange={handleFilterChange}
             />
           </div>
           <div className="col-6 col-md-3">
-            <input
+            <CitySelect
               name="destination"
-              className="form-control form-control-sm rounded-3"
               placeholder={t('pages.loads.destination')}
               value={filters.destination}
               onChange={handleFilterChange}
@@ -218,18 +227,12 @@ const AvailableLoads = ({ embedded = false }) => {
             />
           </div>
           <div className="col-6 col-md-3">
-            <select
+            <VehicleTypeDropdown
               name="vehicleType"
-              className="form-select form-select-sm rounded-3"
               value={filters.vehicleType}
               onChange={handleFilterChange}
-            >
-              <option value="">{t('pages.loads.vehicleType')}</option>
-              <option>Truck</option>
-              <option>Trailer</option>
-              <option>Container</option>
-              <option>Flatbed</option>
-            </select>
+              includeAllOption
+            />
           </div>
           <div className="col-6 col-md-3">
             <input

@@ -77,3 +77,11 @@ export const VEHICLE_TYPES = [
 export function getVehicleTypeMeta(value) {
   return VEHICLE_TYPES.find((v) => v.value === value) || VEHICLE_TYPES.find((v) => v.value === 'Truck');
 }
+
+/** Localized short label for filters, badges, and selects. */
+export function getVehicleTypeLabel(value, locale = 'en') {
+  const item = getVehicleTypeMeta(value);
+  const lang = locale === 'ur' ? 'ur' : 'en';
+  const meta = item?.[lang] || item?.en;
+  return meta?.label || item?.value || String(value || 'Truck');
+}

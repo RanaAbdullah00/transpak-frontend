@@ -50,6 +50,7 @@ import Contact from './pages/static/Contact.jsx';
 import HomeEntry from './pages/landing/HomeEntry.jsx';
 import Navbar from './components/layout/Navbar.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
+import AdminSidebar from './components/layout/AdminSidebar.jsx';
 import MobileNav from './components/layout/MobileNav.jsx';
 import Footer from './components/layout/Footer.jsx';
 import LoadingScreen from './components/ui/LoadingScreen.jsx';
@@ -57,8 +58,10 @@ import ReviewPromptHost from './components/reviews/ReviewPromptHost.jsx';
 import SocketReconnectIndicator from './components/layout/SocketReconnectIndicator.jsx';
 import RouteVerifier from './components/layout/RouteVerifier.jsx';
 import DeployMismatchBanner from './components/layout/DeployMismatchBanner.jsx';
+import RoleSwitchOverlay from './components/layout/RoleSwitchOverlay.jsx';
 import { AppContext } from './context/AppContext.jsx';
 import { dashboardPathForRole } from './utils/dashboardPath.js';
+import { shouldUseAdminShell } from './utils/rbac.js';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -74,6 +77,19 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   const activeRole = user.activeRole ?? user.roles?.[0];
   if (!activeRole) return <Navigate to="/role" replace state={{ from: location.pathname }} />;
+
+  if (shouldUseAdminShell(user) && allowedRoles && !allowedRoles.includes('admin')) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  const path = location.pathname;
+  const adminExtras = ['/profile', '/settings', '/support', '/feedback', '/about', '/contact'];
+  const adminPathOk =
+    path.startsWith('/admin') ||
+    adminExtras.some((p) => path === p || path.startsWith(`${p}/`));
+  if (shouldUseAdminShell(user) && !adminPathOk) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   if (allowedRoles && !allowedRoles.includes(activeRole)) {
     return <Navigate to={dashboardPathForRole(activeRole)} replace />;
@@ -121,6 +137,9 @@ function AppRealtimeChrome() {
 
 function App() {
   const location = useLocation();
+  const { user } = useAuth();
+  const roleRemountKey =
+    user?.id && user?.activeRole ? `${user.id}:${user.activeRole}` : 'guest';
   const isAuthPage = ['/', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/splash', '/about', '/contact'].includes(
     location.pathname
   );
@@ -128,20 +147,25 @@ function App() {
     location.pathname
   );
   const pageBg = useMemo(() => resolvePageBackground(location.pathname), [location.pathname]);
+  const adminShell = shouldUseAdminShell(user);
+  React.useEffect(() => {
+    document.body.classList.toggle('tp-role-admin', adminShell);
+    return () => document.body.classList.remove('tp-role-admin');
+  }, [adminShell]);
   return (
     <>
 
       <div className="app-root d-flex flex-column min-vh-100 tp-app-surface tp-app-root-vh">
         <DeployMismatchBanner />
         <RouteVerifier />
-        {!isAuthPage && <Navbar />}
+        {!isAuthPage && <Navbar key={`nav-${roleRemountKey}`} />}
         <div className="d-flex flex-grow-1 tp-app-main-row min-w-0">
-          {!isAuthPage && <Sidebar />}
+          {!isAuthPage && (adminShell ? <AdminSidebar key={`aside-${roleRemountKey}`} /> : <Sidebar key={`side-${roleRemountKey}`} />)}
           <main
             className={`flex-grow-1 container-fluid px-0 pb-5 pb-md-0 tp-main-shell min-h-0 min-w-0${isBareAuthMain ? ' tp-main-shell--bare-auth' : ''}`}
             data-tp-page-bg={pageBg}
           >
-              <Suspense fallback={<LoadingScreen />}>
+              <Suspense fallback={<LoadingScreen />} key={roleRemountKey}>
               <Routes>
               {/* Auth */}
               <Route path="/splash" element={<Splash />} />
@@ -482,6 +506,7 @@ function App() {
         {!isAuthPage && <MobileNav />}
         {!isAuthPage && <Footer />}
         {!isAuthPage ? <AppRealtimeChrome /> : null}
+        <RoleSwitchOverlay />
       </div>
     </>
   );

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
+import { resolveWorkspaceSwitchTarget } from '../../utils/roleSwitch.js';
 import { useReceivedRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
@@ -12,7 +13,7 @@ import { formatUserError } from '../../utils/userErrors.js';
  * Profile “trust center” role summary: active role, role chips, lightweight stats (existing APIs only).
  */
 const ProfileRolePanel = () => {
-  const { user, setActiveRole } = useAuth();
+  const { user, setActiveRole, roleSwitching } = useAuth();
   const { request } = useApi();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ const ProfileRolePanel = () => {
     return () => {
       cancelled = true;
     };
-  }, [request, t]);
+  }, [request, t, user?.activeRole]);
 
   const roleLabel = (r) => {
     if (r === 'shipper') return t('auth.shipper');
@@ -53,15 +54,14 @@ const ProfileRolePanel = () => {
     return r || t('common.emDash');
   };
 
-  const handleSwitchRole = async () => {
-    if (!hasBothCommercial || !activeRole) return;
-    const target = activeRole === 'shipper' ? 'carrier' : activeRole === 'carrier' ? 'shipper' : null;
-    if (!target || !roles.includes(target)) return;
+  const handleSwitchRole = async (targetRole) => {
+    const target = targetRole || resolveWorkspaceSwitchTarget(user);
+    if (!target || roleSwitching) return;
     try {
       await setActiveRole(target);
       navigate(dashboardPathForRole(target), { replace: true });
-    } catch {
-      /* toast handled elsewhere if needed */
+    } catch (err) {
+      notifyError(formatUserError(err, t, { fallback: t('errors.generic') }));
     }
   };
 
@@ -164,21 +164,25 @@ const ProfileRolePanel = () => {
         <div className="small tp-secondary-text mb-1">{t('profile.rolesOnAccount')}</div>
         <div className="d-flex flex-wrap gap-2">
           {roles.map((r) => (
-            <span
+            <button
               key={r}
-              className={`badge rounded-pill px-2 py-1 tp-profile-role-chip ${
+              type="button"
+              className={`badge rounded-pill px-2 py-1 tp-profile-role-chip border-0 ${
                 r === activeRole ? 'tp-profile-role-chip--active' : 'tp-profile-role-chip--idle'
               }`}
+              disabled={roleSwitching || r === activeRole}
+              onClick={() => handleSwitchRole(r)}
             >
               {roleLabel(r)}
-            </span>
+            </button>
           ))}
         </div>
-        {hasBothCommercial ? (
+        {roles.length > 1 ? (
           <button
             type="button"
             className="btn btn-outline-primary btn-sm rounded-pill mt-3 w-100"
-            onClick={handleSwitchRole}
+            onClick={() => handleSwitchRole()}
+            disabled={roleSwitching || !resolveWorkspaceSwitchTarget(user)}
           >
             {t('profile.switchRoleVisualCta')}
           </button>

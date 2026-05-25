@@ -9,6 +9,8 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 import { uploadMediaFile } from '../../services/uploadMedia.js';
+import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
+import SafeImage from '../../components/ui/SafeImage.jsx';
 import { syncTrucksAfterCreate } from '../../utils/truckListSync.js';
 
 const emptyForm = {
@@ -200,18 +202,12 @@ const TruckDetails = () => {
               </div>
               <div className="mb-2">
                 <label className="form-label small fw-semibold">{t('pages.truckDetailsPage.typeLabel')}</label>
-                <select
+                <VehicleTypeDropdown
                   name="truckType"
-                  className="form-select form-select-sm"
                   value={form.truckType}
                   onChange={onChange}
                   disabled={!canSubmit}
-                >
-                  <option>Truck</option>
-                  <option>Trailer</option>
-                  <option>Container</option>
-                  <option>Flatbed</option>
-                </select>
+                />
               </div>
               <div className="mb-2">
                 <label className="form-label small fw-semibold">{t('pages.truckDetailsPage.capacityLabel')}</label>
@@ -255,10 +251,15 @@ const TruckDetails = () => {
                   </div>
                 ) : null}
                 {form.truckCardFrontImage ? (
-                  <img
+                  <SafeImage
                     src={form.truckCardFrontImage}
                     alt={t('pages.truckDetailsPage.cardFrontAlt')}
                     className="mt-2 tp-img-contain-full"
+                    fallback={
+                      <div className="mt-2 small text-muted tp-image-fallback rounded border p-2 text-center">
+                        {t('profile.notOnFile')}
+                      </div>
+                    }
                   />
                 ) : null}
               </div>
@@ -277,10 +278,15 @@ const TruckDetails = () => {
                   }}
                 />
                 {form.truckCardBackImage ? (
-                  <img
+                  <SafeImage
                     src={form.truckCardBackImage}
                     alt={t('pages.truckDetailsPage.cardBackAlt')}
                     className="mt-2 tp-img-contain-full"
+                    fallback={
+                      <div className="mt-2 small text-muted tp-image-fallback rounded border p-2 text-center">
+                        {t('profile.notOnFile')}
+                      </div>
+                    }
                   />
                 ) : null}
               </div>

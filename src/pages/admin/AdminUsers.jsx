@@ -24,7 +24,7 @@ const AdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, [request, t]);
+  }, [request]);
 
   useEffect(() => {
     refresh();

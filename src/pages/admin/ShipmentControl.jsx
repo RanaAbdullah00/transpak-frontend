@@ -5,7 +5,7 @@ import Button from '../../components/ui/Button.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const ShipmentControl = () => {
   const { request, loading } = useApi();

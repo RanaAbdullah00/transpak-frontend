@@ -19,15 +19,15 @@ const ICONS = {
 };
 
 const VehicleTypeSelect = ({ value, onChange, name = 'vehicleType' }) => {
-  const { language, t } = useLanguage();
-  const lang = language === 'ur' ? 'ur' : 'en';
+  const { lang, t } = useLanguage();
+  const locale = lang === 'ur' ? 'ur' : 'en';
 
   return (
     <div className="tp-vehicle-type-select">
       <label className="form-label small">{t('pages.postLoadForm.vehicleType')}</label>
       <div className="tp-vehicle-type-grid" role="listbox" aria-label={t('pages.postLoadForm.vehicleType')}>
         {VEHICLE_TYPES.map((item) => {
-          const meta = item[lang] || item.en;
+          const meta = item[locale] || item.en;
           const Icon = ICONS[item.icon] || FaTruck;
           const selected = value === item.value;
           return (

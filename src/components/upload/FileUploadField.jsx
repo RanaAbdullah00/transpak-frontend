@@ -3,6 +3,7 @@ import Button from '../ui/Button.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useCloudinaryUpload } from '../../hooks/useCloudinaryUpload.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
+import SafeImage from '../ui/SafeImage.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 
 /**
@@ -70,7 +71,12 @@ const FileUploadField = ({
         <div className="small text-muted mt-1">{t('pages.upload.progress', { pct: String(progress) })}</div>
       ) : null}
       {preview && variant !== 'pdf' ? (
-        <img src={preview} alt="" className="rounded border mt-2 w-100" style={{ maxHeight: 140, objectFit: 'cover' }} />
+        <SafeImage
+          src={preview}
+          alt=""
+          className="rounded border mt-2 w-100"
+          style={{ maxHeight: 140, objectFit: 'cover', minHeight: 80 }}
+        />
       ) : null}
     </div>
   );

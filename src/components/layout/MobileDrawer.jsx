@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom';
 import { NavLink } from 'react-router-dom';
 import { FaSignOutAlt, FaClipboardCheck } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth.js';
-import { AppContext } from '../../context/AppContext.jsx';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
+import BrandLogo from './BrandLogo.jsx';
 
 const linkClass = ({ isActive }) =>
   `list-group-item list-group-item-action border-0 rounded-lg mb-1 ${isActive ? 'active' : ''}`;
@@ -15,10 +15,6 @@ const MobileDrawer = ({ open, onClose }) => {
   const { t, isUrdu } = useLanguage();
   const { user } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
-  const app = React.useContext(AppContext);
-  const unreadCount = Array.isArray(app?.notifications)
-    ? app.notifications.filter((n) => !(n.read || n.isRead)).length
-    : 0;
   const activeRole = user?.activeRole ?? user?.roles?.[0];
 
   const dashboardPath =
@@ -46,7 +42,10 @@ const MobileDrawer = ({ open, onClose }) => {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-            <div className="fw-bold">{t('nav.menu')}</div>
+            <div className="d-flex align-items-center gap-2">
+              <BrandLogo variant="mark" title="TransPak" className="tp-drawer-brand" />
+              <div className="fw-bold mb-0">{t('nav.menu')}</div>
+            </div>
             <button type="button" className="btn btn-sm btn-outline-secondary rounded-lg" onClick={onClose}>
               {t('nav.close')}
             </button>
@@ -71,7 +70,7 @@ const MobileDrawer = ({ open, onClose }) => {
             {activeRole === 'carrier' && (
               <>
                 <NavLink to="/loads" className={linkClass} onClick={onClose}>
-                  {t('nav.loads')}
+                  {t('loadsHub.navOperations')}
                 </NavLink>
                 <NavLink to="/bids/mine" className={linkClass} onClick={onClose}>
                   {t('nav.myBids')}
@@ -98,38 +97,29 @@ const MobileDrawer = ({ open, onClose }) => {
                 <NavLink to="/admin/users" className={linkClass} onClick={onClose}>
                   {t('nav.adminUsers')}
                 </NavLink>
-                <NavLink to="/admin/loads" className={linkClass} onClick={onClose}>
-                  {t('nav.adminLoads')}
-                </NavLink>
-                <NavLink to="/admin/bids" className={linkClass} onClick={onClose}>
-                  {t('pages.admin.bidsTitle')}
-                </NavLink>
-                <NavLink to="/admin/notifications" className={linkClass} onClick={onClose}>
-                  {t('pages.admin.notificationsTitle')}
-                </NavLink>
-                <NavLink to="/admin/otp-logs" className={linkClass} onClick={onClose}>
-                  {t('pages.admin.otpLogsTitle')}
-                </NavLink>
-                <NavLink to="/admin/roles" className={linkClass} onClick={onClose}>
-                  {t('nav.roleManagement')}
-                </NavLink>
                 <NavLink to="/admin/verification" className={linkClass} onClick={onClose}>
                   {t('nav.verification')}
                 </NavLink>
                 <NavLink to="/admin/disputes" className={linkClass} onClick={onClose}>
                   {t('nav.disputes')}
                 </NavLink>
+                <NavLink to="/admin/loads" className={linkClass} onClick={onClose}>
+                  {t('nav.adminModeration')}
+                </NavLink>
                 <NavLink to="/admin/shipments" className={linkClass} onClick={onClose}>
                   {t('nav.shipments')}
                 </NavLink>
+                <NavLink to="/admin/otp-logs" className={linkClass} onClick={onClose}>
+                  {t('nav.adminReports')}
+                </NavLink>
+                <NavLink to="/admin/notifications" className={linkClass} onClick={onClose}>
+                  {t('pages.admin.notificationsTitle')}
+                </NavLink>
+                <NavLink to="/admin/roles" className={linkClass} onClick={onClose}>
+                  {t('nav.roleManagement')}
+                </NavLink>
               </>
             )}
-            <NavLink to="/notifications" className={linkClass} onClick={onClose}>
-              <span className="d-flex align-items-center gap-2">
-                {t('nav.notifications')}
-                {unreadCount > 0 && <span className="badge bg-danger rounded-pill">{unreadCount}</span>}
-              </span>
-            </NavLink>
             <NavLink to="/settings" className={linkClass} onClick={onClose}>
               {t('nav.settings')}
             </NavLink>

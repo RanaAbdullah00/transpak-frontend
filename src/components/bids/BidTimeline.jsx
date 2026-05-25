@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { isActiveBidStatus, isAwaitingShipper, isCounterOffered, normalizeBidStatus } from '../../utils/bidStatus.js';
+import { isAwaitingShipper, isCounterOffered, normalizeBidStatus } from '../../utils/bidStatus.js';
 
 const STEP_DEFS = [
   { id: 'posted', labelKey: 'bidTimeline.posted' },

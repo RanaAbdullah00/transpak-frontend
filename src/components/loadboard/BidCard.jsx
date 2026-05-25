@@ -7,7 +7,7 @@ import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { translateBidStatus } from '../../utils/i18nLabels.js';
-import { isActiveBidStatus, isAwaitingShipper, isCounterOffered, normalizeBidStatus } from '../../utils/bidStatus.js';
+import { isAwaitingShipper, isCounterOffered, normalizeBidStatus } from '../../utils/bidStatus.js';
 
 function formatHHMMSS(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds));

@@ -8,6 +8,7 @@ const CitySelect = ({ name, value, onChange, label, placeholder, required }) => 
   const [query, setQuery] = useState(value || '');
   const [open, setOpen] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const [highlight, setHighlight] = useState(0);
   const wrapRef = useRef(null);
   const debouncedQuery = useDebouncedValue(query, 120);
 
@@ -16,6 +17,10 @@ const CitySelect = ({ name, value, onChange, label, placeholder, required }) => 
   }, [value]);
 
   const options = useMemo(() => filterCities(debouncedQuery, 16), [debouncedQuery]);
+
+  useEffect(() => {
+    setHighlight(0);
+  }, [options]);
 
   useEffect(() => {
     const onDoc = (e) => {
@@ -50,6 +55,28 @@ const CitySelect = ({ name, value, onChange, label, placeholder, required }) => 
     setInvalid(true);
   };
 
+  const handleKeyDown = (e) => {
+    if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      setOpen(true);
+      return;
+    }
+    if (e.key === 'Escape') {
+      setOpen(false);
+      return;
+    }
+    if (!options.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlight((h) => (h + 1) % options.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight((h) => (h - 1 + options.length) % options.length);
+    } else if (e.key === 'Enter' && open) {
+      e.preventDefault();
+      pick(options[highlight]);
+    }
+  };
+
   return (
     <div className="tp-city-select" ref={wrapRef}>
       {label ? <label className="form-label small">{label}</label> : null}
@@ -66,19 +93,27 @@ const CitySelect = ({ name, value, onChange, label, placeholder, required }) => 
         }}
         onFocus={() => setOpen(true)}
         onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
         autoComplete="off"
         required={required}
         aria-autocomplete="list"
         aria-invalid={invalid}
+        aria-expanded={open}
+        role="combobox"
       />
       {invalid ? (
         <div className="invalid-feedback d-block">{t('pages.postLoadForm.cityInvalid')}</div>
       ) : null}
       {open && options.length > 0 ? (
         <ul className="tp-city-select__menu list-unstyled mb-0" role="listbox">
-          {options.map((city) => (
-            <li key={city}>
-              <button type="button" className="tp-city-select__item" onMouseDown={() => pick(city)}>
+          {options.map((city, idx) => (
+            <li key={city} role="option" aria-selected={idx === highlight}>
+              <button
+                type="button"
+                className={`tp-city-select__item${idx === highlight ? ' tp-city-select__item--active' : ''}`}
+                onMouseDown={() => pick(city)}
+                onMouseEnter={() => setHighlight(idx)}
+              >
                 {city}
               </button>
             </li>

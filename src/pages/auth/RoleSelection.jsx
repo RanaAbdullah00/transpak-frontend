@@ -6,7 +6,6 @@ import Loader from '../../components/ui/Loader.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
-import { notifyError } from '../../components/ui/ToastProvider.jsx';
 import { notifyAuthError } from '../../utils/notifySystem.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
 import { lockOverlayScroll } from '../../utils/overlayScrollLock.js';
@@ -14,7 +13,7 @@ import { lockOverlayScroll } from '../../utils/overlayScrollLock.js';
 const RoleSelection = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setActiveRole } = useAuth();
+  const { user, setActiveRole, roleSwitching } = useAuth();
   const { t } = useLanguage();
 
   const roles = useMemo(() => {
@@ -101,7 +100,7 @@ const RoleSelection = () => {
   if (!dualRole) return null;
 
   const handleSwitch = async () => {
-    if (!targetRole) return;
+    if (!targetRole || roleSwitching) return;
     setSwitching(true);
     try {
       if (roles.includes(targetRole)) {

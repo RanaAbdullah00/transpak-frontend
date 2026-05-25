@@ -4,9 +4,10 @@ import { normalizeTracking } from '../adapters/normalize.js';
 import { AppContext } from '../context/AppContext.jsx';
 import { useLiveLocation } from './useLiveLocation.js';
 import { useTrackingSocket } from './useTrackingSocket.js';
+import { useLanguage } from './useLanguage.js';
 import { mergeTrackingPayload, matchesTrackingPayload } from '../utils/trackingMerge.js';
 
-const SHIPPER_POLL_MS = 60000;
+const TRACK_POLL_MS = Number(import.meta.env.VITE_TRACK_POLL_MS || 8000);
 
 /**
  * Shared REST + socket tracking for dashboards and tracking page.
@@ -14,11 +15,13 @@ const SHIPPER_POLL_MS = 60000;
  */
 export function useShipmentTracking({ trackRef, shareLive = false, enabled = true }) {
   const localRef = String(trackRef || '').trim();
+  const { t } = useLanguage();
   const { registerTrackingHandler, getSocket } = useContext(AppContext) || {};
   const [payload, setPayload] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const lastPostedRef = useRef(0);
+  const fetchGenerationRef = useRef(0);
   const socketKey = payload?.refKey || localRef;
 
   const { position: livePos, error: geoError } = useLiveLocation(shareLive && Boolean(socketKey));
@@ -30,42 +33,70 @@ export function useShipmentTracking({ trackRef, shareLive = false, enabled = tru
       setError('');
       return;
     }
+    const generation = fetchGenerationRef.current;
     if (!silent) setLoading(true);
     if (!silent) setError('');
     try {
-      const res = await api.get(`/shipments/track/${encodeURIComponent(localRef)}`);
+      const res = await api.get(`/shipments/track/${encodeURIComponent(localRef)}`, {
+        skipGlobalErrorToast: true
+      });
+      if (generation !== fetchGenerationRef.current) return;
       const normalized = normalizeTracking(res?.data) || null;
       setPayload((prev) => {
         if (!prev || !normalized) return normalized;
         return mergeTrackingPayload(prev, normalized);
       });
     } catch (e) {
+      if (generation !== fetchGenerationRef.current) return;
       if (!silent) {
-        setError(e?.message || 'Failed to load tracking');
+        setError(e?.message || t('pages.tracking.loadFailed'));
         setPayload(null);
       }
     } finally {
-      if (!silent) setLoading(false);
+      if (generation === fetchGenerationRef.current && !silent) setLoading(false);
     }
-  }, [enabled, localRef]);
+  }, [enabled, localRef, t]);
+
+  useEffect(() => {
+    const reset = () => {
+      fetchGenerationRef.current += 1;
+      setPayload(null);
+      setError('');
+      setLoading(false);
+      lastPostedRef.current = 0;
+    };
+    window.addEventListener('tp:role-switched', reset);
+    window.addEventListener('tp:session-cleared', reset);
+    return () => {
+      window.removeEventListener('tp:role-switched', reset);
+      window.removeEventListener('tp:session-cleared', reset);
+    };
+  }, []);
 
   useEffect(() => {
     if (!enabled || !localRef) {
       setPayload(null);
-      return;
+      setError('');
+      setLoading(false);
+      return undefined;
     }
+    fetchGenerationRef.current += 1;
     setPayload(null);
+    setError('');
     lastPostedRef.current = 0;
     fetchTrack();
+    return () => {
+      fetchGenerationRef.current += 1;
+    };
   }, [fetchTrack, enabled, localRef]);
 
   useEffect(() => {
-    if (!enabled || !localRef || shareLive) return undefined;
+    if (!enabled || !localRef) return undefined;
     const id = setInterval(() => {
       fetchTrack({ silent: true });
-    }, SHIPPER_POLL_MS);
+    }, TRACK_POLL_MS);
     return () => clearInterval(id);
-  }, [enabled, localRef, shareLive, fetchTrack]);
+  }, [enabled, localRef, fetchTrack]);
 
   const applyUpdate = useCallback(
     (incoming) => {

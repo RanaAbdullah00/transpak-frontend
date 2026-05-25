@@ -175,7 +175,11 @@ export function mapAuthError(err, t, flow = 'login') {
   if (code === 'EMAIL_ALREADY_EXISTS') return t('errors.accountAlreadyExists');
   if (code === 'OTP_EXPIRED') return msg || t('errors.otpExpired');
   if (code === 'INVALID_OTP') return msg || t('errors.otpInvalid');
-  if (code === 'DATABASE_UNAVAILABLE') return t('errors.generic');
+  if (code === 'DATABASE_UNAVAILABLE' || code === 'DATABASE_TIMEOUT') {
+    return t('errors.databaseUnavailable');
+  }
+  if (code === 'DATABASE_AUTH_FAILED') return t('errors.databaseUnavailable');
+  if (code === 'LOGIN_SERVER_ERROR') return t('errors.loginServer');
 
   return msg || t('errors.unexpectedAuth') || AUTH_UNEXPECTED_ERROR;
 }

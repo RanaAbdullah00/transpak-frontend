@@ -11,6 +11,7 @@ const AdminDashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,7 +19,7 @@ const AdminDashboardPage = () => {
       try {
         setLoading(true);
         setFetchError(null);
-        const data = await request({ url: '/admin/stats' });
+        const data = await request({ url: '/admin/stats', skipGlobalErrorToast: true });
         if (!cancelled) setStats(data);
       } catch (e) {
         if (!cancelled) {
@@ -32,7 +33,7 @@ const AdminDashboardPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [request, t]);
+  }, [request, t, retryKey]);
 
   const cards = [
     { key: 'users', title: t('pages.admin.usersTitle'), value: stats?.totalUsers, hint: t('pages.admin.registeredAccounts') },
@@ -66,14 +67,13 @@ const AdminDashboardPage = () => {
   }, [stats, t]);
 
   const quickLinks = [
-    { to: '/admin/bids', label: t('pages.admin.bidsTitle') },
-    { to: '/admin/notifications', label: t('pages.admin.notificationsTitle') },
-    { to: '/admin/otp-logs', label: t('pages.admin.otpLogsTitle') },
     { to: '/admin/users', label: t('nav.adminUsers') },
-    { to: '/admin/shipments', label: t('nav.shipments') },
-    { to: '/admin/loads', label: t('nav.adminLoads') },
     { to: '/admin/verification', label: t('nav.verification') },
     { to: '/admin/disputes', label: t('nav.disputes') },
+    { to: '/admin/loads', label: t('nav.adminModeration') },
+    { to: '/admin/shipments', label: t('nav.shipments') },
+    { to: '/admin/otp-logs', label: t('nav.adminReports') },
+    { to: '/admin/notifications', label: t('pages.admin.notificationsTitle') },
     { to: '/admin/roles', label: t('nav.roleManagement') }
   ];
 
@@ -92,7 +92,11 @@ const AdminDashboardPage = () => {
         <div className="alert alert-warning rounded-3 border-0 shadow-sm" role="alert">
           <div className="fw-semibold mb-1">{t('pages.admin.statsError')}</div>
           <p className="small mb-3 text-muted">{fetchError}</p>
-          <button type="button" className="btn btn-primary btn-sm rounded-lg" onClick={() => window.location.reload()}>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm rounded-lg"
+            onClick={() => setRetryKey((k) => k + 1)}
+          >
             {t('pages.admin.tryAgain')}
           </button>
         </div>

@@ -8,6 +8,7 @@ import { normalizeBids } from '../../adapters/normalize.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import { filterActiveBids } from '../../utils/bidStatus.js';
 
 const isTruckComplete = (t) =>
   t && (t.engineNumber || t.truckNumber) && (t.truckCardFrontImage || t.truckFrontImage) && (t.truckCardBackImage || t.truckBackImage);
@@ -148,7 +149,7 @@ const MyBids = () => {
             </div>
           )}
           <BidList
-            bids={bids}
+            bids={filterActiveBids(bids)}
             mode="carrier"
             onAcceptSuggestion={handleAcceptSuggestion}
             onRejectSuggestion={handleRejectSuggestion}

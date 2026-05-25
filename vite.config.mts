@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
     );
   }
 
-  const proxyTarget = (env.VITE_PROXY_TARGET || 'http://127.0.0.1:5000').replace(/\/$/, '');
+  const proxyTarget = (env.VITE_PROXY_TARGET || 'http://127.0.0.1:10000').replace(/\/$/, '');
 
   const appBuildId = resolveBuildId();
 
@@ -41,7 +41,6 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
-            if (id.includes('recharts')) return 'vendor-charts';
             if (id.includes('socket.io') || id.includes('engine.io')) return 'vendor-socket';
             if (id.includes('react-router')) return 'vendor-router';
             if (id.includes('react-dom') || id.includes('/react/')) return 'vendor-react';

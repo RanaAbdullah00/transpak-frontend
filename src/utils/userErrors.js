@@ -48,6 +48,18 @@ export function formatUserError(err, t, options = {}) {
   if (apiCode === 'COUNTER_LIMIT_REACHED' && t) {
     return t('errors.counterLimitReached');
   }
+  if (apiCode === 'PROFILE_INCOMPLETE' && t) {
+    return t('pages.loads.profileRequiredBody');
+  }
+  if (apiCode === 'SCHEMA_OUTDATED' && t) {
+    return t('errors.databaseUnavailable');
+  }
+  if (apiCode === 'ADMIN_SESSION_REQUIRED' && t) {
+    return t('errors.adminSessionRequired');
+  }
+  if (apiCode === 'ADMIN_COMMERCIAL_FORBIDDEN' && t) {
+    return t('errors.adminCommercialForbidden');
+  }
 
   const { displayMessage, message } = unwrapErrorDetail(err);
   const rawUnwrap = displayMessage || message;

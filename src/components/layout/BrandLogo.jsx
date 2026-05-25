@@ -1,28 +1,35 @@
 import React from 'react';
-import { FaTruck, FaShip, FaPlane } from 'react-icons/fa';
 
 /**
- * TransPak wordmark: TRANS (italic, theme-contrast) + PAK (green).
- * Subtle truck / ship / plane for logistics identity.
+ * TransPak TP mark — rounded container, italic black T, green P.
+ * TransPAK Digital Logistics System
  */
+export const TpMark = ({ compact = false, className = '', showTagline = false }) => (
+  <span
+    className={`tp-brand-mark-wrap ${compact ? 'tp-brand-mark-wrap--compact' : ''} ${className}`.trim()}
+    aria-hidden={!showTagline}
+  >
+    <span className={`tp-brand-mark ${compact ? 'tp-brand-mark--compact' : ''}`}>
+      <span className="tp-brand-mark__t">T</span>
+      <span className="tp-brand-mark__p">P</span>
+    </span>
+    {showTagline ? (
+      <span className="tp-brand-mark__tagline small text-muted d-block">Digital Logistics</span>
+    ) : null}
+  </span>
+);
+
 const BrandLogo = ({ className = '', onClick, title = 'TransPak', variant = 'full' }) => {
   const isMark = variant === 'mark';
   const isAuth = variant === 'auth';
+  const compact = isMark || isAuth;
 
-  const icons = (
-    <span className="tp-brand-logo__modes" aria-hidden="true">
-      <FaTruck className="tp-brand-logo__mode-icon" />
-      <FaShip className="tp-brand-logo__mode-icon" />
-      <FaPlane className="tp-brand-logo__mode-icon" />
-    </span>
-  );
-
-  const wordmark = (
+  const wordmark = !isMark ? (
     <span className={`tp-brand-logo__wordmark ${isAuth ? 'tp-brand-logo__wordmark--auth' : ''}`}>
       <span className="tp-brand-logo__trans">TRANS</span>
       <span className="tp-brand-logo__pak">PAK</span>
     </span>
-  );
+  ) : null;
 
   return (
     <div
@@ -45,22 +52,12 @@ const BrandLogo = ({ className = '', onClick, title = 'TransPak', variant = 'ful
       tabIndex={onClick ? 0 : undefined}
       aria-label={title}
     >
-      {isMark ? (
-        <span className="tp-brand-logo__wordmark tp-brand-logo__wordmark--compact">
-          <span className="tp-brand-logo__trans">TRANS</span>
-          <span className="tp-brand-logo__pak">PAK</span>
-        </span>
-      ) : (
-        wordmark
-      )}
+      <TpMark compact={compact} />
+      {wordmark}
       {!isMark && !isAuth ? <span className="tp-brand-logo__rule" aria-hidden="true" /> : null}
-      {isAuth ? <span className="tp-brand-logo__rule tp-brand-logo__rule--vertical d-none d-sm-inline" aria-hidden="true" /> : null}
-      <div
-        className={`tp-brand-logo__icons ${isMark ? 'tp-brand-logo__icons--mark' : ''} ${isAuth ? 'tp-brand-logo__icons--auth' : ''}`}
-        aria-hidden="true"
-      >
-        {icons}
-      </div>
+      {isAuth ? (
+        <span className="tp-brand-logo__rule tp-brand-logo__rule--vertical d-none d-sm-inline" aria-hidden="true" />
+      ) : null}
     </div>
   );
 };

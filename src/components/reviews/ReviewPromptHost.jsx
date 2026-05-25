@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
+import { shouldUseAdminShell } from '../../utils/rbac.js';
 import ReviewPromptModal from './ReviewPromptModal.jsx';
 
 const STORAGE_KEY = 'tp_review_dismissed';
@@ -106,6 +107,8 @@ const ReviewPromptHost = () => {
       saveDismissed(dismissedRef.current);
     }
   };
+
+  if (shouldUseAdminShell(user)) return null;
 
   return <ReviewPromptModal prompt={prompt} onClose={handleClose} onSubmitted={handleSubmitted} />;
 };

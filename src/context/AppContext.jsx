@@ -4,6 +4,8 @@ import { normalizeNotification } from '../adapters/normalize.js';
 import { isRenderableClientNotification, sanitizeNotificationRoleType } from '../utils/notificationsFilter.js';
 import { routeRealtimeNotification } from '../utils/notifySystem.js';
 import api from '../services/api.js';
+import { unwrapResponseData } from '../utils/unwrapApi.js';
+import { notifyApiError } from '../utils/notifySystem.js';
 import { useAuth } from '../hooks/useAuth.js';
 
 export const AppContext = createContext(null);
@@ -24,7 +26,7 @@ function mapNotificationRow(r) {
 }
 
 export const AppProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, sessionVersion } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const chatMessageHandlers = useRef(new Set());
   const chatSeenHandlers = useRef(new Set());
@@ -94,34 +96,35 @@ export const AppProvider = ({ children }) => {
       return undefined;
     }
 
+    setNotifications([]);
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get('/notifications');
+        const res = await api.get('/notifications', { skipGlobalErrorToast: true });
         if (cancelled) return;
-        const rows = res?.data;
+        const rows = unwrapResponseData(res);
         if (!Array.isArray(rows)) return;
         setNotifications(rows.map(mapNotificationRow));
-      } catch {
-        // keep empty; socket may still deliver
+      } catch (err) {
+        if (err?.response?.status !== 401) notifyApiError(err);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, user?.activeRole]);
 
   const refetchNotifications = useCallback(async () => {
     const token = localStorage.getItem('transpak_token');
     if (!token) return;
     try {
-      const res = await api.get('/notifications');
-      const rows = res?.data;
+      const res = await api.get('/notifications', { skipGlobalErrorToast: true });
+      const rows = unwrapResponseData(res);
       if (!Array.isArray(rows)) return;
       setNotifications(rows.map(mapNotificationRow));
-    } catch {
-      /* keep current */
+    } catch (err) {
+      if (err?.response?.status !== 401) notifyApiError(err);
     }
   }, []);
 
@@ -129,6 +132,27 @@ export const AppProvider = ({ children }) => {
     const onRefresh = () => refetchNotifications();
     window.addEventListener('tp:realtime-refresh', onRefresh);
     return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refetchNotifications]);
+
+  useEffect(() => {
+    const onSessionCleared = () => {
+      setNotifications([]);
+      lastTrackingSig.current = { sig: '', t: 0 };
+      lastTrackingTsByRef.current.clear();
+    };
+    window.addEventListener('tp:session-cleared', onSessionCleared);
+    return () => window.removeEventListener('tp:session-cleared', onSessionCleared);
+  }, []);
+
+  useEffect(() => {
+    const onRoleSwitch = () => {
+      setNotifications([]);
+      lastTrackingSig.current = { sig: '', t: 0 };
+      lastTrackingTsByRef.current.clear();
+      refetchNotifications();
+    };
+    window.addEventListener('tp:role-switched', onRoleSwitch);
+    return () => window.removeEventListener('tp:role-switched', onRoleSwitch);
   }, [refetchNotifications]);
 
   useEffect(() => {
@@ -147,7 +171,6 @@ export const AppProvider = ({ children }) => {
         const refs = [p?.refKey, p?.loadId]
           .map((v) => String(v ?? '').trim())
           .filter(Boolean);
-        const ref = refs[0] || '';
         const ts = Number(p?.ts);
         if (refs.length && Number.isFinite(ts)) {
           const lastTs = Math.max(...refs.map((r) => lastTrackingTsByRef.current.get(r) || 0));
@@ -192,7 +215,7 @@ export const AppProvider = ({ children }) => {
       client.disconnect();
       socketRef.current = null;
     };
-  }, [user?.id, refetchNotifications]);
+  }, [user?.id, user?.activeRole, sessionVersion, refetchNotifications]);
 
   const getSocket = useCallback(() => socketRef.current, []);
 

@@ -1,21 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import RoleSelector from './RoleSelector.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
-import { loginApi, fetchProfileApi } from '../../services/authService.js';
+import { loginApi, fetchProfileApi, patchActiveRoleApi } from '../../services/authService.js';
 import PasswordField from '../ui/PasswordField.jsx';
 import { notifySuccess } from '../ui/ToastProvider.jsx';
 import { notifyAuthError, notifyUserError } from '../../utils/notifySystem.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapErrorCode } from '../../utils/unwrapApi.js';
 import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
+import { applyDemoAdminSession } from '../../utils/authSession.js';
 import { FaEnvelope } from 'react-icons/fa';
 
 const DEMO_ADMIN_EMAIL = String(import.meta.env.VITE_DEMO_ADMIN_EMAIL || '')
   .trim()
   .toLowerCase();
+
+/** FYP demo admin — auto-login only for this exact credential pair. */
+const QUICK_DEMO_EMAIL = 'mrrajpoot.327@gmail.com';
+const QUICK_DEMO_PASSWORD = '11223344';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -24,6 +29,7 @@ const LoginForm = () => {
   const { t, isUrdu } = useLanguage();
   const [form, setForm] = useState({ email: '', password: '' });
   const [uiRolePref, setUiRolePref] = useState('');
+  const autoLoginAttempted = useRef(false);
 
   React.useEffect(() => {
     const pre = location.state?.prefill?.email;
@@ -44,7 +50,9 @@ const LoginForm = () => {
   };
 
   const emailNorm = form.email.trim().toLowerCase();
-  const isDemoAdmin = DEMO_ADMIN_EMAIL.length > 0 && emailNorm === DEMO_ADMIN_EMAIL;
+  const isDemoAdmin =
+    (DEMO_ADMIN_EMAIL.length > 0 && emailNorm === DEMO_ADMIN_EMAIL) ||
+    emailNorm === QUICK_DEMO_EMAIL;
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
@@ -66,13 +74,34 @@ const LoginForm = () => {
       try {
         const profRes = await fetchProfileApi();
         const prof = safeUnwrapAuthResponse(profRes);
-        if (prof?.user) session = prof;
+        if (prof?.user) {
+          session = {
+            ...prof,
+            token: prof.token || payload.token,
+            user: { ...prof.user, activeRole: prof.user.activeRole || payload.user?.activeRole }
+          };
+        }
       } catch {
         /* use login payload */
       }
-      if (session?.user) login(session);
+      if (isDemoAdmin && session?.user?.activeRole !== 'admin') {
+        try {
+          const syncRes = await patchActiveRoleApi('admin');
+          const synced = safeUnwrapAuthResponse(syncRes);
+          if (synced?.token) localStorage.setItem('transpak_token', synced.token);
+          if (synced?.user) session = { ...synced, token: synced.token || session.token };
+        } catch {
+          /* keep login session */
+        }
+      }
+      const sessionToStore = applyDemoAdminSession(session, emailNorm);
+      if (sessionToStore?.user) login(sessionToStore);
       notifySuccess(t('auth.welcomeBack'));
-      const activeRole = session?.user?.activeRole ?? session?.currentRole ?? user?.activeRole ?? currentRole;
+      const activeRole =
+        sessionToStore?.user?.activeRole ??
+        sessionToStore?.currentRole ??
+        user?.activeRole ??
+        currentRole;
       navigate(safeDashboardPath(activeRole), { replace: true });
     } catch (err) {
       const code = unwrapErrorCode(err);
@@ -90,9 +119,16 @@ const LoginForm = () => {
     }
   };
 
+  React.useEffect(() => {
+    if (loading || autoLoginAttempted.current) return;
+    if (emailNorm !== QUICK_DEMO_EMAIL || form.password !== QUICK_DEMO_PASSWORD) return;
+    autoLoginAttempted.current = true;
+    handleSubmit({ preventDefault: () => {} });
+  }, [emailNorm, form.password, loading]);
+
   return (
     <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-login-form mt-3">
-      <RoleSelector value={uiRolePref} onChange={setUiRolePref} />
+      {!isDemoAdmin ? <RoleSelector value={uiRolePref} onChange={setUiRolePref} /> : null}
       <div className="mb-2">
         <label className="form-label small">{t('auth.email')}</label>
         <div className="input-group input-group-sm">

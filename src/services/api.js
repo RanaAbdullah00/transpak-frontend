@@ -12,6 +12,7 @@ const ALLOWED_API_PREFIXES = [
   '/loads',
   '/bids',
   '/fare',
+  '/maps',
   '/carrier-space',
   '/operations',
   '/admin',
@@ -90,7 +91,7 @@ api.interceptors.request.use((config) => {
   const resolved = fullUrl(config);
   const isAuth = /\/api\/auth(\/|$)/i.test(resolved) || /\/auth(\/|$)/i.test(config.url || '');
 
-  if (isAuth && !/^https?:\/\//i.test(config.url || '') && String(config.url || '').startsWith('/')) {
+  if (isAuth && import.meta.env.DEV && !/^https?:\/\//i.test(config.url || '') && String(config.url || '').startsWith('/')) {
     // eslint-disable-next-line no-console
     console.error('[api] relative auth path bypasses authService — use authService.js only:', resolved);
   }

@@ -113,7 +113,7 @@ const ActiveShipmentPanel = ({
             }))}
           />
         ) : (
-          <div className="text-muted small text-center py-3">No history available</div>
+          <div className="text-muted small text-center py-3">{t('pages.trackingMap.noHistory')}</div>
         )}
       </div>
     </div>

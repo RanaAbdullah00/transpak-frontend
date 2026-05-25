@@ -1,4 +1,4 @@
-import { PAKISTAN_CITIES } from '../data/pakistanCities.js';
+import { PAKISTAN_CITIES, resolveCityName } from '../data/pakistanCities.js';
 
 export function isLatLngPair(v) {
   if (Array.isArray(v) && v.length >= 2) {
@@ -23,9 +23,10 @@ export function normalizeCoordList(list) {
 }
 
 export function findCityCoords(name) {
-  const q = String(name || '').trim().toLowerCase();
-  if (!q) return null;
-  const hit = PAKISTAN_CITIES.find((c) => c.name.toLowerCase() === q);
+  const canonical = resolveCityName(name);
+  if (!canonical) return null;
+  const n = canonical.toLowerCase();
+  const hit = PAKISTAN_CITIES.find((c) => c.name.toLowerCase() === n);
   return hit ? [hit.lat, hit.lng] : null;
 }
 

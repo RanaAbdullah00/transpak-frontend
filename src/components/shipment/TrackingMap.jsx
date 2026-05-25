@@ -3,6 +3,7 @@ import Card from '../ui/Card.jsx';
 import Map from '../Map.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeCoordList, routeFromCityNames, toLatLngPair } from '../../utils/mapCoords.js';
+import { useMapRoute } from '../../hooks/useMapRoute.js';
 import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
 
 const TrackingMap = ({
@@ -16,13 +17,28 @@ const TrackingMap = ({
 }) => {
   const { t, isUrdu } = useLanguage();
 
+  const hasLiveRoute =
+    normalizeCoordList(trackingData?.liveTrackingMap?.coordinates).length > 0 ||
+    normalizeCoordList(route).length > 0;
+
+  const {
+    coordinates: orsCoords,
+    loading: orsLoading,
+    usedFallback: orsFallback
+  } = useMapRoute({
+    origin: originName,
+    destination: destinationName,
+    enabled: Boolean(originName && destinationName && !hasLiveRoute)
+  });
+
   const coords = useMemo(() => {
     const fromData = normalizeCoordList(trackingData?.liveTrackingMap?.coordinates);
     if (fromData.length > 0) return fromData;
     const fromRoute = normalizeCoordList(route);
     if (fromRoute.length > 0) return fromRoute;
+    if (orsCoords.length >= 2) return orsCoords;
     return routeFromCityNames(originName, destinationName);
-  }, [trackingData?.liveTrackingMap?.coordinates, route, originName, destinationName]);
+  }, [trackingData?.liveTrackingMap?.coordinates, route, originName, destinationName, orsCoords]);
 
   const pickup = coords.length >= 1 ? coords[0] : null;
   const delivery = coords.length >= 2 ? coords[coords.length - 1] : null;
@@ -57,6 +73,8 @@ const TrackingMap = ({
         route={coords}
         driver={driver}
         liveDriver={false}
+        loading={orsLoading && !hasLiveRoute}
+        errorMessage={orsFallback && !hasLiveRoute && !orsLoading ? t('map.routeFallback') : ''}
         pickupLabel={t('pages.trackingMap.pickup')}
         deliveryLabel={t('pages.trackingMap.delivery')}
         driverLabel={t('pages.trackingMap.driver')}

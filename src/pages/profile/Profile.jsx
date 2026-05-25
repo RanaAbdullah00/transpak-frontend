@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import Loader from '../../components/ui/Loader.jsx';
 import ProfileSheet from '../../components/profile/ProfileSheet.jsx';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
+import { shouldUseAdminShell } from '../../utils/rbac.js';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -14,8 +15,9 @@ const Profile = () => {
 
   const handleClose = () => {
     setOpen(false);
-    const role = user.activeRole ?? user.roles?.[0];
-    const path = dashboardPathForRole(role);
+    const path = shouldUseAdminShell(user)
+      ? '/admin/dashboard'
+      : dashboardPathForRole(user.activeRole ?? user.roles?.[0]);
     navigate(path === '/' ? '/loads/manage' : path, { replace: true });
   };
 

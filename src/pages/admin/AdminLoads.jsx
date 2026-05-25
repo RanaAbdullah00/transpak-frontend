@@ -23,7 +23,7 @@ const AdminLoads = () => {
     } finally {
       setLoading(false);
     }
-  }, [request, t]);
+  }, [request]);
 
   useEffect(() => {
     refresh();

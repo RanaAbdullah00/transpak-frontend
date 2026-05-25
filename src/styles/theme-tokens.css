@@ -59,7 +59,7 @@ body.tp-role-admin {
 
 .tp-city-select__menu {
   position: absolute;
-  z-index: var(--tp-z-drawer);
+  z-index: var(--tp-z-dropdown);
   left: 0;
   right: 0;
   top: calc(100% + 2px);
@@ -84,6 +84,10 @@ body.tp-role-admin {
 
 .tp-city-select__item:hover {
   background: var(--pak-light-green-bg);
+}
+
+.tp-city-select__item--active {
+  background: color-mix(in srgb, var(--pak-primary) 16%, var(--card-bg));
 }
 
 /* Futuristic toast host */

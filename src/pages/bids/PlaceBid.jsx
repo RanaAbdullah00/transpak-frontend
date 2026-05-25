@@ -75,7 +75,12 @@ const PlaceBid = () => {
         transitTime,
         note,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + parseInt(load.deadlineHours || 2, 10) * 60 * 60 * 1000).toISOString()
+        expiresAt: new Date(
+          Date.now() +
+            (Number(load.deadlineMinutes) > 0
+              ? Number(load.deadlineMinutes) * 60 * 1000
+              : parseInt(load.deadlineHours || 2, 10) * 60 * 60 * 1000)
+        ).toISOString()
       };
 
       await request({
