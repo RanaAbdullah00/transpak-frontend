@@ -3,8 +3,9 @@ export function resolveImageUrl(value) {
   const s = typeof value === 'string' ? value.trim() : '';
   if (!s || s.length > 2048) return '';
   if (/^data:/i.test(s)) return '';
-  if (/^http:\/\//i.test(s)) return '';
   if (/^https:\/\//i.test(s)) return s;
+  if (/^http:\/\//i.test(s)) return `https://${s.slice(7)}`;
+  if (s.startsWith('//')) return `https:${s}`;
   return '';
 }
 

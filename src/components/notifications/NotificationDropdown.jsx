@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaBell } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
+import { FaBell, FaTimes } from 'react-icons/fa';
 import NotificationItem from './NotificationItem.jsx';
 import Button from '../ui/Button.jsx';
 import { AppContext } from '../../context/AppContext.jsx';
@@ -9,6 +10,9 @@ import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notificationsForUser } from '../../utils/notificationScope.js';
+import { getPortalContainer } from '../../utils/portalRoot.js';
+import { resolveAdminShell } from '../../utils/rbac.js';
+import { useLocation } from 'react-router-dom';
 
 function startOfDay(d) {
   const x = new Date(d);
@@ -16,7 +20,10 @@ function startOfDay(d) {
   return x.getTime();
 }
 
-function groupByRole(notifications, t) {
+function groupByRole(notifications, t, adminShell) {
+  if (adminShell) {
+    return [{ key: 'admin', label: null, items: notifications }];
+  }
   const shipper = [];
   const carrier = [];
   const general = [];
@@ -36,6 +43,8 @@ function groupByRole(notifications, t) {
 const NotificationDropdown = ({ className = '' }) => {
   const { t, isUrdu } = useLanguage();
   const { user } = useAuth();
+  const location = useLocation();
+  const adminShell = resolveAdminShell(user, location.pathname);
   const app = React.useContext(AppContext);
   const [open, setOpen] = useState(false);
   const [serverUnread, setServerUnread] = useState(0);
@@ -45,10 +54,7 @@ const NotificationDropdown = ({ className = '' }) => {
     () => (Array.isArray(app?.notifications) ? app.notifications : []),
     [app?.notifications]
   );
-  const notifications = useMemo(
-    () => notificationsForUser(allNotifications, user),
-    [allNotifications, user]
-  );
+  const notifications = useMemo(() => notificationsForUser(allNotifications), [allNotifications]);
   const markNotificationRead = app?.markNotificationRead || (() => {});
   const refetchNotifications = app?.refetchNotifications;
 
@@ -56,7 +62,7 @@ const NotificationDropdown = ({ className = '' }) => {
     if (!user) return [];
     return Array.isArray(user.roles) && user.roles.length ? user.roles : [user.activeRole].filter(Boolean);
   }, [user]);
-  const dualRole = roles.includes('shipper') && roles.includes('carrier');
+  const dualRole = !adminShell && roles.includes('shipper') && roles.includes('carrier');
 
   const contextUnread = notifications.filter((n) => !(n.read || n.isRead)).length;
   const unreadCount = allNotifications.length ? contextUnread : serverUnread;
@@ -87,16 +93,11 @@ const NotificationDropdown = ({ className = '' }) => {
       return undefined;
     }
     document.body.classList.add('tp-notif-panel-open');
-    const onDoc = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
-    };
     const onEsc = (e) => {
       if (e.key === 'Escape') setOpen(false);
     };
-    document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onEsc);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onEsc);
       document.body.classList.remove('tp-notif-panel-open');
     };
@@ -133,12 +134,12 @@ const NotificationDropdown = ({ className = '' }) => {
   }, [sorted]);
 
   const roleSectionsToday = useMemo(
-    () => (dualRole ? groupByRole(today, t) : [{ key: 'all', label: null, items: today }]),
-    [dualRole, today, t]
+    () => (dualRole || adminShell ? groupByRole(today, t, adminShell) : [{ key: 'all', label: null, items: today }]),
+    [dualRole, adminShell, today, t]
   );
   const roleSectionsOlder = useMemo(
-    () => (dualRole ? groupByRole(older, t) : [{ key: 'all', label: null, items: older }]),
-    [dualRole, older, t]
+    () => (dualRole || adminShell ? groupByRole(older, t, adminShell) : [{ key: 'all', label: null, items: older }]),
+    [dualRole, adminShell, older, t]
   );
 
   const markAllRead = async () => {
@@ -201,8 +202,59 @@ const NotificationDropdown = ({ className = '' }) => {
     );
   };
 
+  const panel = open ? (
+    <div className={`tp-notif-slide ${isUrdu && !adminShell ? 'tp-rtl' : ''}`} role="presentation">
+      <button
+        type="button"
+        className="tp-notif-slide__backdrop"
+        aria-label={t('nav.close')}
+        onClick={() => setOpen(false)}
+      />
+      <aside
+        className="tp-notif-slide__panel shadow-lg"
+        role="dialog"
+        aria-label={t('common.notifications')}
+        ref={rootRef}
+      >
+        <div className="tp-notif-slide__head d-flex justify-content-between align-items-center gap-2 px-3 py-3 border-bottom tp-border-theme">
+          <span className="fw-semibold">{t('common.notifications')}</span>
+          <div className="d-flex align-items-center gap-2">
+            {contextUnread > 0 ? (
+              <Button variant="outline-primary" size="sm" className="rounded-lg py-0 px-2" onClick={markAllRead}>
+                {t('pages.notificationsPanel.markAllRead')}
+              </Button>
+            ) : null}
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm rounded-lg d-flex align-items-center justify-content-center"
+              aria-label={t('nav.close')}
+              onClick={() => setOpen(false)}
+            >
+              <FaTimes size={14} />
+            </button>
+          </div>
+        </div>
+        <div className="tp-notif-slide__scroll px-2 py-2">
+          {!sorted.length ? (
+            <div className="text-center small py-5 px-2 tp-empty-state">
+              <div className="fw-semibold mb-1 text-body">{t('pages.notificationsPanel.emptyTitle')}</div>
+              <div className="text-muted">{t('pages.notificationsPanel.emptyBody')}</div>
+            </div>
+          ) : (
+            <>
+              {renderTimeGroup(t('pages.notificationsPanel.groupToday'), roleSectionsToday)}
+              {renderTimeGroup(t('pages.notificationsPanel.groupEarlier'), roleSectionsOlder)}
+            </>
+          )}
+        </div>
+      </aside>
+    </div>
+  ) : null;
+
+  const host = getPortalContainer();
+
   return (
-    <div className={`tp-notif-dropdown position-relative ${className}`} ref={rootRef}>
+    <div className={`tp-notif-trigger position-relative ${className}`}>
       <button
         type="button"
         className="btn btn-outline-secondary btn-sm rounded-lg position-relative d-flex align-items-center justify-content-center gap-1"
@@ -215,35 +267,7 @@ const NotificationDropdown = ({ className = '' }) => {
           <span className="badge rounded-pill bg-danger tp-badge-xs">{unreadCount > 99 ? '99+' : unreadCount}</span>
         ) : null}
       </button>
-      {open ? (
-        <div
-          className={`tp-notif-dropdown__panel tp-notif-dropdown__panel--open shadow-lg rounded-3 border ${isUrdu ? 'tp-rtl' : ''}`}
-          role="dialog"
-          aria-label={t('common.notifications')}
-        >
-          <div className="d-flex justify-content-between align-items-center gap-2 px-3 py-2 border-bottom tp-border-theme tp-notif-dropdown__head">
-            <span className="fw-semibold small">{t('common.notifications')}</span>
-            {contextUnread > 0 ? (
-              <Button variant="outline-primary" size="sm" className="rounded-lg py-0 px-2" onClick={markAllRead}>
-                {t('pages.notificationsPanel.markAllRead')}
-              </Button>
-            ) : null}
-          </div>
-          <div className="tp-notif-dropdown__scroll px-2 py-2">
-            {!sorted.length ? (
-              <div className="text-center small py-4 px-2 tp-empty-state">
-                <div className="fw-semibold mb-1 text-body">{t('pages.notificationsPanel.emptyTitle')}</div>
-                <div className="text-muted">{t('pages.notificationsPanel.emptyBody')}</div>
-              </div>
-            ) : (
-              <>
-                {renderTimeGroup(t('pages.notificationsPanel.groupToday'), roleSectionsToday)}
-                {renderTimeGroup(t('pages.notificationsPanel.groupEarlier'), roleSectionsOlder)}
-              </>
-            )}
-          </div>
-        </div>
-      ) : null}
+      {host && panel ? createPortal(panel, host) : panel}
     </div>
   );
 };

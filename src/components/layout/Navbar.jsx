@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth.js';
 import MobileDrawer from './MobileDrawer.jsx';
@@ -8,6 +8,7 @@ import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { resolveWorkspaceSwitchTarget } from '../../utils/roleSwitch.js';
+import { resolveAdminShell } from '../../utils/rbac.js';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import LanguageToggle from '../ui/LanguageToggle.jsx';
@@ -15,6 +16,7 @@ import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, isUrdu } = useLanguage();
   const { user, setActiveRole, roleSwitching } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -26,7 +28,8 @@ const Navbar = () => {
   const hasCarrier = roles.includes('carrier');
   const hasBothCommercial = hasShipper && hasCarrier;
   const hasOneCommercial = (hasShipper || hasCarrier) && !hasBothCommercial;
-  const workspaceTarget = resolveWorkspaceSwitchTarget(user);
+  const adminShell = resolveAdminShell(user, location.pathname);
+  const workspaceTarget = adminShell ? null : resolveWorkspaceSwitchTarget(user);
   const showWorkspaceSwitch = Boolean(workspaceTarget);
 
   const missingCommercialRole = hasShipper && !hasCarrier ? 'carrier' : !hasShipper && hasCarrier ? 'shipper' : null;
@@ -137,7 +140,7 @@ const Navbar = () => {
           </Link>
 
           <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-            <LanguageToggle className="rounded-lg" />
+            {!adminShell ? <LanguageToggle className="rounded-lg" /> : null}
             {user ? (
               <>
                 <NotificationDropdown />

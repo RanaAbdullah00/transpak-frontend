@@ -15,35 +15,18 @@ import {
 } from 'react-icons/fa';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import SafeAvatar from '../ui/SafeAvatar.jsx';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
 import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
-import { resolveWorkspaceSwitchTarget } from '../../utils/roleSwitch.js';
-import { dashboardPathForRole } from '../../utils/dashboardPath.js';
-import { notifyError } from '../ui/ToastProvider.jsx';
-import { formatUserError } from '../../utils/userErrors.js';
 
 const navLinkClass = ({ isActive }) =>
   `nav-link d-flex align-items-center gap-2 rounded-lg px-3 py-2 mb-1 ${isActive ? 'active' : ''}`;
 
 /** Platform admin navigation only — no shipper/carrier commercial links. */
 const AdminSidebar = () => {
-  const navigate = useNavigate();
-  const { user, setActiveRole, roleSwitching } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
-  const workspaceTarget = resolveWorkspaceSwitchTarget(user);
-
-  const handleWorkspaceSwitch = async () => {
-    if (!workspaceTarget || roleSwitching) return;
-    try {
-      await setActiveRole(workspaceTarget);
-      navigate(dashboardPathForRole(workspaceTarget), { replace: true });
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('errors.generic') }));
-    }
-  };
 
   return (
     <aside className="d-none d-md-block sidebar-fixed sidebar-aside d-flex flex-column tp-admin-sidebar">
@@ -93,16 +76,6 @@ const AdminSidebar = () => {
           <FaCog />
           {t('nav.settings')}
         </NavLink>
-        {workspaceTarget ? (
-          <button
-            type="button"
-            className="nav-link d-flex align-items-center gap-2 rounded-lg px-3 py-2 mb-1 w-100 border-0 bg-transparent text-start"
-            onClick={handleWorkspaceSwitch}
-            disabled={roleSwitching}
-          >
-            {workspaceTarget === 'shipper' ? t('auth.shipper') : t('auth.carrier')}
-          </button>
-        ) : null}
       </nav>
       <div className="border-top flex-shrink-0 tp-sidebar-footer tp-border-theme">
         <div className="p-3 pb-2">

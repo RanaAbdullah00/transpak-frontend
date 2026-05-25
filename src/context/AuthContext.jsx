@@ -3,11 +3,11 @@ import { fetchProfileApi, patchActiveRoleApi } from '../services/authService.js'
 import { safeUnwrapAuthResponse } from '../utils/authApiSafe.js';
 import { emitRoleSwitchComplete, getUserRoles } from '../utils/roleSwitch.js';
 import {
-  applyDemoAdminSession,
+  applyAuthSessionFromApi,
   clearAuthStorage,
-  isDemoAdminEmail,
   mergeAuthUser
 } from '../utils/authSession.js';
+import { refreshAuthSessionFromServer } from '../utils/authRefresh.js';
 
 export const AuthContext = createContext(null);
 
@@ -30,20 +30,21 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = useCallback((apiData, opts = {}) => {
-    const email = apiData?.user?.email || apiData?.email;
-    const withDemo =
-      opts.forceDemoAdmin === true ? applyDemoAdminSession(apiData, email) : apiData;
-    const normalized = mergeAuthUser(withDemo);
-    if (!normalized) return;
-
-    const token = withDemo?.token || apiData?.token;
+  const login = useCallback((apiData) => {
     clearAuthStorage();
-    if (token) localStorage.setItem('transpak_token', token);
-
+    const { user: normalized } = applyAuthSessionFromApi(apiData);
+    if (!normalized) return;
     setUser(normalized);
-    localStorage.setItem('transpak_user', JSON.stringify(normalized));
     setSessionVersion((v) => v + 1);
+  }, []);
+
+  const refreshSession = useCallback(async () => {
+    const result = await refreshAuthSessionFromServer();
+    if (result?.user) {
+      setUser(result.user);
+      setSessionVersion((v) => v + 1);
+    }
+    return result;
   }, []);
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export const AuthProvider = ({ children }) => {
         const res = await fetchProfileApi();
         const data = safeUnwrapAuthResponse(res);
         if (!cancelled && data?.user) {
-          login({ ...data, token: token || undefined });
+          login({ ...data, token: data.token || token || undefined });
         }
       } catch (err) {
         const status = err?.response?.status;
@@ -96,8 +97,6 @@ export const AuthProvider = ({ children }) => {
 
     switchLockRef.current = true;
     setRoleSwitching(true);
-    const prevRole = current.activeRole;
-
     try {
       const res = await patchActiveRoleApi(nextRole);
       const data = safeUnwrapAuthResponse(res);
@@ -121,15 +120,32 @@ export const AuthProvider = ({ children }) => {
       login(session);
       emitRoleSwitchComplete(nextRole);
     } catch (err) {
-      if (prevRole) {
-        setUser((u) => (u ? { ...u, activeRole: prevRole } : u));
-      }
       throw err;
     } finally {
       switchLockRef.current = false;
       setRoleSwitching(false);
     }
   }, [login]);
+
+  useEffect(() => {
+    const onUnauthorized = async () => {
+      try {
+        await refreshSession();
+      } catch {
+        logout();
+      }
+    };
+    const onRefreshed = (e) => {
+      const next = e?.detail?.user;
+      if (next) setUser(next);
+    };
+    window.addEventListener('tp:auth-unauthorized', onUnauthorized);
+    window.addEventListener('tp:auth-refreshed', onRefreshed);
+    return () => {
+      window.removeEventListener('tp:auth-unauthorized', onUnauthorized);
+      window.removeEventListener('tp:auth-refreshed', onRefreshed);
+    };
+  }, [refreshSession, logout]);
 
   useEffect(() => {
     const role = user?.activeRole || '';
@@ -147,6 +163,7 @@ export const AuthProvider = ({ children }) => {
     roleSwitching,
     sessionVersion,
     login,
+    refreshSession,
     setActiveRole,
     logout
   };

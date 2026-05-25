@@ -13,7 +13,7 @@ import VehicleTypeLabel from '../../components/loadboard/VehicleTypeLabel.jsx';
 
 const COMPLETED_STATUSES = new Set(['closed', 'delivered']);
 
-async function fetchCompletedShipments(request, activeRole) {
+async function fetchCompletedShipments(request, roles) {
   try {
     const data = await request({ url: '/shipments/completed', skipGlobalErrorToast: true });
     return Array.isArray(data) ? data : [];
@@ -24,7 +24,7 @@ async function fetchCompletedShipments(request, activeRole) {
     if (!notFound) throw err;
 
     // Until GET /shipments/completed is deployed, shippers can fall back to /loads/mine.
-    if (activeRole === 'shipper') {
+    if (roles.includes('shipper')) {
       const mine = await request({ url: '/loads/mine', skipGlobalErrorToast: true });
       return (Array.isArray(mine) ? mine : []).filter((l) =>
         COMPLETED_STATUSES.has(String(l.status || '').toLowerCase())
@@ -39,13 +39,13 @@ const ShipmentHistory = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [rows, setRows] = useState([]);
-  const activeRole = user?.activeRole ?? user?.roles?.[0];
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const data = await fetchCompletedShipments(request, activeRole);
+        const data = await fetchCompletedShipments(request, roles);
         if (alive) setRows(data);
       } catch (err) {
         if (alive) {
@@ -57,7 +57,7 @@ const ShipmentHistory = () => {
     return () => {
       alive = false;
     };
-  }, [request, activeRole]);
+  }, [request, roles.join(',')]);
 
   const closedLabel = t('pages.shipments.historyClosedLabel');
 

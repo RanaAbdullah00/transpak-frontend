@@ -46,7 +46,11 @@ function profileFormFromUser(user, row = null) {
 }
 
 function imageFieldUrl(value) {
-  return resolveImageUrl(value) || '';
+  const url = resolveImageUrl(value);
+  if (url) return url;
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (raw && /^https?:\/\//i.test(raw)) return raw.replace(/^http:\/\//i, 'https://');
+  return '';
 }
 
 function initialsFrom(name, email) {
@@ -158,53 +162,29 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
         data: fd
       });
       if (updated) {
+        const prof = updated.profile || updated;
         setForm((p) => ({
           ...p,
-          full_name: updated.full_name || '',
-          phone: updated.phone || '',
-          cnic_number: updated.cnic_number || '',
-          cnic_image: updated.cnic_image || '',
-          cnic_image_back: updated.cnic_image_back || '',
-          profile_image: updated.profile_image || ''
+          full_name: prof.full_name || '',
+          phone: prof.phone || '',
+          cnic_number: prof.cnic_number || '',
+          cnic_image: prof.cnic_image || '',
+          cnic_image_back: prof.cnic_image_back || '',
+          profile_image: prof.profile_image || ''
         }));
-        setCnicLocked(Boolean(updated.cnic_number));
-        setProfileComplete(Boolean(updated.is_profile_complete));
+        setCnicLocked(Boolean(prof.cnic_number));
+        setProfileComplete(Boolean(prof.is_profile_complete));
         setFiles({ cnic_image: null, cnic_image_back: null, profile_image: null });
-        try {
-          const profRes = await fetchProfileApi();
-          const prof = safeUnwrapAuthResponse(profRes);
-          if (prof?.user) login(prof);
-          else {
-            login({
-              user: {
-                ...user,
-                name: updated.full_name || user?.name,
-                fullName: updated.full_name || user?.fullName,
-                profileImage: updated.profile_image || user?.profileImage,
-                profileComplete: Boolean(updated.is_profile_complete)
-              },
-              currentRole: user?.activeRole,
-              roles: {
-                hasShipper: user?.hasShipper,
-                hasCarrier: user?.hasCarrier
-              }
-            });
+        if (updated.token && updated.user) {
+          login(updated);
+        } else {
+          try {
+            const profRes = await fetchProfileApi();
+            const fresh = safeUnwrapAuthResponse(profRes);
+            if (fresh?.user) login(fresh);
+          } catch {
+            /* form state already updated */
           }
-        } catch {
-          login({
-            user: {
-              ...user,
-              name: updated.full_name || user?.name,
-              fullName: updated.full_name || user?.fullName,
-              profileImage: updated.profile_image || user?.profileImage,
-              profileComplete: Boolean(updated.is_profile_complete)
-            },
-            currentRole: user?.activeRole,
-            roles: {
-              hasShipper: user?.hasShipper,
-              hasCarrier: user?.hasCarrier
-            }
-          });
         }
         onSaved?.();
         notifySystem(SystemNotifyType.PROFILE_UPDATED, t('common.save'));

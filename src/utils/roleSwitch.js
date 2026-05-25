@@ -1,10 +1,9 @@
 /** Shared helpers for dual-role (shipper ↔ carrier) account switching. */
 
+import { getUserRolesFromSession } from './authSession.js';
+
 export function getUserRoles(user) {
-  if (!user) return [];
-  return Array.isArray(user.roles) && user.roles.length
-    ? user.roles
-    : [user.activeRole].filter(Boolean);
+  return getUserRolesFromSession(user);
 }
 
 /** Next commercial role when user has both shipper and carrier. */
@@ -37,8 +36,6 @@ export function resolveWorkspaceSwitchTarget(user) {
   const active = user.activeRole ?? roles[0];
 
   if (active === 'admin') {
-    if (roles.includes('shipper')) return 'shipper';
-    if (roles.includes('carrier')) return 'carrier';
     return null;
   }
 

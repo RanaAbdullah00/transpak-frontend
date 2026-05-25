@@ -61,7 +61,7 @@ import DeployMismatchBanner from './components/layout/DeployMismatchBanner.jsx';
 import RoleSwitchOverlay from './components/layout/RoleSwitchOverlay.jsx';
 import { AppContext } from './context/AppContext.jsx';
 import { dashboardPathForRole } from './utils/dashboardPath.js';
-import { shouldUseAdminShell } from './utils/rbac.js';
+import { canAccessAdminRoutes, resolveAdminShell, shouldUseAdminShell } from './utils/rbac.js';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -78,7 +78,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const activeRole = user.activeRole ?? user.roles?.[0];
   if (!activeRole) return <Navigate to="/role" replace state={{ from: location.pathname }} />;
 
-  if (shouldUseAdminShell(user) && allowedRoles && !allowedRoles.includes('admin')) {
+  if (
+    shouldUseAdminShell(user) &&
+    allowedRoles &&
+    !allowedRoles.includes('admin') &&
+    !canAccessAdminRoutes(user)
+  ) {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
@@ -91,8 +96,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(activeRole)) {
-    return <Navigate to={dashboardPathForRole(activeRole)} replace />;
+  const accountRoles = Array.isArray(user.roles) ? user.roles : [];
+  if (allowedRoles && !allowedRoles.some((r) => accountRoles.includes(r))) {
+    const fallback =
+      allowedRoles.includes('admin') && accountRoles.includes('admin')
+        ? 'admin'
+        : activeRole;
+    return <Navigate to={dashboardPathForRole(fallback)} replace />;
   }
 
   return children;
@@ -147,9 +157,14 @@ function App() {
     location.pathname
   );
   const pageBg = useMemo(() => resolvePageBackground(location.pathname), [location.pathname]);
-  const adminShell = shouldUseAdminShell(user);
+  const adminShell = resolveAdminShell(user, location.pathname);
   React.useEffect(() => {
     document.body.classList.toggle('tp-role-admin', adminShell);
+    if (adminShell) {
+      document.documentElement.lang = 'en';
+      document.documentElement.dir = 'ltr';
+      document.body.classList.remove('tp-lang-ur');
+    }
     return () => document.body.classList.remove('tp-role-admin');
   }, [adminShell]);
   return (

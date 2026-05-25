@@ -153,6 +153,13 @@ api.interceptors.response.use(
           body.code && !msg.includes(body.code) ? `${msg} (${body.code})` : msg;
       }
     }
+    if (error.response?.status === 401 && !error.config?.skipAuthRefresh) {
+      const path = String(error.config?.url || '');
+      const isAuthEndpoint = /\/auth(\/|$)/i.test(path);
+      if (!isAuthEndpoint && localStorage.getItem('transpak_token')) {
+        window.dispatchEvent(new CustomEvent('tp:auth-unauthorized'));
+      }
+    }
     handleApiFailure(error, error.config || {});
     return Promise.reject(error);
   }
