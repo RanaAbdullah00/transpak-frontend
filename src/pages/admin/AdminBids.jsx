@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { FaGavel } from 'react-icons/fa';
 import Card from '../../components/ui/Card.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -70,7 +72,12 @@ const AdminBids = () => {
             </table>
           </div>
           {!rows.length && !error && (
-            <div className="text-center text-muted py-5 small">{t('pages.admin.emptyBids')}</div>
+            <EmptyState
+              icon={FaGavel}
+              title={t('pages.admin.emptyBids')}
+              body={t('empty.bidsBody')}
+              className="border-0"
+            />
           )}
         </Card>
       )}

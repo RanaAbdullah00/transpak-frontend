@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHistory } from 'react-icons/fa';
 import Card from '../../components/ui/Card.jsx';
-import Loader from '../../components/ui/Loader.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
+import { SkeletonCard } from '../../components/ui/Skeleton.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -59,24 +60,21 @@ const ShipmentHistory = () => {
     };
   }, [request, roles.join(',')]);
 
-  const closedLabel = t('pages.shipments.historyClosedLabel');
-
   return (
     <div className="container py-3">
       <h5 className="mb-1">{t('pages.shipments.historyTitle')}</h5>
       <p className="small text-muted mb-3">{t('pages.shipments.historyLead')}</p>
       {loading ? (
-        <div className="d-flex justify-content-center py-5">
-          <Loader />
-        </div>
+        <>
+          <SkeletonCard rows={2} />
+          <SkeletonCard rows={2} />
+        </>
       ) : rows.length === 0 ? (
-        <div className="text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed">
-          <FaHistory className="fs-1 text-muted mb-3 opacity-50" aria-hidden />
-          <p className="text-muted mb-0 fw-medium">{t('pages.shipments.historyEmptyTitle')}</p>
-          <p className="small text-muted mt-2 mb-0 mx-auto" style={{ maxWidth: 420 }}>
-            {t('pages.shipments.historyEmpty', { status: closedLabel })}
-          </p>
-        </div>
+        <EmptyState
+          icon={FaHistory}
+          title={t('empty.shipmentsTitle')}
+          body={t('empty.shipmentsBody')}
+        />
       ) : (
         rows.map((row) => (
           <Card key={row.id} className="p-3 mb-2">

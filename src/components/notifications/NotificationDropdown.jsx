@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FaBell, FaTimes } from 'react-icons/fa';
 import NotificationItem from './NotificationItem.jsx';
 import Button from '../ui/Button.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import { AppContext } from '../../context/AppContext.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import api from '../../services/api.js';
@@ -13,6 +14,7 @@ import { notificationsForUser } from '../../utils/notificationScope.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
 import { useLocation } from 'react-router-dom';
+import { playNotificationSound } from '../../utils/notificationSound.js';
 
 function startOfDay(d) {
   const x = new Date(d);
@@ -65,7 +67,7 @@ const NotificationDropdown = ({ className = '' }) => {
   const dualRole = !adminShell && roles.includes('shipper') && roles.includes('carrier');
 
   const contextUnread = notifications.filter((n) => !(n.read || n.isRead)).length;
-  const unreadCount = allNotifications.length ? contextUnread : serverUnread;
+  const unreadCount = Math.max(contextUnread, serverUnread);
 
   useEffect(() => {
     const load = async () => {
@@ -107,6 +109,17 @@ const NotificationDropdown = ({ className = '' }) => {
     const close = () => setOpen(false);
     window.addEventListener('tp:role-switched', close);
     return () => window.removeEventListener('tp:role-switched', close);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    refetchNotifications?.();
+  }, [open, refetchNotifications]);
+
+  useEffect(() => {
+    const onNew = () => playNotificationSound();
+    window.addEventListener('tp:notification-sound', onNew);
+    return () => window.removeEventListener('tp:notification-sound', onNew);
   }, []);
 
   const sorted = useMemo(
@@ -236,10 +249,12 @@ const NotificationDropdown = ({ className = '' }) => {
         </div>
         <div className="tp-notif-slide__scroll px-2 py-2">
           {!sorted.length ? (
-            <div className="text-center small py-5 px-2 tp-empty-state">
-              <div className="fw-semibold mb-1 text-body">{t('pages.notificationsPanel.emptyTitle')}</div>
-              <div className="text-muted">{t('pages.notificationsPanel.emptyBody')}</div>
-            </div>
+            <EmptyState
+              icon={FaBell}
+              title={t('empty.notificationsTitle')}
+              body={t('empty.notificationsBody')}
+              className="border-0 py-4"
+            />
           ) : (
             <>
               {renderTimeGroup(t('pages.notificationsPanel.groupToday'), roleSectionsToday)}
@@ -260,7 +275,13 @@ const NotificationDropdown = ({ className = '' }) => {
         className="btn btn-outline-secondary btn-sm rounded-lg position-relative d-flex align-items-center justify-content-center gap-1"
         aria-label={t('nav.notificationsAria')}
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => {
+            const next = !v;
+            if (next) refetchNotifications?.();
+            return next;
+          });
+        }}
       >
         <FaBell size={14} />
         {unreadCount > 0 ? (

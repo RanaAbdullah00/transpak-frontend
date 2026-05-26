@@ -117,10 +117,12 @@ const Navbar = () => {
           </button>
           <Link to="/" className="navbar-brand fw-bold mb-0 d-flex align-items-center gap-2">
             <BrandLogo variant="mark" title={t('common.appName')} />
-            {user && <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />}
+            {user && !adminShell ? (
+              <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />
+            ) : null}
           </Link>
           <div className="d-flex align-items-center gap-2">
-            <LanguageToggle className="rounded-lg" />
+            {!adminShell ? <LanguageToggle className="rounded-lg" /> : null}
             {user && (
               <>
                 <NotificationDropdown />
@@ -136,7 +138,9 @@ const Navbar = () => {
         <div className="container-fluid px-3">
           <Link to="/" className="navbar-brand d-flex align-items-center gap-2 fw-bold">
             <BrandLogo variant="mark" title={t('common.appName')} />
-            {user && <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />}
+            {user && !adminShell ? (
+              <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />
+            ) : null}
           </Link>
 
           <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">

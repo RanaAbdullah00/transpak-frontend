@@ -23,6 +23,7 @@ export function createSocketClient({
   }
 
   let socket = null;
+  let reconnectTimer = null;
 
   if (!token) {
     return {
@@ -39,25 +40,51 @@ export function createSocketClient({
     return { socket: null, disconnect: () => {} };
   }
 
+  const scheduleReconnectRefresh = () => {
+    if (reconnectTimer) window.clearTimeout(reconnectTimer);
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null;
+      onReconnect?.();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
+      }
+    }, 400);
+  };
+
   try {
     socket = io(url, {
       auth: { token },
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 12,
-      reconnectionDelay: 800
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 800,
+      reconnectionDelayMax: 8000,
+      timeout: 20000
     });
 
     let hadConnected = false;
     socket.on('connect', () => {
-      if (hadConnected) {
-        onReconnect?.();
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
-        }
-      }
+      if (hadConnected) scheduleReconnectRefresh();
       hadConnected = true;
+    });
+
+    socket.io.on('reconnect', () => {
+      scheduleReconnectRefresh();
+    });
+
+    socket.on('disconnect', (reason) => {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.info('[socket] disconnected:', reason);
+      }
+    });
+
+    socket.on('connect_error', (err) => {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.warn('[socket] connect_error:', err?.message || err);
+      }
     });
 
     socket.on('notification:new', (n) => onNotification?.(n));
@@ -75,7 +102,12 @@ export function createSocketClient({
   return {
     socket,
     disconnect: () => {
+      if (reconnectTimer) {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
       try {
+        socket?.removeAllListeners();
         socket?.disconnect();
       } catch {
         // ignore

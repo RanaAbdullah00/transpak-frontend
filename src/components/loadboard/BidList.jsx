@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
+import { FaGavel } from 'react-icons/fa';
 import BidCard from './BidCard.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { isActiveBidStatus } from '../../utils/bidStatus.js';
 
 // List of bids. mode: 'shipper' | 'carrier' controls which actions are shown.
-const BidList = ({
+const BidList = memo(({
   bids,
   onAccept,
   onReject,
@@ -41,7 +43,7 @@ const BidList = ({
   return (
     <div className="mt-2">
       {activeBids.length === 0 && bids.length === 0 ? (
-        <p className="text-center text-muted small mt-3 py-4">{resolvedEmpty}</p>
+        <EmptyState icon={FaGavel} title={resolvedEmpty} body={t('empty.bidsBody')} />
       ) : (
         <>
           {activeBids.map((bid) => (
@@ -80,7 +82,9 @@ const BidList = ({
       )}
     </div>
   );
-};
+});
 
-export default React.memo(BidList);
+BidList.displayName = 'BidList';
+
+export default BidList;
 

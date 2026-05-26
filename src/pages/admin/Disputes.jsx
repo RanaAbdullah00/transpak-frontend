@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { FaBalanceScale } from 'react-icons/fa';
 import Card from '../../components/ui/Card.jsx';
 import Button from '../../components/ui/Button.jsx';
-import Loader from '../../components/ui/Loader.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
+import { SkeletonCard } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
@@ -36,13 +38,13 @@ const Disputes = () => {
     <div className="container py-3">
       <h5 className="mb-3">{t('pages.admin.disputesTitle')}</h5>
       {loading ? (
-        <div className="d-flex justify-content-center py-5">
-          <Loader />
-        </div>
+        <SkeletonCard rows={3} />
       ) : disputes.length === 0 ? (
-        <div className="text-muted text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed">
-          {t('pages.admin.emptyDisputes')}
-        </div>
+        <EmptyState
+          icon={FaBalanceScale}
+          title={t('empty.disputesTitle')}
+          body={t('empty.disputesBody')}
+        />
       ) : (
         disputes.map((d) => (
           <Card key={d.id}>

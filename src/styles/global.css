@@ -1344,10 +1344,11 @@ body.tp-notif-panel-open {
 .tp-notif-slide {
   position: fixed;
   inset: 0;
-  z-index: var(--tp-z-modal, 1055);
+  z-index: 10050;
   display: flex;
   justify-content: flex-end;
   pointer-events: none;
+  isolation: isolate;
 }
 
 .tp-notif-slide__backdrop {
@@ -1398,7 +1399,8 @@ body.tp-notif-panel-open {
 
 @media (max-width: 767.98px) {
   .tp-notif-slide__panel {
-    width: min(100%, 22rem);
+    width: min(100vw, 100%);
+    max-width: 100%;
   }
 }
 
@@ -2587,6 +2589,13 @@ body.dark-theme .tp-progress-box {
 
 body.dark-theme .tp-static-page .card {
   background: rgba(31, 41, 55, 0.88);
+}
+
+.tp-empty-state__icon {
+  width: 3rem;
+  height: 3rem;
+  background: color-mix(in srgb, var(--pak-primary, #28a745) 12%, transparent);
+  color: var(--pak-primary-dark, #218838);
 }
 
 .tp-empty-state {

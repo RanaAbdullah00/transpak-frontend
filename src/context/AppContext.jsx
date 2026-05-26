@@ -7,6 +7,7 @@ import api from '../services/api.js';
 import { unwrapResponseData } from '../utils/unwrapApi.js';
 import { notifyApiError } from '../utils/notifySystem.js';
 import { useAuth } from '../hooks/useAuth.js';
+import { playNotificationSound } from '../utils/notificationSound.js';
 
 export const AppContext = createContext(null);
 
@@ -115,18 +116,37 @@ export const AppProvider = ({ children }) => {
     };
   }, [user?.id, user?.activeRole]);
 
+  const mergeNotificationsFromServer = useCallback((rows) => {
+    if (!Array.isArray(rows)) return;
+    const mapped = rows.map(mapNotificationRow);
+    setNotifications((prev) => {
+      const byId = new Map();
+      prev.forEach((n) => {
+        const id = n.id ?? n._id;
+        if (id != null) byId.set(String(id), n);
+      });
+      mapped.forEach((n) => {
+        const id = n.id ?? n._id;
+        if (id != null) byId.set(String(id), n);
+      });
+      return [...byId.values()].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    });
+  }, []);
+
   const refetchNotifications = useCallback(async () => {
     const token = localStorage.getItem('transpak_token');
     if (!token) return;
     try {
       const res = await api.get('/notifications', { skipGlobalErrorToast: true });
       const rows = unwrapResponseData(res);
-      if (!Array.isArray(rows)) return;
-      setNotifications(rows.map(mapNotificationRow));
+      mergeNotificationsFromServer(rows);
+      window.dispatchEvent(new CustomEvent('tp_notifications_read'));
     } catch (err) {
       if (err?.response?.status !== 401) notifyApiError(err);
     }
-  }, []);
+  }, [mergeNotificationsFromServer]);
 
   useEffect(() => {
     const onRefresh = () => refetchNotifications();
@@ -163,9 +183,11 @@ export const AppProvider = ({ children }) => {
       onNotification: (n) => {
         if (n?.items && Array.isArray(n.items)) {
           n.items.forEach((item) => addNotificationRef.current?.(item));
-          return;
+        } else {
+          addNotificationRef.current?.(n);
         }
-        addNotificationRef.current?.(n);
+        window.dispatchEvent(new CustomEvent('tp:notification-sound'));
+        playNotificationSound();
       },
       onTracking: (p) => {
         const refs = [p?.refKey, p?.loadId]

@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { memo } from 'react';
+import { FaBoxOpen } from 'react-icons/fa';
 import LoadCard from './LoadCard.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
+import { useLanguage } from '../../hooks/useLanguage.js';
 
 // Vertical list of load cards with mobile spacing.
-const LoadList = ({
+const LoadList = memo(({
   loads,
   onBid,
   carrierMode = false,
@@ -11,13 +14,15 @@ const LoadList = ({
   onCarrierReject,
   carrierBusyLoadId = null
 }) => {
+  const { t } = useLanguage();
   const safeLoads = Array.isArray(loads) ? loads : [];
   if (!safeLoads.length) {
     return (
-      <div className="text-center py-5 px-3 rounded-xl tp-surface-muted">
-        <p className="text-muted mb-0 fw-medium">No loads available</p>
-        <p className="small text-muted mt-1 mb-0">Try adjusting filters or check back later.</p>
-      </div>
+      <EmptyState
+        icon={FaBoxOpen}
+        title={t('empty.loadsTitle')}
+        body={t('empty.loadsBody')}
+      />
     );
   }
 
@@ -37,7 +42,9 @@ const LoadList = ({
       ))}
     </div>
   );
-};
+});
+
+LoadList.displayName = 'LoadList';
 
 export default LoadList;
 

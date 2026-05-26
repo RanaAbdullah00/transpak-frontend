@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
+import { FaBell } from 'react-icons/fa';
 import NotificationItem from './NotificationItem.jsx';
 import Button from '../ui/Button.jsx';
+import EmptyState from '../ui/EmptyState.jsx';
 import { AppContext } from '../../context/AppContext.jsx';
 import api from '../../services/api.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -100,10 +102,12 @@ const NotificationPanel = () => {
       </div>
       <div className="tp-notifications-surface rounded-3 p-2 p-md-3">
         {!sorted.length ? (
-          <div className="text-center small py-5 px-3 tp-empty-state tp-notifications-empty">
-            <div className="fw-semibold mb-1 text-body">{t('pages.notificationsPanel.emptyTitle')}</div>
-            <div className="tp-notifications-empty__hint">{t('pages.notificationsPanel.emptyBody')}</div>
-          </div>
+          <EmptyState
+            icon={FaBell}
+            title={t('empty.notificationsTitle')}
+            body={t('empty.notificationsBody')}
+            className="tp-notifications-empty border-0"
+          />
         ) : (
           <>
             {renderGroup(t('pages.notificationsPanel.groupToday'), today)}

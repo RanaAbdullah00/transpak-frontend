@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../../components/layout/BrandLogo.jsx';
 import LanguageToggle from '../../components/ui/LanguageToggle.jsx';
+import DemoVideoWatchButton from '../../components/demo/DemoVideoWatchButton.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { getApiUrl } from '../../config/apiConfig.js';
 
@@ -71,6 +72,7 @@ const Landing = () => {
               {t('pages.landing.navFaq')}
             </a>
             <LanguageToggle className="btn btn-sm btn-outline-secondary rounded-pill" />
+            <DemoVideoWatchButton variant="compact" className="btn-sm" />
             <Link to="/login" className="btn btn-sm btn-outline-primary rounded-pill">
               {t('pages.landing.navSignIn')}
             </Link>

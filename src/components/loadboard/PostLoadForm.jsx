@@ -86,6 +86,11 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null, subm
       notifyError(t('pages.postLoadForm.cityInvalid'));
       return;
     }
+    const weight = Number(form.weight);
+    if (!Number.isFinite(weight) || weight < 0.1 || weight > 80) {
+      notifyError(t('pages.postLoadForm.weightInvalid'));
+      return;
+    }
     const price = Number(form.expectedPrice);
     if (!Number.isFinite(price) || price < 1) {
       notifyError(t('pages.postLoadForm.priceRequired'));

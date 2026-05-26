@@ -7,6 +7,7 @@ import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import CarrierLoadActions from './CarrierLoadActions.jsx';
+import { formatLoadDisplayId } from '../../utils/displayId.js';
 
 // Card representing a single load in the marketplace.
 const LoadCard = ({
@@ -50,7 +51,7 @@ const LoadCard = ({
             {shipperId ? <UserRatingBadge userId={shipperId} /> : null}
           </div>
           <small className="text-muted d-block text-break">
-            {t('pages.loads.loadCardRef', { code: load.code })}
+            {t('pages.loads.loadCardRef', { code: formatLoadDisplayId(load) })}
           </small>
         </div>
         <Badge variant={load.status === 'open' ? 'success' : 'secondary'}>{statusLabel}</Badge>

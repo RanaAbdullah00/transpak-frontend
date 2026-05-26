@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { FaBell } from 'react-icons/fa';
 import Card from '../../components/ui/Card.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -64,7 +66,12 @@ const AdminNotifications = () => {
             </table>
           </div>
           {!rows.length && !error && (
-            <div className="text-center text-muted py-5 small">{t('pages.admin.emptyNotifications')}</div>
+            <EmptyState
+              icon={FaBell}
+              title={t('empty.notificationsTitle')}
+              body={t('empty.notificationsBody')}
+              className="border-0"
+            />
           )}
         </Card>
       )}
