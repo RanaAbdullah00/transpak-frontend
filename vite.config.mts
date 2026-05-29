@@ -38,7 +38,18 @@ export default defineConfig(({ mode }) => {
   const appBuildId = resolveBuildId();
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        name: 'transpak-build-meta',
+        transformIndexHtml(html) {
+          return html.replace(
+            '<head>',
+            `<head>\n    <meta name="transpak-build" content="${appBuildId}" />`
+          );
+        }
+      }
+    ],
     resolve: {
       dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
       alias: {
