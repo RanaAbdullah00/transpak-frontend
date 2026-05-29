@@ -63,7 +63,7 @@ const Navbar = () => {
   const roleActionBtn = showWorkspaceSwitch ? (
     <button
       type="button"
-      className="btn btn-outline-success btn-sm rounded-lg px-2 text-nowrap d-none d-md-inline-flex px-3"
+      className="btn btn-outline-primary btn-sm rounded-lg px-2 text-nowrap d-none d-md-inline-flex px-3"
       onClick={handleNavRoleAction}
       title={navRoleActionLabel}
       disabled={roleSwitching}
@@ -75,7 +75,7 @@ const Navbar = () => {
   const roleActionBtnMobile = showWorkspaceSwitch ? (
     <button
       type="button"
-      className="btn btn-outline-success btn-sm rounded-lg px-2 text-nowrap d-md-none"
+      className="btn btn-outline-primary btn-sm rounded-lg px-2 text-nowrap d-md-none"
       onClick={handleNavRoleAction}
       title={navRoleActionLabel}
       disabled={roleSwitching}

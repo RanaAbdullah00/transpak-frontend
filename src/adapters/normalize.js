@@ -17,7 +17,7 @@ export const normalizeLoad = (raw) => {
     shipperId: raw.shipperId ?? null,
     assignedCarrierId: raw.assignedCarrierId ?? null,
     // backward-compatible fields used by existing components
-    code: raw.code ?? `L-${String(id ?? '').slice(-4)}`,
+    code: raw.code ?? null,
     cargo: raw.cargo ?? raw.title ?? raw.description ?? 'Load',
     origin: raw.origin ?? raw.pickup ?? '',
     destination: raw.destination ?? raw.delivery ?? '',

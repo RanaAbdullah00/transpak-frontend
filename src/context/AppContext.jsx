@@ -306,6 +306,11 @@ export const AppProvider = ({ children }) => {
     return () => window.clearInterval(pollId);
   }, [user?.id, user?.activeRole, refetchNotifications]);
 
+  const refetchNotificationsRef = useRef(refetchNotifications);
+  const syncReconnectRef = useRef(syncReconnectNotifications);
+  refetchNotificationsRef.current = refetchNotifications;
+  syncReconnectRef.current = syncReconnectNotifications;
+
   useEffect(() => {
     const token = getAuthToken();
     const workspaceScoped = (row) => {
@@ -335,8 +340,7 @@ export const AppProvider = ({ children }) => {
         const now = Date.now();
         if (now - lastReconnectSyncRef.current < 6000) return;
         lastReconnectSyncRef.current = now;
-        await refetchNotifications();
-        await syncReconnectNotifications();
+        await syncReconnectRef.current?.();
       },
       onDispatch: (d) => {
         if (d?.scope?.workspace && user) {
@@ -401,7 +405,7 @@ export const AppProvider = ({ children }) => {
       client.disconnect();
       socketRef.current = null;
     };
-  }, [user?.id, user?.activeRole, sessionVersion, refetchNotifications, syncReconnectNotifications]);
+  }, [user?.id, user?.activeRole, sessionVersion]);
 
   const getSocket = useCallback(() => socketRef.current, []);
 

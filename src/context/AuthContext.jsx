@@ -152,7 +152,13 @@ export const AuthProvider = ({ children }) => {
 
     const roles = getUserRoles(current);
     if (!roles.includes(nextRole)) throw new Error('Role not available for this account');
+    if (canAccessAdminRoutes(current) && nextRole !== 'admin') {
+      throw new Error('Admin accounts cannot switch workspace');
+    }
     if (current.activeRole === nextRole) return;
+    if (current.activeRole && nextRole !== current.activeRole) {
+      throw new Error('Role switching is disabled');
+    }
 
     switchLockRef.current = true;
     setRoleSwitching(true);

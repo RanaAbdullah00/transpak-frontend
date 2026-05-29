@@ -96,7 +96,6 @@ export function createSocketClient({
     const onConnect = () => {
       emitWorkspaceJoin();
       onConnectionChange?.(true);
-      if (hadConnected) scheduleReconnectRefresh();
       hadConnected = true;
     };
 

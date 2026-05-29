@@ -133,6 +133,13 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.LOAD_POSTED, msg);
     return;
   }
+  if (type.includes('SPACE_LISTED') || type.includes('CAPACITY')) {
+    notifySystem(SystemNotifyType.LOAD_POSTED, msg);
+    return;
+  }
+  if (type.includes('LOGIN_SUCCESS')) {
+    return;
+  }
   if (type.includes('TRACKING') || type.includes('LOCATION')) {
     notifySystem(SystemNotifyType.LOCATION_UPDATED, msg);
     return;

@@ -6,8 +6,8 @@ import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { AppContext } from '../../context/AppContext.jsx';
-import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { notifyApiError } from '../../utils/notifySystem.js';
+import { notifySuccess, notifyError } from '../../components/ui/ToastProvider.jsx';
+import { formatUserError } from '../../utils/userErrors.js';
 import { logApiSuccess, logApiFailure } from '../../utils/apiDevLog.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { shouldUseAdminShell } from '../../utils/rbac.js';
@@ -53,7 +53,11 @@ const PostLoad = () => {
         skipGlobalErrorToast: true
       });
       logApiSuccess({ method: 'POST', url: '/loads/create', data: body }, loadData);
-      const code = loadData?.code || loadData?.load?.code || `L-${Date.now()}`;
+      const loadId = loadData?.id || loadData?.load?.id;
+      const code = loadData?.code || loadData?.load?.code;
+      if (!loadId || !code) {
+        throw new Error(t('pages.loads.postLoadFailed'));
+      }
       notifySuccess(t('pages.loads.postLoadSuccess', { code }));
       addNotification({
         type: 'load',
@@ -64,7 +68,7 @@ const PostLoad = () => {
       navigate('/loads/manage', { replace: true });
     } catch (error) {
       logApiFailure(error, { method: 'POST', url: '/loads/create', data: body });
-      notifyApiError(error);
+      notifyError(formatUserError(error, t, { fallback: t('pages.loads.postLoadFailed') }));
     } finally {
       setPosting(false);
     }

@@ -90,6 +90,9 @@ export function mergeAuthUser(apiData) {
     activeRole,
     profileImage: user.profileImage || user.profile_image || '',
     fullName: user.fullName || user.full_name || '',
+    cnicNumber: user.cnicNumber || user.cnic_number || user.cnic || '',
+    cnicImage: user.cnicImage || user.cnic_image || '',
+    cnicImageBack: user.cnicImageBack || user.cnic_image_back || '',
     profileComplete: Boolean(
       user.profileComplete ?? user.isProfileComplete ?? user.is_profile_complete
     ),

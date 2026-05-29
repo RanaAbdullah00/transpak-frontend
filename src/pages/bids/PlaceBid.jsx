@@ -66,30 +66,17 @@ const PlaceBid = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const bidPayload = {
-        loadId: load.id,
-        carrierId: user.id,
-        loadCode: load.code,
-        amount: Number(amount),
-        currency,
-        transitTime,
-        note,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(
-          Date.now() +
-            (Number(load.deadlineMinutes) > 0
-              ? Number(load.deadlineMinutes) * 60 * 1000
-              : parseInt(load.deadlineHours || 2, 10) * 60 * 60 * 1000)
-        ).toISOString()
-      };
-
       await request({
         url: '/bids',
         method: 'POST',
-        data: bidPayload
+        data: {
+          loadId: load.id,
+          amount: Number(amount)
+        }
       });
 
       notifySuccess(t('pages.placeBid.bidPlaced', { code: load.code }));
+      window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
       navigate('/loads');
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.placeBid.bidFailed') }));

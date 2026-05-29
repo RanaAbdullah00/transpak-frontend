@@ -1,9 +1,8 @@
-/** HTTPS-only image URLs (aligns with transpak-backend/utils/imageUrl.js). */
+/** HTTPS-only persisted image URLs — blob/data are preview-only, never stored. */
 export function resolveImageUrl(value) {
   const s = typeof value === 'string' ? value.trim() : '';
   if (!s || s.length > 2048) return '';
-  if (/^blob:/i.test(s)) return s;
-  if (/^data:image\//i.test(s)) return s;
+  if (/^blob:/i.test(s) || /^data:image\//i.test(s)) return '';
   if (/^https:\/\//i.test(s)) return s;
   if (/^http:\/\//i.test(s)) return `https://${s.slice(7)}`;
   if (s.startsWith('//')) return `https:${s}`;
