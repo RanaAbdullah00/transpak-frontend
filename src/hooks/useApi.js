@@ -17,6 +17,11 @@ export const useApi = () => {
       const response = await api({ ...config, skipGlobalErrorToast: skipToast });
       return unwrapBody(response.data);
     } catch (err) {
+      const canceled =
+        err?.code === 'ERR_CANCELED' ||
+        err?.name === 'CanceledError' ||
+        String(err?.message || '').toLowerCase() === 'canceled';
+      if (canceled) throw err;
       logApiFailure(err, config);
       const msg = formatUserError(err);
       setError(msg);

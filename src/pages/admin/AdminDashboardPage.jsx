@@ -5,8 +5,10 @@ import { SkeletonStatCards } from '../../components/ui/Skeleton.jsx';
 import AdminDemoVideoManager from '../../components/admin/AdminDemoVideoManager.jsx';
 import AdminWidgetShell from '../../components/admin/AdminWidgetShell.jsx';
 import { useApi } from '../../hooks/useApi.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAdminDashboardWidgets } from '../../hooks/useAdminDashboardWidgets.js';
+import { canAccessAdminRoutes } from '../../utils/authSession.js';
 import { formatLoadDisplayId } from '../../utils/displayId.js';
 import { formatStatValue } from '../../utils/formatStat.js';
 
@@ -42,15 +44,20 @@ function formatWhen(iso, locale) {
 }
 
 const AdminDashboardPage = () => {
+  const { user, roleSwitching } = useAuth();
   const { request } = useApi();
   const { t, isUrdu } = useLanguage();
   const locale = isUrdu ? 'ur-PK' : 'en-PK';
   const { live, widgetState, initialLoading, loadAll, retryWidget, widgetFailed, widgetLoading, anyOk } =
     useAdminDashboardWidgets(request);
 
+  const adminReady =
+    canAccessAdminRoutes(user) && user?.activeRole === 'admin' && !roleSwitching;
+
   useEffect(() => {
+    if (!adminReady) return;
     loadAll();
-  }, [loadAll]);
+  }, [loadAll, adminReady]);
 
   useEffect(() => {
     const onRefresh = () => loadAll();
@@ -58,7 +65,7 @@ const AdminDashboardPage = () => {
     return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
   }, [loadAll]);
 
-  useSafeInterval(() => loadAll(), POLL_MS, { enabled: true });
+  useSafeInterval(() => loadAll(), POLL_MS, { enabled: adminReady });
 
   const stats = live?.stats;
   const meta = live?.meta;

@@ -68,7 +68,7 @@ const MobileNav = () => {
       ? { to: '/fleet', icon: <FaTools />, label: t('common.fleet') }
       : { to: '/loads/manage', icon: <FaTools />, label: t('common.manage') };
 
-  const loadsPath = activeRole === 'carrier' ? '/loads' : '/loads/manage';
+  const loadsPath = activeRole === 'carrier' ? '/carrier/space/post' : '/loads/manage';
 
   return (
     <nav className={`mobile-bottom-nav d-md-none ${isUrdu ? 'tp-rtl' : ''}`}>

@@ -138,8 +138,6 @@ export async function verifyProductionDeploy() {
     while (attempt <= MAX_RECHECKS) {
       // eslint-disable-next-line no-await-in-loop
       const { res, body } = await fetchHealth(apiOrigin);
-      // Raw health payload before any mismatch logic (deployment debugging)
-      console.info('[TransPak deploy] /api/health raw', JSON.stringify(body));
       const result = evaluate(body, res);
       if (result.done) return;
       attempt += 1;

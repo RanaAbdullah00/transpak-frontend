@@ -69,8 +69,8 @@ const MobileDrawer = ({ open, onClose }) => {
             )}
             {activeRole === 'carrier' && (
               <>
-                <NavLink to="/loads" className={linkClass} onClick={onClose}>
-                  {t('loadsHub.navOperations')}
+                <NavLink to="/carrier/space/post" className={linkClass} onClick={onClose}>
+                  {t('loadsHub.navCapacityHub')}
                 </NavLink>
                 <NavLink to="/bids/mine" className={linkClass} onClick={onClose}>
                   {t('nav.myBids')}

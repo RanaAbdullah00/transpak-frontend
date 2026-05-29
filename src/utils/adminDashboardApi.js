@@ -8,6 +8,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isAbortError(err) {
+  return (
+    err?.code === 'ERR_CANCELED' ||
+    err?.name === 'CanceledError' ||
+    String(err?.message || '').toLowerCase() === 'canceled'
+  );
+}
+
 function legacyStatsPayload(legacy) {
   const totalUsers = Number(legacy?.totalUsers ?? 0);
   return {
@@ -65,7 +73,7 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
         err.widget = id;
         err.attempt = attempt + 1;
         lastError = err;
-        if (process.env.NODE_ENV !== 'production') {
+        if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
           console.warn('[admin-widget]', id, 'degraded', err.code, `attempt ${attempt + 1}`);
         }
@@ -73,10 +81,15 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
       }
       return { widget: id, data, error: null, attempts: attempt + 1 };
     } catch (err) {
+      if (isAbortError(err)) {
+        lastError = err;
+        lastError.widget = id;
+        if (attempt + 1 < maxAttempts) continue;
+      }
       lastError = err;
       lastError.widget = id;
       lastError.attempt = attempt + 1;
-      if (process.env.NODE_ENV !== 'production') {
+      if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.warn('[admin-widget]', id, 'failed', unwrapErrorCode(err) || err.message, `attempt ${attempt + 1}`);
       }

@@ -74,9 +74,9 @@ const Sidebar = () => {
         )}
         {isCarrier && (
           <>
-            <NavLink to="/loads" className={navLinkClass}>
+            <NavLink to="/carrier/space/post" className={navLinkClass}>
               <FaListUl />
-              {t('loadsHub.navOperations')}
+              {t('loadsHub.navCapacityHub')}
             </NavLink>
             <NavLink to="/bids/mine" className={navLinkClass}>
               <FaGavel />

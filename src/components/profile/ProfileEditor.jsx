@@ -53,6 +53,20 @@ function imageFieldUrl(value) {
   return '';
 }
 
+function useFilePreview(file) {
+  const [preview, setPreview] = React.useState('');
+  React.useEffect(() => {
+    if (!file) {
+      setPreview('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  return preview;
+}
+
 function initialsFrom(name, email) {
   const parts = String(name || '')
     .trim()
@@ -141,9 +155,12 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
     return Math.max(0, Math.min(100, Math.round(((PROFILE_FIELD_COUNT - n) / PROFILE_FIELD_COUNT) * 100)));
   }, [profileComplete, missingProfilePieces.length]);
 
-  const cnicFrontUrl = imageFieldUrl(form.cnic_image);
-  const cnicBackUrl = imageFieldUrl(form.cnic_image_back);
-  const profilePhotoUrl = imageFieldUrl(form.profile_image);
+  const cnicFrontPreview = useFilePreview(files.cnic_image);
+  const cnicBackPreview = useFilePreview(files.cnic_image_back);
+  const profilePhotoPreview = useFilePreview(files.profile_image);
+  const cnicFrontUrl = cnicFrontPreview || imageFieldUrl(form.cnic_image);
+  const cnicBackUrl = cnicBackPreview || imageFieldUrl(form.cnic_image_back);
+  const profilePhotoUrl = profilePhotoPreview || imageFieldUrl(form.profile_image);
 
   const handleSave = async () => {
     setLoading(true);

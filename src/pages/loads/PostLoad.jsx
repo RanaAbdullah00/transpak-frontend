@@ -45,10 +45,6 @@ const PostLoad = () => {
       deadlineHours: Number(payload.deadlineHours || 6),
       distanceKm: payload.distanceKm
     };
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.info('[post-load] submit', body);
-    }
     try {
       const loadData = await request({
         url: '/loads/create',
@@ -57,12 +53,13 @@ const PostLoad = () => {
         skipGlobalErrorToast: true
       });
       logApiSuccess({ method: 'POST', url: '/loads/create', data: body }, loadData);
-      const code = loadData?.code || `L-${Date.now()}`;
+      const code = loadData?.code || loadData?.load?.code || `L-${Date.now()}`;
       notifySuccess(t('pages.loads.postLoadSuccess', { code }));
       addNotification({
         type: 'load',
         message: t('pages.loads.postLoadNotify', { code })
       });
+      window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
       setFormKey((k) => k + 1);
       navigate('/loads/manage', { replace: true });
     } catch (error) {

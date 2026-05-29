@@ -60,11 +60,13 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
             if (id.includes('socket.io') || id.includes('engine.io')) return 'vendor-socket';
+            if (/node_modules[\\/]react(-dom)?[\\/]/.test(id) || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (id.includes('leaflet') || id.includes('react-leaflet')) {
+              return 'vendor-map';
+            }
             if (
-              /node_modules[\\/]react(-dom)?[\\/]/.test(id) ||
-              id.includes('react-router') ||
-              id.includes('react-leaflet') ||
-              id.includes('@react-leaflet') ||
               id.includes('react-toastify') ||
               id.includes('react-icons') ||
               id.includes('react-phone-input')

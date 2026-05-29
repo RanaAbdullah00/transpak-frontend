@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import SegmentTabs from '../../components/ui/SegmentTabs.jsx';
 import ManageLoads from './ManageLoads.jsx';
 import CapacityMarketplace from '../../components/carrier/CapacityMarketplace.jsx';
-import MySpaceListings from '../../components/carrier/MySpaceListings.jsx';
-import AvailableLoads from './AvailableLoads.jsx';
 import Button from '../../components/ui/Button.jsx';
+import PostCarrierSpace from '../carrier/PostCarrierSpace.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
@@ -17,7 +16,7 @@ const LoadsHub = () => {
   const isCarrier = activeRole === 'carrier';
 
   const [params, setParams] = useSearchParams();
-  const defaultTab = isShipper ? 'posted' : 'freight';
+  const defaultTab = isShipper ? 'posted' : 'capacity';
   const tab = params.get('tab') || defaultTab;
 
   const tabs = useMemo(() => {
@@ -46,27 +45,11 @@ const LoadsHub = () => {
   if (isCarrier) {
     return (
       <div className="container py-3">
-        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          <div>
-            <h5 className="mb-1">{t('loadsHub.carrierPageTitle')}</h5>
-            <p className="text-muted small mb-0">{t('loadsHub.carrierOpsSubtitle')}</p>
-          </div>
-          <Link to="/carrier/space/post">
-            <Button variant="outline-primary" className="btn-sm rounded-lg">
-              + {t('loadsHub.listCapacity')}
-            </Button>
-          </Link>
+        <div className="mb-3">
+          <h5 className="mb-1">{t('loadsHub.capacityHubTitle')}</h5>
+          <p className="text-muted small mb-0">{t('loadsHub.capacityHubSubtitle')}</p>
         </div>
-
-        <section className="mb-4">
-          <h6 className="mb-2">{t('loadsHub.freightBoard')}</h6>
-          <AvailableLoads embedded />
-        </section>
-
-        <section className="pt-3 border-top tp-border-theme">
-          <h6 className="mb-2">{t('loadsHub.myCapacity')}</h6>
-          <MySpaceListings />
-        </section>
+        <PostCarrierSpace embedded />
       </div>
     );
   }

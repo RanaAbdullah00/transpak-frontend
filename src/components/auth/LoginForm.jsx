@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
@@ -18,10 +18,6 @@ const DEMO_ADMIN_EMAIL = String(import.meta.env.VITE_DEMO_ADMIN_EMAIL || '')
   .trim()
   .toLowerCase();
 
-/** FYP demo admin — auto-login only for this exact credential pair. */
-const QUICK_DEMO_EMAIL = 'mrrajpoot.327@gmail.com';
-const QUICK_DEMO_PASSWORD = '11223344';
-
 const LoginForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,8 +25,6 @@ const LoginForm = () => {
   const { t, isUrdu } = useLanguage();
   const [form, setForm] = useState({ email: '', password: '' });
   const [uiRolePref, setUiRolePref] = useState('');
-  const autoLoginAttempted = useRef(false);
-
   React.useEffect(() => {
     const pre = location.state?.prefill?.email;
     if (typeof pre === 'string' && pre.trim()) {
@@ -50,9 +44,7 @@ const LoginForm = () => {
   };
 
   const emailNorm = form.email.trim().toLowerCase();
-  const isDemoAdmin =
-    (DEMO_ADMIN_EMAIL.length > 0 && emailNorm === DEMO_ADMIN_EMAIL) ||
-    emailNorm === QUICK_DEMO_EMAIL;
+  const isDemoAdmin = DEMO_ADMIN_EMAIL.length > 0 && emailNorm === DEMO_ADMIN_EMAIL;
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
@@ -124,13 +116,6 @@ const LoginForm = () => {
       setLoading(false);
     }
   };
-
-  React.useEffect(() => {
-    if (loading || autoLoginAttempted.current) return;
-    if (emailNorm !== QUICK_DEMO_EMAIL || form.password !== QUICK_DEMO_PASSWORD) return;
-    autoLoginAttempted.current = true;
-    handleSubmit({ preventDefault: () => {} });
-  }, [emailNorm, form.password, loading]);
 
   return (
     <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-login-form mt-3">

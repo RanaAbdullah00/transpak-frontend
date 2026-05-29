@@ -4,7 +4,7 @@ import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import RoleSelector from './RoleSelector.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { registerApi, fetchProfileApi } from '../../services/authService.js';
+import { registerApi, fetchProfileApi, addRoleApi } from '../../services/authService.js';
 import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
 import { notifyAuthError } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
@@ -111,6 +111,29 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
     if (!validate()) return;
     setLoading(true);
     try {
+      if (upgradeRole && user?.id) {
+        const res = await addRoleApi(upgradeRole);
+        const payload = safeUnwrapAuthResponse(res);
+        if (payload?.token) {
+          const { setAuthToken } = await import('../../utils/authTokenStorage.js');
+          setAuthToken(payload.token);
+        }
+        let session = payload;
+        try {
+          const profRes = await fetchProfileApi();
+          const prof = safeUnwrapAuthResponse(profRes);
+          if (prof?.user) session = prof;
+        } catch {
+          /* use add-role payload */
+        }
+        login(session);
+        notifySuccess(t('auth.roleAddedSuccess'));
+        onDone?.(session?.user);
+        const role = session?.user?.activeRole ?? upgradeRole;
+        navigate(safeDashboardPath(role), { replace: true });
+        return;
+      }
+
       const res = await registerApi({
         name: form.name,
         email: form.email,

@@ -3,8 +3,6 @@
 import { clearAuthToken, getAuthToken, setAuthToken } from './authTokenStorage.js';
 import { persistWorkspaceContext, clearWorkspaceContext } from './workspaceContext.js';
 
-const QUICK_DEMO_EMAIL = 'mrrajpoot.327@gmail.com';
-
 export function isDemoAdminEmail(email) {
   const norm = String(email || '')
     .trim()
@@ -12,8 +10,7 @@ export function isDemoAdminEmail(email) {
   const fromEnv = String(import.meta.env.VITE_DEMO_ADMIN_EMAIL || '')
     .trim()
     .toLowerCase();
-  if (fromEnv && norm === fromEnv) return true;
-  return norm === QUICK_DEMO_EMAIL;
+  return Boolean(fromEnv && norm === fromEnv);
 }
 
 export function resolveActiveRole(user, apiData = {}) {

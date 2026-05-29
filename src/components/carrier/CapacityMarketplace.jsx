@@ -9,14 +9,12 @@ import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { getVehicleTypeLabel } from '../../data/vehicleTypes.js';
-import VehicleTypeDropdown from '../loadboard/VehicleTypeDropdown.jsx';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import SpaceSentRequestsPanel from './SpaceSentRequestsPanel.jsx';
 
 const DEFAULT_FILTERS = {
   origin: '',
   destination: '',
-  vehicleType: '',
   minCapacityKg: '',
   maxCapacityKg: '',
   availableFrom: '',
@@ -40,7 +38,6 @@ const CapacityMarketplace = () => {
         params: {
           origin: debounced.origin || undefined,
           destination: debounced.destination || undefined,
-          vehicleType: debounced.vehicleType || undefined,
           minCapacityKg: debounced.minCapacityKg || undefined,
           availableFrom: debounced.availableFrom || undefined
         }
@@ -126,13 +123,6 @@ const CapacityMarketplace = () => {
               placeholder={t('loadsHub.filterDestination')}
               value={filters.destination}
               onChange={(e) => setField('destination', e.target.value)}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <VehicleTypeDropdown
-              value={filters.vehicleType}
-              onChange={(e) => setField('vehicleType', e.target.value)}
-              includeAllOption
             />
           </div>
           <div className="col-6 col-md-3">

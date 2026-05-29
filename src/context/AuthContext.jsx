@@ -156,7 +156,10 @@ export const AuthProvider = ({ children }) => {
 
     switchLockRef.current = true;
     setRoleSwitching(true);
-    prepareWorkspaceSwitch(current.id);
+    const commercial = (r) => r === 'shipper' || r === 'carrier';
+    const abortInflight =
+      commercial(current.activeRole) && commercial(nextRole) && current.activeRole !== nextRole;
+    prepareWorkspaceSwitch(current.id, { abortInflight });
     try {
       const res = await patchActiveRoleApi(nextRole);
       const data = safeUnwrapAuthResponse(res);

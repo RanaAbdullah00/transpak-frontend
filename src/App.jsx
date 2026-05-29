@@ -356,7 +356,7 @@ function App() {
                 path="/loads"
                 element={
                   <ProtectedRoute allowedRoles={['carrier']}>
-                    <LoadsHub />
+                    <Navigate to="/carrier/space/post" replace />
                   </ProtectedRoute>
                 }
               />

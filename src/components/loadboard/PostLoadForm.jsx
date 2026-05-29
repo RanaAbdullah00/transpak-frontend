@@ -73,6 +73,10 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null, subm
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!String(form.cargo || '').trim()) {
+      notifyError(t('pages.postLoadForm.cargoRequired'));
+      return;
+    }
     const pickup = String(form.pickupDate || '').trim();
     const today = new Date();
     const todayStr = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))

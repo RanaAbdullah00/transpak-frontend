@@ -40,6 +40,14 @@ function serverUnavailableMessage(t) {
 export function formatUserError(err, t, options = {}) {
   const { fallback } = options;
 
+  if (
+    err?.code === 'ERR_CANCELED' ||
+    err?.name === 'CanceledError' ||
+    String(err?.message || '').toLowerCase() === 'canceled'
+  ) {
+    return fallback ?? '';
+  }
+
   if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') {
     return networkMessage(t);
   }

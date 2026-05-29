@@ -5,6 +5,7 @@ import { unwrapErrorDetail } from '../utils/unwrapApi.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
 import { createTrackedSignal } from '../utils/inflightRequests.js';
+import { dispatchAuthUnauthorized } from '../utils/authUnauthorized.js';
 import { readWorkspaceContext } from '../utils/workspaceContext.js';
 const BASE_URL = getApiRoot();
 
@@ -62,6 +63,7 @@ function fullUrl(config) {
 }
 
 function handleApiFailure(error, config) {
+  if (isCanceledError(error)) return;
   logApiFailure(error, config);
   if (config?.skipGlobalErrorToast) return;
   const { displayMessage } = unwrapErrorDetail(error);
@@ -73,10 +75,19 @@ function handleApiFailure(error, config) {
 const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || 45000),
   headers: {
     'Content-Type': 'application/json'
   },
 });
+
+function isCanceledError(error) {
+  return (
+    error?.code === 'ERR_CANCELED' ||
+    error?.name === 'CanceledError' ||
+    error?.message === 'canceled'
+  );
+}
 
 api.interceptors.request.use((config) => {
   assertProductionApiTarget(config);
@@ -180,14 +191,20 @@ api.interceptors.response.use(
           body.code && !msg.includes(body.code) ? `${msg} (${body.code})` : msg;
       }
     }
-    if (error.response?.status === 401 && !error.config?.skipAuthRefresh) {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.skipAuthRefresh &&
+      !isCanceledError(error)
+    ) {
       const path = String(error.config?.url || '');
       const isAuthEndpoint = /\/auth(\/|$)/i.test(path);
       if (!isAuthEndpoint && getAuthToken()) {
-        window.dispatchEvent(new CustomEvent('tp:auth-unauthorized'));
+        dispatchAuthUnauthorized();
       }
     }
-    handleApiFailure(error, error.config || {});
+    if (!isCanceledError(error)) {
+      handleApiFailure(error, error.config || {});
+    }
     return Promise.reject(error);
   }
 );

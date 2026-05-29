@@ -65,6 +65,7 @@ export const AppProvider = ({ children }) => {
   const socketRef = useRef(null);
   const socketConnectedRef = useRef(false);
   const addNotificationRef = useRef(null);
+  const lastReconnectSyncRef = useRef(0);
 
   const registerChatMessageHandler = useCallback((fn) => {
     chatMessageHandlers.current.add(fn);
@@ -274,6 +275,7 @@ export const AppProvider = ({ children }) => {
 
     const reconcileMs = Number(import.meta.env.VITE_CACHE_RECONCILE_MS || 300000);
     const reconcileId = window.setInterval(async () => {
+      if (document.hidden) return;
       pruneWorkspaceQueryCaches();
       try {
         const count = await fetchUnreadCount(user);
@@ -291,7 +293,7 @@ export const AppProvider = ({ children }) => {
 
     const pollMs = Number(import.meta.env.VITE_NOTIFICATION_POLL_MS || 28000);
     const pollId = window.setInterval(async () => {
-      if (socketConnectedRef.current) return;
+      if (document.hidden || socketConnectedRef.current) return;
       await refetchNotifications();
       try {
         const count = await fetchUnreadCount(user);
@@ -330,6 +332,9 @@ export const AppProvider = ({ children }) => {
         socketConnectedRef.current = Boolean(connected);
       },
       onReconnect: async () => {
+        const now = Date.now();
+        if (now - lastReconnectSyncRef.current < 6000) return;
+        lastReconnectSyncRef.current = now;
         await refetchNotifications();
         await syncReconnectNotifications();
       },
