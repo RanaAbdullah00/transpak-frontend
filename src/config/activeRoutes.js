@@ -22,6 +22,7 @@ export const ACTIVE_ROUTE_MAP = new Set([
   '/admin/roles',
   '/admin/loads',
   '/admin/verification',
+  '/admin/fleet',
   '/admin/disputes',
   '/admin/bids',
   '/admin/notifications',

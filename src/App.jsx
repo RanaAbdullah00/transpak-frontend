@@ -19,6 +19,7 @@ import {
   AdminOtpLogs,
   AdminRoleManagement,
   VerificationQueue,
+  AdminFleetQueue,
   Disputes,
   ShipmentControl,
   LoadsHub,
@@ -62,6 +63,8 @@ import RoleSwitchOverlay from './components/layout/RoleSwitchOverlay.jsx';
 import { AppContext } from './context/AppContext.jsx';
 import { dashboardPathForRole } from './utils/dashboardPath.js';
 import { canAccessAdminRoutes, resolveAdminShell, shouldUseAdminShell } from './utils/rbac.js';
+import { useAdminSessionBootstrap } from './hooks/useAdminSessionBootstrap.js';
+import AdminErrorBoundary from './components/admin/AdminErrorBoundary.jsx';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -97,6 +100,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   const accountRoles = Array.isArray(user.roles) ? user.roles : [];
+  if (allowedRoles?.includes('admin') && !canAccessAdminRoutes(user)) {
+    return <Navigate to={dashboardPathForRole(activeRole === 'admin' ? 'shipper' : activeRole)} replace />;
+  }
   if (allowedRoles && !allowedRoles.some((r) => accountRoles.includes(r))) {
     const fallback =
       allowedRoles.includes('admin') && accountRoles.includes('admin')
@@ -148,6 +154,7 @@ function AppRealtimeChrome() {
 function App() {
   const location = useLocation();
   const { user } = useAuth();
+  useAdminSessionBootstrap();
   const roleRemountKey =
     user?.id && user?.activeRole ? `${user.id}:${user.activeRole}` : 'guest';
   const isAuthPage = ['/', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/splash', '/about', '/contact'].includes(
@@ -181,6 +188,7 @@ function App() {
             data-tp-page-bg={pageBg}
           >
               <Suspense fallback={<LoadingScreen />} key={roleRemountKey}>
+              <AdminErrorBoundary key={adminShell ? `admin-eb-${roleRemountKey}` : 'commercial'}>
               <Routes>
               {/* Auth */}
               <Route path="/splash" element={<Splash />} />
@@ -267,6 +275,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <VerificationQueue />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/fleet"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminFleetQueue />
                   </ProtectedRoute>
                 }
               />
@@ -515,6 +531,7 @@ function App() {
               />
               <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </AdminErrorBoundary>
               </Suspense>
           </main>
         </div>

@@ -5,9 +5,12 @@ import { emitRoleSwitchComplete, getUserRoles } from '../utils/roleSwitch.js';
 import {
   applyAuthSessionFromApi,
   clearAuthStorage,
-  mergeAuthUser
+  mergeAuthUser,
+  setAuthToken
 } from '../utils/authSession.js';
 import { refreshAuthSessionFromServer } from '../utils/authRefresh.js';
+import { clearEntireSession, prepareWorkspaceSwitch } from '../utils/sessionCleanup.js';
+import { getAuthToken } from '../utils/authTokenStorage.js';
 
 export const AuthContext = createContext(null);
 
@@ -22,20 +25,23 @@ export const AuthProvider = ({ children }) => {
   userRef.current = user;
 
   const logout = useCallback(() => {
-    clearAuthStorage();
+    const uid = userRef.current?.id;
+    clearEntireSession({ userId: uid });
     setUser(null);
     setSessionVersion((v) => v + 1);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('tp:session-cleared'));
-    }
   }, []);
 
-  const login = useCallback((apiData) => {
-    clearAuthStorage();
+  const login = useCallback((apiData, { clearPrevious = true } = {}) => {
+    if (clearPrevious) {
+      clearEntireSession({ userId: userRef.current?.id });
+    }
     const { user: normalized } = applyAuthSessionFromApi(apiData);
     if (!normalized) return;
     setUser(normalized);
     setSessionVersion((v) => v + 1);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('tp:session-established', { detail: { userId: normalized.id } }));
+    }
   }, []);
 
   const refreshSession = useCallback(async () => {
@@ -49,7 +55,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     let cancelled = false;
-    const token = localStorage.getItem('transpak_token');
+    const token = getAuthToken();
 
     if (!token) {
       clearAuthStorage();
@@ -63,6 +69,12 @@ export const AuthProvider = ({ children }) => {
         const res = await fetchProfileApi();
         const data = safeUnwrapAuthResponse(res);
         if (!cancelled && data?.user) {
+          const owner = sessionStorage.getItem('transpak_session_owner');
+          const nextId = String(data.user.id || '');
+          if (owner && nextId && owner !== nextId) {
+            logout();
+            return;
+          }
           login({ ...data, token: data.token || token || undefined });
         }
       } catch (err) {
@@ -83,6 +95,28 @@ export const AuthProvider = ({ children }) => {
     };
   }, [login, logout]);
 
+  useEffect(() => {
+    const onTokenChanged = () => {
+      const token = getAuthToken();
+      if (!token) {
+        logout();
+        return;
+      }
+      refreshSession().catch(() => logout());
+    };
+    const onStorage = (e) => {
+      if (e.key === 'transpak_token' && e.storageArea === sessionStorage) {
+        onTokenChanged();
+      }
+    };
+    window.addEventListener('tp:auth-token-changed', onTokenChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('tp:auth-token-changed', onTokenChanged);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [logout, refreshSession]);
+
   const setActiveRole = useCallback(async (role) => {
     const current = userRef.current;
     if (!current) throw new Error('Not authenticated');
@@ -97,11 +131,12 @@ export const AuthProvider = ({ children }) => {
 
     switchLockRef.current = true;
     setRoleSwitching(true);
+    prepareWorkspaceSwitch(current.id);
     try {
       const res = await patchActiveRoleApi(nextRole);
       const data = safeUnwrapAuthResponse(res);
       if (!data?.token) throw new Error('Role switch failed — no session token');
-      localStorage.setItem('transpak_token', data.token);
+      setAuthToken(data.token);
 
       let session = data;
       try {
@@ -117,7 +152,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      login(session);
+      login(session, { clearPrevious: false });
       emitRoleSwitchComplete(nextRole);
     } catch (err) {
       throw err;
@@ -167,6 +202,10 @@ export const AuthProvider = ({ children }) => {
     setActiveRole,
     logout
   };
+
+  if (loading) {
+    return <AuthContext.Provider value={value}>{null}</AuthContext.Provider>;
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

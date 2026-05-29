@@ -29,17 +29,27 @@ export function emitRoleSwitchComplete(role) {
   window.dispatchEvent(new CustomEvent('tp:realtime-refresh', { detail: { scope: 'all' } }));
 }
 
-/** Next workspace role: admin ↔ commercial (shipper/carrier). */
+/** Commercial shipper ↔ carrier only (never crosses accounts). */
 export function resolveWorkspaceSwitchTarget(user) {
   if (!user) return null;
   const roles = getUserRoles(user);
-  const active = user.activeRole ?? roles[0];
-
-  if (active === 'admin') {
-    return null;
-  }
-
-  if (roles.includes('admin')) return 'admin';
-
+  if (roles.includes('admin') && user.activeRole === 'admin') return null;
   return resolveCommercialSwitchTarget(user);
+}
+
+/** Show "Add role" when account has one commercial role; "Switch" when both. */
+export function resolveNavRoleAction(user) {
+  if (!user) return { mode: 'none' };
+  const roles = getUserRoles(user).filter((r) => r === 'shipper' || r === 'carrier');
+  if (roles.includes('admin') && user.activeRole === 'admin') return { mode: 'none' };
+  const hasBoth = roles.includes('shipper') && roles.includes('carrier');
+  if (hasBoth) {
+    const target = resolveCommercialSwitchTarget(user);
+    return target ? { mode: 'switch', target } : { mode: 'none' };
+  }
+  if (roles.length === 1) {
+    const missing = roles.includes('shipper') ? 'carrier' : 'shipper';
+    return { mode: 'add', target: missing };
+  }
+  return { mode: 'none' };
 }

@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeBids } from '../../adapters/normalize.js';
-import { viewAsQuery } from '../../utils/workspaceApi.js';
+import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { invalidateRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
@@ -153,7 +153,7 @@ const ProfileRateUsersPanel = () => {
       setLoading(true);
       try {
         if (role === 'shipper') {
-          const data = await request({ url: '/bids', params: viewAsQuery(user) });
+          const data = await request({ url: '/bids', params: mergeWorkspaceParams(user) });
           const bids = normalizeBids(data).filter((b) => b.status === 'accepted' && b.carrierId && b.loadId);
           const seen = new Set();
           const next = [];

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getAuthApiUrl } from '../config/apiConfig.js';
 import { unwrapBody } from '../utils/unwrapApi.js';
+import { getAuthToken } from '../utils/authTokenStorage.js';
 
 /** Only these HTTP methods may be used from this module. */
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH']);
@@ -16,7 +17,7 @@ function redactAuthPayload(data) {
 
 function authHeaders() {
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
-  const token = localStorage.getItem('transpak_token');
+  const token = getAuthToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }

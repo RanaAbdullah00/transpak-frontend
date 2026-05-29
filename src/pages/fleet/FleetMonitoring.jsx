@@ -4,6 +4,7 @@ import FleetList from '../../components/fleet/FleetList.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { normalizeTrucksResponse } from '../../utils/fleetApi.js';
 
 const FleetMonitoring = () => {
   const { t, isUrdu } = useLanguage();
@@ -14,8 +15,8 @@ const FleetMonitoring = () => {
   const refresh = useCallback(async () => {
     setLoadError(false);
     try {
-      const data = await request({ method: 'GET', url: '/trucks/mine' });
-      setTrucks(Array.isArray(data) ? data : []);
+      const data = await request({ method: 'GET', url: '/trucks/mine', params: { page: 1, pageSize: 50 } });
+      setTrucks(normalizeTrucksResponse(data));
     } catch {
       setLoadError(true);
       setTrucks([]);

@@ -20,7 +20,7 @@ import {
 } from '../../components/ui/ToastProvider.jsx';
 import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
-import { viewAsQuery } from '../../utils/workspaceApi.js';
+import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 
 const LoadDetails = () => {
   const { id } = useParams();
@@ -47,7 +47,7 @@ const LoadDetails = () => {
       const loadPromise = request({ url: `/loads/${id}` });
       const bidsPromise =
         activeRole === 'shipper'
-          ? request({ url: '/bids', params: { loadId: id, ...viewAsQuery(user) } })
+          ? request({ url: '/bids', params: { loadId: id, ...mergeWorkspaceParams(user) } })
           : Promise.resolve([]);
       const [raw, bidRows] = await Promise.all([loadPromise, bidsPromise]);
       const normalizedLoads = normalizeLoads([raw]);

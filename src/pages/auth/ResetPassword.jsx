@@ -65,7 +65,10 @@ const ResetPassword = () => {
       });
       const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
-      if (token) localStorage.setItem('transpak_token', token);
+      if (token) {
+        const { setAuthToken } = await import('../../utils/authTokenStorage.js');
+        setAuthToken(token);
+      }
       let session = payload;
       try {
         const profRes = await fetchProfileApi();

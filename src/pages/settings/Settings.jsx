@@ -6,10 +6,14 @@ import { useTheme } from '../../hooks/useTheme.js';
 import { FaSun, FaMoon, FaQuestionCircle, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import LanguageToggle from '../../components/ui/LanguageToggle.jsx';
+import { useLocation } from 'react-router-dom';
+import { resolveAdminShell } from '../../utils/rbac.js';
 
 const Settings = () => {
   const { t, isUrdu } = useLanguage();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const adminShell = resolveAdminShell(user, location.pathname);
   const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -46,10 +50,12 @@ const Settings = () => {
           <Chev className="tp-settings-chevron flex-shrink-0" size={12} aria-hidden />
         </Link>
 
-        <div className={rowClass}>
-          <span className="small fw-medium text-body">{t('auth.language')}</span>
-          <LanguageToggle className="rounded-pill" />
-        </div>
+        {!adminShell ? (
+          <div className={rowClass}>
+            <span className="small fw-medium text-body">{t('auth.language')}</span>
+            <LanguageToggle className="rounded-pill" />
+          </div>
+        ) : null}
 
         <div className={rowClass}>
           <span className="d-flex align-items-center gap-2 small fw-medium text-body">

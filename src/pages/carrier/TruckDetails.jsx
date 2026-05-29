@@ -9,6 +9,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 import { uploadMediaFile } from '../../services/uploadMedia.js';
+import { fleetStatusBadgeClass, isTruckMatchingEligible, normalizeTrucksResponse } from '../../utils/fleetApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
 import SafeImage from '../../components/ui/SafeImage.jsx';
 import { syncTrucksAfterCreate } from '../../utils/truckListSync.js';
@@ -65,7 +66,7 @@ const TruckDetails = () => {
     setListLoading(true);
     try {
       const data = await request({ method: 'GET', url: '/trucks/mine' });
-      setTrucks(Array.isArray(data) ? data : []);
+      setTrucks(normalizeTrucksResponse(data));
     } catch (err) {
       notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
       setTrucks([]);
@@ -105,6 +106,28 @@ const TruckDetails = () => {
   };
 
   const reset = () => setForm(emptyForm);
+
+  const setAsDefault = async (row) => {
+    try {
+      await request({ method: 'PATCH', url: `/trucks/${row.id}/default` });
+      notifySuccess(t('pages.truckDetailsPage.defaultSet'));
+      await refresh();
+    } catch (err) {
+      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+    }
+  };
+
+  const removeTruck = async (row) => {
+    if (!window.confirm(t('pages.truckDetailsPage.deleteConfirm'))) return;
+    try {
+      await request({ method: 'DELETE', url: `/trucks/${row.id}` });
+      notifySuccess(t('pages.truckDetailsPage.deleted'));
+      if (String(form.id) === String(row.id)) reset();
+      await refresh();
+    } catch (err) {
+      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -151,7 +174,7 @@ const TruckDetails = () => {
       reset();
       const fetchList = async () => {
         const data = await request({ method: 'GET', url: '/trucks/mine' });
-        const list = Array.isArray(data) ? data : [];
+        const list = normalizeTrucksResponse(data);
         setTrucks(list);
         return list;
       };
@@ -327,24 +350,55 @@ const TruckDetails = () => {
                       <div className="min-w-0 flex-grow-1">
                         <div className="fw-semibold d-flex align-items-center gap-2 flex-wrap">
                           <span className="text-break">{row.engineNumber || row.truckNumber}</span>
-                          {isTruckComplete(row) ? (
-                            <span className="badge bg-success" style={{ fontSize: 9 }} title={t('pages.truckDetailsPage.verifiedShort')}>
-                              ✓
+                          <span
+                            className={`badge ${fleetStatusBadgeClass(row.statusLabel || row.status)}`}
+                            style={{ fontSize: 9 }}
+                          >
+                            {row.statusLabel || row.status || t('pages.fleet.statusPending')}
+                          </span>
+                          {row.isDefault ? (
+                            <span className="badge bg-primary" style={{ fontSize: 9 }}>
+                              {t('pages.truckDetailsPage.defaultBadge')}
                             </span>
                           ) : null}
                         </div>
                         <div className="small text-muted text-break">
                           {row.truckType} · {row.capacity || 0}t · {row.licensePlate}
                         </div>
+                        {isTruckMatchingEligible(row) ? (
+                          <div className="small text-success">{t('pages.truckDetailsPage.matchingEligible')}</div>
+                        ) : (
+                          <div className="small text-warning">{t('pages.truckDetailsPage.notMatchingEligible')}</div>
+                        )}
                       </div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="flex-shrink-0 tp-touch-target w-100 w-sm-auto"
-                        onClick={() => startEdit(row)}
-                      >
-                        {t('pages.truckDetailsPage.edit')}
-                      </Button>
+                      <div className="d-flex flex-column gap-1 flex-shrink-0 w-100 w-sm-auto">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="tp-touch-target"
+                          onClick={() => startEdit(row)}
+                        >
+                          {t('pages.truckDetailsPage.edit')}
+                        </Button>
+                        {isTruckMatchingEligible(row) && !row.isDefault ? (
+                          <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            className="tp-touch-target"
+                            onClick={() => setAsDefault(row)}
+                          >
+                            {t('pages.truckDetailsPage.setDefault')}
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="tp-touch-target"
+                          onClick={() => removeTruck(row)}
+                        >
+                          {t('pages.truckDetailsPage.delete')}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}

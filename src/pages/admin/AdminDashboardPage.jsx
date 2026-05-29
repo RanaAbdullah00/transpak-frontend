@@ -1,14 +1,33 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSafeInterval } from '../../hooks/useSafeInterval.js';
 import { Link } from 'react-router-dom';
 import { SkeletonStatCards } from '../../components/ui/Skeleton.jsx';
 import AdminDemoVideoManager from '../../components/admin/AdminDemoVideoManager.jsx';
+import AdminWidgetShell from '../../components/admin/AdminWidgetShell.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { formatUserError } from '../../utils/userErrors.js';
+import { useAdminDashboardWidgets } from '../../hooks/useAdminDashboardWidgets.js';
 import { formatLoadDisplayId } from '../../utils/displayId.js';
+import { formatStatValue } from '../../utils/formatStat.js';
 
 const POLL_MS = 28000;
+
+const CARD_WIDGET = {
+  users: 'users',
+  activeUsers: 'users',
+  loads: 'loads',
+  openLoads: 'loads',
+  bids: 'bids',
+  shipments: 'shipments',
+  completed: 'shipments',
+  notifToday: 'users',
+  disputes: 'users',
+  verification: 'users',
+  shippers: 'users',
+  carriers: 'users',
+  profiles: 'users',
+  trucks: 'users'
+};
 
 function formatWhen(iso, locale) {
   if (!iso) return '—';
@@ -26,45 +45,34 @@ const AdminDashboardPage = () => {
   const { request } = useApi();
   const { t, isUrdu } = useLanguage();
   const locale = isUrdu ? 'ur-PK' : 'en-PK';
-  const [live, setLive] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
-  const mountedRef = useRef(true);
+  const { live, widgetState, initialLoading, loadAll, retryWidget, widgetFailed, widgetLoading, anyOk } =
+    useAdminDashboardWidgets(request);
 
   useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const loadLive = useCallback(async () => {
-    try {
-      setFetchError(null);
-      const data = await request({ url: '/admin/dashboard/live', skipGlobalErrorToast: true });
-      if (!mountedRef.current) return;
-      setLive(data);
-    } catch (e) {
-      if (!mountedRef.current) return;
-      setFetchError(formatUserError(e, t, { fallback: t('pages.admin.statsError') }));
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [request, t]);
+    loadAll();
+  }, [loadAll]);
 
   useEffect(() => {
-    const onRefresh = () => loadLive();
+    const onRefresh = () => loadAll();
     window.addEventListener('tp:realtime-refresh', onRefresh);
     return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
-  }, [loadLive]);
+  }, [loadAll]);
 
-  useSafeInterval(loadLive, POLL_MS, { enabled: true });
+  useSafeInterval(() => loadAll(), POLL_MS, { enabled: true });
 
   const stats = live?.stats;
+  const meta = live?.meta;
 
   const cards = useMemo(
     () => [
       { key: 'users', title: t('pages.admin.usersTitle'), value: stats?.totalUsers, hint: t('pages.admin.registeredAccounts') },
+      {
+        key: 'activeUsers',
+        title: t('pages.admin.activeUsers'),
+        value: stats?.activeUsers,
+        hint: t('pages.admin.activeUsersHint')
+      },
+      { key: 'loads', title: t('pages.admin.loadsTitle'), value: stats?.totalLoads, hint: t('pages.admin.loadRecords') },
       { key: 'openLoads', title: t('pages.admin.openLoads'), value: stats?.openLoads, hint: t('pages.admin.openLoadsHint') },
       { key: 'bids', title: t('pages.bids.bidManagementTitle'), value: stats?.totalBids, hint: t('pages.admin.bidsPlaced') },
       {
@@ -119,194 +127,267 @@ const AdminDashboardPage = () => {
 
   const activity = useMemo(() => {
     const items = [];
-    (live?.recentLoads || []).forEach((r) => {
-      items.push({
-        id: `load-${r.id}`,
-        ts: r.createdAt,
-        label: t('pages.admin.activityLoadPosted'),
-        detail: `${formatLoadDisplayId(r)} · ${r.origin} → ${r.destination}`,
-        meta: r.shipperName
+    const loadsOk = !widgetFailed('loads');
+    const bidsOk = !widgetFailed('bids');
+    const shipmentsOk = !widgetFailed('shipments');
+
+    if (loadsOk) {
+      (live?.recentLoads || []).forEach((r) => {
+        items.push({
+          id: `load-${r.id}`,
+          ts: r.createdAt,
+          label: t('pages.admin.activityLoadPosted'),
+          detail: `${formatLoadDisplayId(r)} · ${r.origin} → ${r.destination}`,
+          meta: r.shipperName
+        });
       });
-    });
-    (live?.recentBids || []).forEach((r) => {
-      items.push({
-        id: `bid-${r.id}`,
-        ts: r.createdAt,
-        label: t('pages.admin.activityBid'),
-        detail: `${formatLoadDisplayId({ code: r.loadCode })} · PKR ${r.amount}`,
-        meta: r.carrierName
+    }
+    if (bidsOk) {
+      (live?.recentBids || []).forEach((r) => {
+        items.push({
+          id: `bid-${r.id}`,
+          ts: r.createdAt,
+          label: t('pages.admin.activityBid'),
+          detail: `${formatLoadDisplayId({ code: r.loadCode })} · PKR ${r.amount}`,
+          meta: r.carrierName
+        });
       });
-    });
-    (live?.recentShipments || []).forEach((r) => {
-      items.push({
-        id: `shp-${r.id}`,
-        ts: r.updatedAt,
-        label: t('pages.admin.activityShipment'),
-        detail: `${formatLoadDisplayId({ code: r.loadCode })} · ${r.status}`,
-        meta: null
+    }
+    if (shipmentsOk) {
+      (live?.recentShipments || []).forEach((r) => {
+        items.push({
+          id: `shp-${r.id}`,
+          ts: r.updatedAt,
+          label: t('pages.admin.activityShipment'),
+          detail: `${formatLoadDisplayId({ code: r.loadCode })} · ${r.status}`,
+          meta: null
+        });
       });
-    });
-  return items
+    }
+    return items
       .filter((x) => x.ts)
       .sort((a, b) => new Date(b.ts) - new Date(a.ts))
       .slice(0, 20);
-  }, [live, t]);
+  }, [live, t, widgetFailed]);
+
+  const activityWidgetsFailed =
+    widgetFailed('loads') && widgetFailed('bids') && widgetFailed('shipments');
+  const activityLoading =
+    widgetLoading('loads') || widgetLoading('bids') || widgetLoading('shipments');
+
+  const retryActivity = useCallback(() => {
+    retryWidget('loads');
+    retryWidget('bids');
+    retryWidget('shipments');
+  }, [retryWidget]);
+
+  const showSkeleton = initialLoading && !anyOk;
 
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
         <div>
           <h5 className="mb-1">{t('pages.admin.dashboardTitle')}</h5>
-          <p className="small text-muted mb-0">{t('pages.admin.dashboardLead')}</p>
+          <p className="small text-muted mb-0">{t('pages.admin.systemMetricsHint')}</p>
           {stats?.generatedAt ? (
             <p className="small text-muted mb-0 mt-1">
               {t('pages.admin.lastUpdated')}: {formatWhen(stats.generatedAt, locale)}
             </p>
           ) : null}
         </div>
-        <button type="button" className="btn btn-outline-primary btn-sm rounded-lg" onClick={loadLive} disabled={loading}>
+        <button
+          type="button"
+          className="btn btn-outline-primary btn-sm rounded-lg"
+          onClick={() => loadAll()}
+          disabled={initialLoading}
+        >
           {t('pages.admin.refreshNow')}
         </button>
       </div>
 
-      {loading && !live && <SkeletonStatCards count={6} />}
-
-      {!loading && fetchError && !live && (
-        <div className="alert alert-warning rounded-3 border-0 shadow-sm" role="alert">
-          <div className="fw-semibold mb-1">{t('pages.admin.statsError')}</div>
-          <p className="small mb-3 text-muted">{fetchError}</p>
-          <button type="button" className="btn btn-primary btn-sm rounded-lg" onClick={loadLive}>
-            {t('pages.admin.tryAgain')}
-          </button>
+      {meta?.dbReachable === false ? (
+        <div className="alert alert-danger rounded-3 border-0 shadow-sm mb-3" role="alert">
+          <div className="fw-semibold mb-1">{t('pages.admin.dbUnreachable')}</div>
+          <p className="small mb-0 text-muted">{t('pages.admin.dbUnreachableHint')}</p>
         </div>
-      )}
+      ) : null}
 
-      {live && (
-        <>
-          <div className="row g-3 mb-4">
-            {cards.map((c) => (
-              <div key={c.key} className="col-6 col-lg-4 col-xl-3">
-                <div className="card border-0 shadow-sm h-100 rounded-3 tp-admin-stat-card">
-                  <div className="card-body py-3">
+      {meta?.partialFailure ? (
+        <div className="alert alert-warning rounded-3 border-0 shadow-sm mb-3" role="status">
+          {t('pages.admin.partialStatsWarning')}
+        </div>
+      ) : null}
+
+      {showSkeleton && <SkeletonStatCards count={8} />}
+
+      <div className="row g-3 mb-4">
+        {cards.map((c) => {
+          const source = CARD_WIDGET[c.key] || 'users';
+          const failed = widgetFailed(source);
+          const loading = widgetLoading(source);
+          return (
+            <div key={c.key} className="col-6 col-lg-4 col-xl-3">
+              <div className="card border-0 shadow-sm h-100 rounded-3 tp-admin-stat-card">
+                <div className="card-body py-3">
+                  <div className="d-flex justify-content-between align-items-start gap-1">
                     <div className="text-muted small mb-1">{c.title}</div>
-                    <div className="h4 fw-bold mb-0 text-primary">{c.value ?? '—'}</div>
-                    <div className="small text-body-secondary mt-2">{c.hint}</div>
+                    {failed ? (
+                      <button
+                        type="button"
+                        className="btn btn-link btn-sm p-0 text-muted"
+                        onClick={() => retryWidget(source)}
+                        title={t('pages.admin.tryAgain')}
+                      >
+                        ↻
+                      </button>
+                    ) : null}
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {live.observability ? (
-            <div className="card border-0 shadow-sm rounded-3 mb-4">
-              <div className="card-body py-3">
-                <h6 className="fw-semibold mb-3">{t('pages.admin.observabilityTitle')}</h6>
-                <div className="row g-2 small">
-                  <div className="col-6 col-md-3">
-                    <span className="text-muted d-block">{t('pages.admin.uptime')}</span>
-                    <span className="fw-semibold">
-                      {Math.floor((live.observability.uptimeSeconds || 0) / 3600)}h{' '}
-                      {Math.floor(((live.observability.uptimeSeconds || 0) % 3600) / 60)}m
-                    </span>
+                  <div className="h4 fw-bold mb-0 text-primary">
+                    {loading && failed ? (
+                      <span className="placeholder col-4" />
+                    ) : (
+                      formatStatValue(c.value, { loading: loading && !stats, failed })
+                    )}
                   </div>
-                  <div className="col-6 col-md-3">
-                    <span className="text-muted d-block">{t('pages.admin.websocketConnections')}</span>
-                    <span className="fw-semibold">{live.observability.websocketConnections ?? 0}</span>
-                  </div>
-                  <div className="col-6 col-md-3">
-                    <span className="text-muted d-block">{t('pages.admin.openLoads')}</span>
-                    <span className="fw-semibold">{stats?.openLoads ?? '—'}</span>
-                  </div>
-                  <div className="col-6 col-md-3">
-                    <span className="text-muted d-block">{t('pages.admin.completedShipments')}</span>
-                    <span className="fw-semibold">{stats?.completedShipments ?? '—'}</span>
-                  </div>
+                  <div className="small text-body-secondary mt-2">{c.hint}</div>
+                  {failed ? (
+                    <p className="small text-warning mb-0 mt-1">{t('pages.admin.widgetUnavailable')}</p>
+                  ) : null}
                 </div>
               </div>
             </div>
-          ) : null}
+          );
+        })}
+      </div>
 
-          <div className="row g-3 mb-4">
-            <div className="col-lg-7">
-              <div className="card border-0 shadow-sm rounded-3 h-100">
-                <div className="card-body">
-                  <h6 className="fw-semibold mb-3">{t('pages.admin.auditLogTitle')}</h6>
-                  {!live.auditEvents?.length ? (
-                    <p className="small text-muted mb-0">{t('pages.admin.auditLogEmpty')}</p>
-                  ) : (
-                    <ul className="list-group list-group-flush tp-admin-activity-list mb-0">
-                      {live.auditEvents.map((ev) => (
-                        <li key={ev.id} className="list-group-item px-0 border-0 border-bottom tp-border-theme">
-                          <div className="d-flex justify-content-between gap-2">
-                            <div className="min-w-0">
-                              <div className="small fw-semibold text-break">{ev.action}</div>
-                              <div className="small text-muted">
-                                {ev.targetEntity}
-                                {ev.targetId ? ` · ${String(ev.targetId).slice(0, 8)}` : ''}
-                              </div>
-                              <div className="small text-body-secondary">{ev.actorName}</div>
+      <div className="card border-0 shadow-sm rounded-3 mb-4">
+        <div className="card-body py-3">
+          <AdminWidgetShell
+            title={t('pages.admin.observabilityTitle')}
+            loading={widgetLoading('observability')}
+            error={widgetFailed('observability') ? widgetState.observability?.error : null}
+            onRetry={() => retryWidget('observability')}
+          >
+            {live?.observability ? (
+              <div className="row g-2 small">
+              <div className="col-6 col-md-3">
+                <span className="text-muted d-block">{t('pages.admin.uptime')}</span>
+                <span className="fw-semibold">
+                  {Math.floor((live.observability.uptimeSeconds || 0) / 3600)}h{' '}
+                  {Math.floor(((live.observability.uptimeSeconds || 0) % 3600) / 60)}m
+                </span>
+              </div>
+              <div className="col-6 col-md-3">
+                <span className="text-muted d-block">{t('pages.admin.websocketConnections')}</span>
+                <span className="fw-semibold">{live.observability.websocketConnections ?? 0}</span>
+              </div>
+              <div className="col-6 col-md-3">
+                <span className="text-muted d-block">{t('pages.admin.openLoads')}</span>
+                <span className="fw-semibold">{formatStatValue(stats?.openLoads, { failed: widgetFailed('loads') })}</span>
+              </div>
+              <div className="col-6 col-md-3">
+                <span className="text-muted d-block">{t('pages.admin.completedShipments')}</span>
+                <span className="fw-semibold">
+                  {formatStatValue(stats?.completedShipments, { failed: widgetFailed('shipments') })}
+                </span>
+              </div>
+              </div>
+            ) : null}
+          </AdminWidgetShell>
+        </div>
+      </div>
+
+      <div className="row g-3 mb-4">
+        <div className="col-lg-7">
+          <div className="card border-0 shadow-sm rounded-3 h-100">
+            <div className="card-body">
+              <AdminWidgetShell
+                title={t('pages.admin.auditLogTitle')}
+                loading={widgetLoading('audit')}
+                error={widgetFailed('audit') ? widgetState.audit?.error : null}
+                onRetry={() => retryWidget('audit')}
+              >
+                {!live?.auditEvents?.length ? (
+                  <p className="small text-muted mb-0">{t('pages.admin.auditLogEmpty')}</p>
+                ) : (
+                  <ul className="list-group list-group-flush tp-admin-activity-list mb-0">
+                    {live.auditEvents.map((ev) => (
+                      <li key={ev.id} className="list-group-item px-0 border-0 border-bottom tp-border-theme">
+                        <div className="d-flex justify-content-between gap-2">
+                          <div className="min-w-0">
+                            <div className="small fw-semibold text-break">{ev.action}</div>
+                            <div className="small text-muted">
+                              {ev.targetEntity}
+                              {ev.targetId ? ` · ${String(ev.targetId).slice(0, 8)}` : ''}
                             </div>
-                            <div className="small text-muted text-nowrap flex-shrink-0">
-                              {formatWhen(ev.createdAt, locale)}
-                            </div>
+                            <div className="small text-body-secondary">{ev.actorName}</div>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-5">
-              <div className="card border-0 shadow-sm rounded-3 h-100">
-                <div className="card-body">
-                  <h6 className="fw-semibold mb-3">{t('pages.admin.recentActivity')}</h6>
-                  {!activity.length ? (
-                    <p className="small text-muted mb-0">{t('pages.admin.noRecentActivity')}</p>
-                  ) : (
-                    <ul className="list-group list-group-flush tp-admin-activity-list">
-                      {activity.map((item) => (
-                        <li key={item.id} className="list-group-item px-0 border-0 border-bottom tp-border-theme">
-                          <div className="d-flex justify-content-between gap-2">
-                            <div className="min-w-0">
-                              <div className="small fw-semibold">{item.label}</div>
-                              <div className="small text-muted text-truncate">{item.detail}</div>
-                              {item.meta ? <div className="small text-body-secondary">{item.meta}</div> : null}
-                            </div>
-                            <div className="small text-muted text-nowrap flex-shrink-0">
-                              {formatWhen(item.ts, locale)}
-                            </div>
+                          <div className="small text-muted text-nowrap flex-shrink-0">
+                            {formatWhen(ev.createdAt, locale)}
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </AdminWidgetShell>
             </div>
           </div>
+        </div>
+        <div className="col-lg-5">
+          <div className="card border-0 shadow-sm rounded-3 h-100">
+            <div className="card-body">
+              <AdminWidgetShell
+                title={t('pages.admin.recentActivity')}
+                loading={activityLoading && !activity.length}
+                error={activityWidgetsFailed ? t('pages.admin.widgetUnavailable') : null}
+                onRetry={retryActivity}
+              >
+                {!activity.length ? (
+                  <p className="small text-muted mb-0">{t('pages.admin.noRecentActivity')}</p>
+                ) : (
+                  <ul className="list-group list-group-flush tp-admin-activity-list">
+                    {activity.map((item) => (
+                      <li key={item.id} className="list-group-item px-0 border-0 border-bottom tp-border-theme">
+                        <div className="d-flex justify-content-between gap-2">
+                          <div className="min-w-0">
+                            <div className="small fw-semibold">{item.label}</div>
+                            <div className="small text-muted text-truncate">{item.detail}</div>
+                            {item.meta ? <div className="small text-body-secondary">{item.meta}</div> : null}
+                          </div>
+                          <div className="small text-muted text-nowrap flex-shrink-0">
+                            {formatWhen(item.ts, locale)}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </AdminWidgetShell>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <div className="row g-3 mb-4">
-            <div className="col-lg-5">
-              <div className="d-grid gap-3">
-                <div className="card border-0 shadow-sm rounded-3">
-                  <div className="card-body">
-                    <h6 className="fw-semibold mb-3">{t('pages.admin.quickActions')}</h6>
-                    <div className="d-grid gap-2">
-                      {quickLinks.map((link) => (
-                        <Link key={link.to} to={link.to} className="btn btn-outline-primary btn-sm rounded-lg text-start">
-                          {link.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
+      <div className="row g-3 mb-4">
+        <div className="col-lg-5">
+          <div className="d-grid gap-3">
+            <div className="card border-0 shadow-sm rounded-3">
+              <div className="card-body">
+                <h6 className="fw-semibold mb-3">{t('pages.admin.quickActions')}</h6>
+                <div className="d-grid gap-2">
+                  {quickLinks.map((link) => (
+                    <Link key={link.to} to={link.to} className="btn btn-outline-primary btn-sm rounded-lg text-start">
+                      {link.label}
+                    </Link>
+                  ))}
                 </div>
-                <AdminDemoVideoManager />
               </div>
             </div>
+            <AdminDemoVideoManager />
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 };

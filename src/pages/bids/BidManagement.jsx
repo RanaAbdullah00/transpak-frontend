@@ -7,7 +7,7 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { normalizeBids } from '../../adapters/normalize.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
-import { viewAsQuery } from '../../utils/workspaceApi.js';
+import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 
 // Screen summarising bids across loads.
 const BidManagement = () => {
@@ -19,7 +19,7 @@ const BidManagement = () => {
 
   const fetchBidsData = useCallback(async () => {
     try {
-      const data = await request({ method: 'GET', url: '/bids', params: viewAsQuery(user) });
+      const data = await request({ method: 'GET', url: '/bids', params: mergeWorkspaceParams(user) });
       setBids(normalizeBids(data));
     } catch (err) {
       notifyError(t('pages.bids.loadBidsFailed'));

@@ -5,6 +5,7 @@ import StatsCards from '../../components/dashboard/StatsCards.jsx';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
 import LoadList from '../../components/loadboard/LoadList.jsx';
 import { useApi } from '../../hooks/useApi.js';
+import { normalizeTrucksResponse } from '../../utils/fleetApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useDashboardMetrics } from '../../hooks/useDashboardMetrics.js';
@@ -47,7 +48,7 @@ const CarrierDashboard = () => {
         if (cancelled) return;
         setOpenLoads(filterOpenLoads(normalizeLoads(Array.isArray(loadsRaw) ? loadsRaw : [])).slice(0, 6));
         setMyBids(Array.isArray(bidsRaw) ? bidsRaw : []);
-        setFleetCount(Array.isArray(trucksRaw) ? trucksRaw.length : 0);
+        setFleetCount(normalizeTrucksResponse(trucksRaw).length);
       } catch {
         if (!cancelled) {
           setOpenLoads([]);

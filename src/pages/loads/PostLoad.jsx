@@ -27,8 +27,12 @@ const PostLoad = () => {
   }, [user, navigate]);
 
   const profileBlocked = user && user.profileComplete === false && !shouldUseAdminShell(user);
+  const [formKey, setFormKey] = React.useState(0);
+  const [posting, setPosting] = React.useState(false);
 
   const handleSubmit = async (payload) => {
+    if (posting) return;
+    setPosting(true);
     const body = {
       cargo: payload.cargo,
       origin: payload.origin,
@@ -59,10 +63,13 @@ const PostLoad = () => {
         type: 'load',
         message: t('pages.loads.postLoadNotify', { code })
       });
+      setFormKey((k) => k + 1);
       navigate('/loads/manage', { replace: true });
     } catch (error) {
       logApiFailure(error, { method: 'POST', url: '/loads/create', data: body });
       notifyApiError(error);
+    } finally {
+      setPosting(false);
     }
   };
 
@@ -101,9 +108,10 @@ const PostLoad = () => {
     <div className="container py-3">
       <h5 className="mb-3">{t('pages.loads.postLoadScreenTitle')}</h5>
       <PostLoadForm
+        key={formKey}
         onSubmit={handleSubmit}
         submitLabel={t('pages.loads.postLoadCta')}
-        submitting={loading}
+        submitting={posting || loading}
       />
     </div>
   );

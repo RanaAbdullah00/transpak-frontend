@@ -4,6 +4,7 @@ import {
   FaTachometerAlt,
   FaUserShield,
   FaClipboardCheck,
+  FaTruck,
   FaExclamationTriangle,
   FaListUl,
   FaFileAlt,
@@ -17,7 +18,6 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import SafeAvatar from '../ui/SafeAvatar.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
-import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
 
 const navLinkClass = ({ isActive }) =>
   `nav-link d-flex align-items-center gap-2 rounded-lg px-3 py-2 mb-1 ${isActive ? 'active' : ''}`;
@@ -47,6 +47,10 @@ const AdminSidebar = () => {
         <NavLink to="/admin/verification" className={navLinkClass}>
           <FaClipboardCheck />
           {t('nav.verification')}
+        </NavLink>
+        <NavLink to="/admin/fleet" className={navLinkClass}>
+          <FaTruck />
+          {t('nav.fleetApproval')}
         </NavLink>
         <NavLink to="/admin/disputes" className={navLinkClass}>
           <FaExclamationTriangle />
@@ -91,7 +95,7 @@ const AdminSidebar = () => {
               </div>
               <div className="flex-grow-1 min-w-0">
                 <div className="fw-semibold text-truncate small">{user.name || t('common.userFallback')}</div>
-                <ActiveRoleBadge className="mt-1" />
+                <span className="badge bg-dark mt-1">{t('common.admin')}</span>
               </div>
             </div>
           )}

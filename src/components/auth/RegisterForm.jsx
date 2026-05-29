@@ -136,7 +136,10 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
 
       const shouldAutoLogin = Boolean(token && user) && (upgradeRole || mergedOrExisting);
       if (shouldAutoLogin) {
-        if (token) localStorage.setItem('transpak_token', token);
+        if (token) {
+          const { setAuthToken } = await import('../../utils/authTokenStorage.js');
+          setAuthToken(token);
+        }
         let session = payload;
         try {
           const profRes = await fetchProfileApi();

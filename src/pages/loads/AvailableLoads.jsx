@@ -98,7 +98,8 @@ const AvailableLoads = ({ embedded = false }) => {
             limit: 60
           }
         });
-        const normalized = normalizeLoads(data);
+        const raw = Array.isArray(data) ? data : data?.items ?? [];
+        const normalized = normalizeLoads(raw);
         const openOnly = filterOpenLoads(normalized);
         const filtered = openOnly.filter((l) => !myBidLoadIds.has(String(l.id)));
         setLoads(filtered);

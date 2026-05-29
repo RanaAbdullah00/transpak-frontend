@@ -13,7 +13,8 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notificationsForUser } from '../../utils/notificationScope.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { resolveNotificationPath } from '../../utils/notificationNavigation.js';
 import { playNotificationSound } from '../../utils/notificationSound.js';
 
 function startOfDay(d) {
@@ -46,6 +47,7 @@ const NotificationDropdown = ({ className = '' }) => {
   const { t, isUrdu } = useLanguage();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const adminShell = resolveAdminShell(user, location.pathname);
   const app = React.useContext(AppContext);
   const [open, setOpen] = useState(false);
@@ -56,7 +58,10 @@ const NotificationDropdown = ({ className = '' }) => {
     () => (Array.isArray(app?.notifications) ? app.notifications : []),
     [app?.notifications]
   );
-  const notifications = useMemo(() => notificationsForUser(allNotifications), [allNotifications]);
+  const notifications = useMemo(
+    () => notificationsForUser(allNotifications, user),
+    [allNotifications, user?.id, user?.activeRole]
+  );
   const markNotificationRead = app?.markNotificationRead || (() => {});
   const refetchNotifications = app?.refetchNotifications;
 
@@ -85,8 +90,17 @@ const NotificationDropdown = ({ className = '' }) => {
     };
     load();
     const onRead = () => load();
+    const onUnreadSync = (e) => {
+      const n = e?.detail?.count;
+      if (typeof n === 'number') setServerUnread(n);
+      else load();
+    };
     window.addEventListener('tp_notifications_read', onRead);
-    return () => window.removeEventListener('tp_notifications_read', onRead);
+    window.addEventListener('tp:unread-sync', onUnreadSync);
+    return () => {
+      window.removeEventListener('tp_notifications_read', onRead);
+      window.removeEventListener('tp:unread-sync', onUnreadSync);
+    };
   }, [user?.id, user?.activeRole]);
 
   useEffect(() => {
@@ -178,6 +192,9 @@ const NotificationDropdown = ({ className = '' }) => {
         })
         .catch(() => {});
     }
+    const path = resolveNotificationPath(n, { activeRole: user?.activeRole });
+    setOpen(false);
+    navigate(path);
   };
 
   const renderItems = (items) =>

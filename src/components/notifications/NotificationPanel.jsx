@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaBell } from 'react-icons/fa';
 import NotificationItem from './NotificationItem.jsx';
 import Button from '../ui/Button.jsx';
@@ -6,6 +7,9 @@ import EmptyState from '../ui/EmptyState.jsx';
 import { AppContext } from '../../context/AppContext.jsx';
 import api from '../../services/api.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { useAuth } from '../../hooks/useAuth.js';
+import { resolveNotificationPath } from '../../utils/notificationNavigation.js';
+import { notificationsForWorkspace } from '../../utils/notificationScope.js';
 
 function startOfDay(d) {
   const x = new Date(d);
@@ -15,13 +19,18 @@ function startOfDay(d) {
 
 const NotificationPanel = () => {
   const { t, isUrdu } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const app = React.useContext(AppContext);
   const notifications = useMemo(
-    () => (Array.isArray(app?.notifications) ? app.notifications : []),
-    [app?.notifications]
+    () => notificationsForWorkspace(Array.isArray(app?.notifications) ? app.notifications : [], user),
+    [app?.notifications, user?.id, user?.activeRole]
   );
   const markNotificationRead = app?.markNotificationRead || (() => {});
   const refetchNotifications = app?.refetchNotifications;
+  const loadMoreNotifications = app?.loadMoreNotifications;
+  const notificationsHasMore = app?.notificationsHasMore;
+  const notificationsLoadingMore = app?.notificationsLoadingMore;
 
   const sorted = useMemo(() => {
     return [...notifications].sort(
@@ -68,6 +77,7 @@ const NotificationPanel = () => {
         })
         .catch(() => {});
     }
+    navigate(resolveNotificationPath(n, { activeRole: user?.activeRole }));
   };
 
   const renderGroup = (label, items) => {
@@ -112,6 +122,20 @@ const NotificationPanel = () => {
           <>
             {renderGroup(t('pages.notificationsPanel.groupToday'), today)}
             {renderGroup(t('pages.notificationsPanel.groupEarlier'), older)}
+            {notificationsHasMore ? (
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm rounded-lg"
+                  disabled={notificationsLoadingMore}
+                  onClick={() => loadMoreNotifications?.()}
+                >
+                  {notificationsLoadingMore
+                    ? t('common.loading')
+                    : t('pages.notificationsPanel.loadMore')}
+                </button>
+              </div>
+            ) : null}
           </>
         )}
       </div>

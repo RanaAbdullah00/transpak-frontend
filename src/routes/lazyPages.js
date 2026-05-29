@@ -10,6 +10,7 @@ export const AdminNotifications = lazyWithRetry(() => import('../pages/admin/Adm
 export const AdminOtpLogs = lazyWithRetry(() => import('../pages/admin/AdminOtpLogs.jsx'));
 export const AdminRoleManagement = lazyWithRetry(() => import('../pages/admin/AdminRoleManagement.jsx'));
 export const VerificationQueue = lazyWithRetry(() => import('../pages/admin/VerificationQueue.jsx'));
+export const AdminFleetQueue = lazyWithRetry(() => import('../pages/admin/AdminFleetQueue.jsx'));
 export const Disputes = lazyWithRetry(() => import('../pages/admin/Disputes.jsx'));
 export const ShipmentControl = lazyWithRetry(() => import('../pages/admin/ShipmentControl.jsx'));
 export const LoadsHub = lazyWithRetry(() => import('../pages/loads/LoadsHub.jsx'));

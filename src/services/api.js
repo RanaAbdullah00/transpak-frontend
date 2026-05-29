@@ -3,6 +3,9 @@ import { getApiRoot, API_BASE, resolveViteApiOrigin } from '../config/apiConfig.
 import { notifyApiError } from '../utils/notifySystem.js';
 import { unwrapErrorDetail } from '../utils/unwrapApi.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
+import { getAuthToken } from '../utils/authTokenStorage.js';
+import { createTrackedSignal } from '../utils/inflightRequests.js';
+import { readWorkspaceContext } from '../utils/workspaceContext.js';
 const BASE_URL = getApiRoot();
 
 const ALLOWED_API_PREFIXES = [
@@ -79,12 +82,35 @@ api.interceptors.request.use((config) => {
   assertProductionApiTarget(config);
   assertAllowedEndpoint(config.url);
 
-  const token = localStorage.getItem('transpak_token');
+  const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
+  }
+
+  if (!config.signal) {
+    config.signal = createTrackedSignal();
+  }
+
+  const wsCtx = readWorkspaceContext();
+  if (wsCtx?.userId) {
+    config.headers['X-TransPak-User-Id'] = wsCtx.userId;
+    if (wsCtx.workspace) {
+      config.headers['X-TransPak-Workspace'] = wsCtx.workspace;
+    }
+    const method = String(config.method || 'get').toUpperCase();
+    if (method === 'GET' || method === 'DELETE') {
+      config.params = {
+        user_id: wsCtx.userId,
+        workspace: wsCtx.workspace,
+        ...(wsCtx.workspace === 'shipper' || wsCtx.workspace === 'carrier'
+          ? { viewAs: wsCtx.workspace }
+          : {}),
+        ...(config.params || {})
+      };
+    }
   }
 
   const method = String(config.method || 'get').toUpperCase();
@@ -156,7 +182,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !error.config?.skipAuthRefresh) {
       const path = String(error.config?.url || '');
       const isAuthEndpoint = /\/auth(\/|$)/i.test(path);
-      if (!isAuthEndpoint && localStorage.getItem('transpak_token')) {
+      if (!isAuthEndpoint && getAuthToken()) {
         window.dispatchEvent(new CustomEvent('tp:auth-unauthorized'));
       }
     }

@@ -7,7 +7,7 @@ import BrandLogo from './BrandLogo.jsx';
 import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
-import { resolveWorkspaceSwitchTarget } from '../../utils/roleSwitch.js';
+import { resolveNavRoleAction } from '../../utils/roleSwitch.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
@@ -24,48 +24,31 @@ const Navbar = () => {
   const roles = user?.roles?.length ? user.roles : [user?.activeRole].filter(Boolean);
   const activeRole = user?.activeRole ?? roles[0];
 
-  const hasShipper = roles.includes('shipper');
-  const hasCarrier = roles.includes('carrier');
-  const hasBothCommercial = hasShipper && hasCarrier;
-  const hasOneCommercial = (hasShipper || hasCarrier) && !hasBothCommercial;
   const adminShell = resolveAdminShell(user, location.pathname);
-  const workspaceTarget = adminShell ? null : resolveWorkspaceSwitchTarget(user);
-  const showWorkspaceSwitch = Boolean(workspaceTarget);
-
-  const missingCommercialRole = hasShipper && !hasCarrier ? 'carrier' : !hasShipper && hasCarrier ? 'shipper' : null;
+  const roleAction = adminShell ? { mode: 'none' } : resolveNavRoleAction(user);
+  const showWorkspaceSwitch = roleAction.mode === 'switch' || roleAction.mode === 'add';
 
   const navRoleActionLabel =
-    workspaceTarget === 'admin'
-      ? t('nav.adminConsole')
-      : activeRole === 'admin'
-        ? workspaceTarget === 'shipper'
-          ? t('auth.shipper')
-          : t('auth.carrier')
-        : hasBothCommercial
-          ? t('nav.switchAccount')
-          : t('nav.addProfile');
+    roleAction.mode === 'switch' ? t('nav.switchAccount') : roleAction.mode === 'add' ? t('nav.addProfile') : '';
 
   const handleNavRoleAction = async () => {
     if (!user || !showWorkspaceSwitch || roleSwitching) return;
 
-    const originalRole = activeRole;
-
-    if (workspaceTarget) {
+    if (roleAction.mode === 'switch' && roleAction.target) {
       try {
-        await setActiveRole(workspaceTarget);
-        navigate(dashboardPathForRole(workspaceTarget), { replace: true });
+        await setActiveRole(roleAction.target);
+        navigate(dashboardPathForRole(roleAction.target), { replace: true });
       } catch (err) {
         notifyError(formatUserError(err, t, { fallback: t('errors.generic') }));
-        if (originalRole) navigate(dashboardPathForRole(originalRole), { replace: true });
       }
       return;
     }
 
-    if (hasOneCommercial && missingCommercialRole) {
+    if (roleAction.mode === 'add' && roleAction.target) {
       navigate('/register', {
         replace: true,
         state: {
-          upgradeRole: missingCommercialRole,
+          upgradeRole: roleAction.target,
           prefill: {
             name: user?.fullName || user?.name || '',
             email: user?.email || '',

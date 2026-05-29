@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Loader from '../../components/ui/Loader.jsx';
 import BidList from '../../components/loadboard/BidList.jsx';
 import { useApi } from '../../hooks/useApi.js';
+import { normalizeTrucksResponse } from '../../utils/fleetApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { normalizeBids } from '../../adapters/normalize.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
@@ -25,7 +26,7 @@ const MyBids = () => {
   const fetchTrucks = useCallback(async () => {
     try {
       const data = await request({ method: 'GET', url: '/trucks/mine' });
-      setTrucks(Array.isArray(data) ? data : []);
+      setTrucks(normalizeTrucksResponse(data));
     } catch {
       setTrucks([]);
     }

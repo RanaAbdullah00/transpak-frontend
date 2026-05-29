@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
+import RelativeTime from '../ui/RelativeTime.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { translateNotificationType } from '../../utils/i18nLabels.js';
 
@@ -34,9 +35,9 @@ const NotificationItem = ({ notification, onClick }) => {
             {typeLbl ? (
               <span className="small text-uppercase tp-notif-item__type">{typeLbl}</span>
             ) : null}
-            <span className="small tp-notif-item__time ms-auto">
-              {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}
-            </span>
+            {notification.createdAt ? (
+              <RelativeTime iso={notification.createdAt} className="small tp-notif-item__time ms-auto" />
+            ) : null}
           </div>
           {notification.senderId ? (
             <div className="small mb-1">
