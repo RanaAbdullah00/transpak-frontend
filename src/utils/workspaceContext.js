@@ -5,6 +5,11 @@ import { getWorkspace } from './workspace.js';
 
 const STORAGE_KEY = 'tp_workspace_ctx';
 
+function readSessionOwner() {
+  if (typeof window === 'undefined') return '';
+  return String(sessionStorage.getItem('transpak_session_owner') || '').trim();
+}
+
 export function persistWorkspaceContext(user) {
   if (typeof window === 'undefined' || !user?.id) return;
   const workspace = getWorkspace(user);
@@ -14,6 +19,7 @@ export function persistWorkspaceContext(user) {
     activeRole: workspace
   };
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(ctx));
+  sessionStorage.setItem('transpak_session_owner', String(user.id));
   sessionStorage.setItem('transpak_active_role', workspace);
 }
 
@@ -24,6 +30,11 @@ export function readWorkspaceContext() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.userId) return null;
+    const owner = readSessionOwner();
+    if (owner && owner !== String(parsed.userId)) {
+      clearWorkspaceContext();
+      return null;
+    }
     return {
       userId: String(parsed.userId),
       workspace: String(parsed.workspace || parsed.activeRole || ''),

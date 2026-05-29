@@ -27,19 +27,22 @@ export function clearRealtimeDedupeCache() {
   seenOrder.length = 0;
 }
 
-const LAST_SYNC_KEY = 'tp:notif-last-sync';
+function lastSyncKey(userId) {
+  const uid = userId != null ? String(userId).trim() : '';
+  return uid ? `tp:${uid}:notif-last-sync` : 'tp:notif-last-sync';
+}
 
-export function getLastNotificationSyncAt() {
+export function getLastNotificationSyncAt(userId) {
   try {
-    return sessionStorage.getItem(LAST_SYNC_KEY);
+    return sessionStorage.getItem(lastSyncKey(userId));
   } catch {
     return null;
   }
 }
 
-export function setLastNotificationSyncAt(iso) {
+export function setLastNotificationSyncAt(iso, userId) {
   try {
-    if (iso) sessionStorage.setItem(LAST_SYNC_KEY, String(iso));
+    if (iso) sessionStorage.setItem(lastSyncKey(userId), String(iso));
   } catch {
     // ignore
   }

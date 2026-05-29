@@ -41,6 +41,9 @@ export function resolveWorkspaceSwitchTarget(user) {
 export function resolveNavRoleAction(user) {
   if (!user) return { mode: 'none' };
   const roles = getUserRoles(user).filter((r) => r === 'shipper' || r === 'carrier');
+  if (roles.includes('admin') && !roles.includes('shipper') && !roles.includes('carrier')) {
+    return { mode: 'none' };
+  }
   if (roles.includes('admin') && user.activeRole === 'admin') return { mode: 'none' };
   const hasBoth = roles.includes('shipper') && roles.includes('carrier');
   if (hasBoth) {

@@ -17,7 +17,7 @@ export async function syncNotificationsSince(user, { since } = {}) {
   });
   const data = unwrapResponseData(res) || {};
   const serverTime = data.serverTime || new Date().toISOString();
-  setLastNotificationSyncAt(serverTime);
+  setLastNotificationSyncAt(serverTime, user?.id);
   return {
     unreadCount: Number(data.unreadCount) || 0,
     items: Array.isArray(data.items) ? data.items : [],

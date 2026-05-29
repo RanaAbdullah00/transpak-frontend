@@ -33,7 +33,17 @@ function schemaMismatchMessage(schema, dbStatus) {
   return 'Database is not ready on the API server.';
 }
 
-function isHardMismatch(dbStatus, schema) {
+function isBooting(dbStatus, schema, body) {
+  if (dbStatus === 'connecting') return true;
+  if (schema?.booting === true) return true;
+  if (body?.data?.healthPhase === 'booting') return true;
+  if (body?.data?.status === 'starting' && dbStatus !== 'ready') return true;
+  return false;
+}
+
+function isHardMismatch(dbStatus, schema, body) {
+  if (isBooting(dbStatus, schema, body)) return false;
+  if (dbStatus !== 'ready' && dbStatus !== 'unavailable') return false;
   if (schema?.ok === false) return true;
   if (dbStatus === 'migration_required' || dbStatus === 'needs_migration') return true;
   return false;
@@ -134,11 +144,12 @@ export async function verifyProductionDeploy() {
       if (result.done) return;
       attempt += 1;
       if (attempt > MAX_RECHECKS) {
-        emitMismatch(
-          body?.data?.db === 'connecting'
-            ? 'API is still starting (database connecting). Refresh shortly or check Render logs.'
-            : schemaMismatchMessage(body?.data?.schema, body?.data?.db)
-        );
+        const stillBooting = isBooting(body?.data?.db, body?.data?.schema, body);
+        if (stillBooting) {
+          console.warn('[TransPak deploy] API still booting after rechecks — not showing mismatch banner.');
+          return;
+        }
+        emitMismatch(schemaMismatchMessage(body?.data?.schema, body?.data?.db));
         return;
       }
       // eslint-disable-next-line no-await-in-loop

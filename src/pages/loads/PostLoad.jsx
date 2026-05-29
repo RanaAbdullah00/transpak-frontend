@@ -111,7 +111,7 @@ const PostLoad = () => {
         key={formKey}
         onSubmit={handleSubmit}
         submitLabel={t('pages.loads.postLoadCta')}
-        submitting={posting || loading}
+        submitting={posting}
       />
     </div>
   );

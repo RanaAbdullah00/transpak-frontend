@@ -38,9 +38,12 @@ const DeployMismatchBanner = () => {
         const body = await res.json();
         const db = body?.data?.db;
         const schema = body?.data?.schema;
-        if (db === 'ready' && schema?.ok !== false) {
+        if (db === 'ready' && schema?.ok === true) {
           setMismatch(false);
           setDetail('');
+        }
+        if (db === 'connecting' || schema?.booting === true) {
+          setMismatch(false);
         }
       } catch {
         /* ignore */

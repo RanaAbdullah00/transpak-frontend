@@ -14,8 +14,8 @@ export function viewAsQuery(user) {
  * Standard query params for list/read APIs (Phase 2 workspace isolation).
  */
 export function workspaceQueryParams(user) {
-  const ctx = user?.id ? { userId: String(user.id), workspace: getWorkspace(user) } : readWorkspaceContext();
-  if (!ctx?.userId) return {};
+  if (!user?.id) return {};
+  const ctx = { userId: String(user.id), workspace: getWorkspace(user) };
   const workspace =
     ctx.workspace === 'shipper' || ctx.workspace === 'carrier' || ctx.workspace === 'admin'
       ? ctx.workspace

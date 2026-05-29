@@ -95,7 +95,8 @@ api.interceptors.request.use((config) => {
   }
 
   const wsCtx = readWorkspaceContext();
-  if (wsCtx?.userId) {
+  const owner = typeof window !== 'undefined' ? sessionStorage.getItem('transpak_session_owner') : null;
+  if (wsCtx?.userId && owner && owner === wsCtx.userId) {
     config.headers['X-TransPak-User-Id'] = wsCtx.userId;
     if (wsCtx.workspace) {
       config.headers['X-TransPak-Workspace'] = wsCtx.workspace;

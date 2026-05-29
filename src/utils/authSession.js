@@ -42,6 +42,11 @@ export function canAccessAdminRoutes(user) {
   return getUserRolesFromSession(user).includes('admin');
 }
 
+export function hasCommercialRole(user) {
+  const roles = getUserRolesFromSession(user);
+  return roles.includes('shipper') || roles.includes('carrier');
+}
+
 export function applyDemoAdminSession(session, email) {
   if (!session || !isDemoAdminEmail(email)) return session;
   return session;
@@ -64,12 +69,22 @@ export function mergeAuthUser(apiData) {
 
   const activeRole = resolveActiveRole(user, apiData);
   const id = user.id || (user._id != null ? String(user._id) : null);
-  const roles =
-    Array.isArray(user.roles) && user.roles.length
-      ? user.roles.map((r) => String(r).trim().toLowerCase()).filter(Boolean)
-      : activeRole
-        ? [activeRole]
-        : [];
+
+  let roles = Array.isArray(user.roles)
+    ? user.roles.map((r) => String(r).trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  if (!roles.length && Array.isArray(apiData.roles) && apiData.roles.length) {
+    roles = apiData.roles.map((r) => String(r).trim().toLowerCase()).filter(Boolean);
+  }
+
+  if (!roles.length && activeRole) {
+    roles = [activeRole];
+  }
+
+  if (roles.includes('admin') && activeRole && !roles.includes(activeRole)) {
+    roles = [...new Set([...roles, activeRole])];
+  }
 
   const next = {
     ...user,
@@ -93,7 +108,7 @@ export function mergeAuthUser(apiData) {
 }
 
 /**
- * Apply auth API payload (login, profile, role switch, profile update) to localStorage.
+ * Apply auth API payload (login, profile, role switch, profile update) to session storage.
  * @returns {{ token: string|null, user: object|null }}
  */
 export function applyAuthSessionFromApi(apiData) {
@@ -103,7 +118,6 @@ export function applyAuthSessionFromApi(apiData) {
   if (token) setAuthToken(token);
   if (normalized && typeof window !== 'undefined') {
     sessionStorage.setItem('transpak_session_owner', String(normalized.id || ''));
-    localStorage.setItem('transpak_user', JSON.stringify(normalized));
     persistWorkspaceContext(normalized);
   }
   return { token, user: normalized };

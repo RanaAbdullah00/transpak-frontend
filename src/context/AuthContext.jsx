@@ -1,9 +1,11 @@
 import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { fetchProfileApi, patchActiveRoleApi } from '../services/authService.js';
 import { safeUnwrapAuthResponse } from '../utils/authApiSafe.js';
 import { emitRoleSwitchComplete, getUserRoles } from '../utils/roleSwitch.js';
 import {
   applyAuthSessionFromApi,
+  canAccessAdminRoutes,
   clearAuthStorage,
   mergeAuthUser,
   setAuthToken
@@ -11,10 +13,12 @@ import {
 import { refreshAuthSessionFromServer } from '../utils/authRefresh.js';
 import { clearEntireSession, prepareWorkspaceSwitch } from '../utils/sessionCleanup.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
+import { isAdminRoutePath } from '../utils/rbac.js';
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [roleSwitching, setRoleSwitching] = useState(false);
@@ -76,14 +80,35 @@ export const AuthProvider = ({ children }) => {
             return;
           }
           login({ ...data, token: data.token || token || undefined });
+
+          if (
+            canAccessAdminRoutes(mergeAuthUser(data)) &&
+            isAdminRoutePath(location.pathname) &&
+            data.user.activeRole !== 'admin'
+          ) {
+            try {
+              await patchActiveRoleApi('admin');
+              const again = await fetchProfileApi();
+              const refreshed = safeUnwrapAuthResponse(again);
+              if (!cancelled && refreshed?.user) {
+                login({ ...refreshed, token: refreshed.token || token });
+              }
+            } catch {
+              /* admin bootstrap optional */
+            }
+          }
+        } else if (!cancelled) {
+          logout();
         }
       } catch (err) {
         const status = err?.response?.status;
-        if (status === 401) {
-          if (!cancelled) logout();
-        } else if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
-          console.warn('[auth] profile restore failed — session not hydrated from cache', err?.message || err);
+        if (!cancelled) {
+          if (status === 401) {
+            logout();
+          } else {
+            clearEntireSession();
+            setUser(null);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -93,7 +118,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, [login, logout]);
+  }, [login, logout, location.pathname]);
 
   useEffect(() => {
     const onTokenChanged = () => {
@@ -154,8 +179,6 @@ export const AuthProvider = ({ children }) => {
 
       login(session, { clearPrevious: false });
       emitRoleSwitchComplete(nextRole);
-    } catch (err) {
-      throw err;
     } finally {
       switchLockRef.current = false;
       setRoleSwitching(false);

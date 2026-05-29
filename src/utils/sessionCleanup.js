@@ -27,6 +27,11 @@ export function clearEntireSession({ userId = null } = {}) {
   clearAllWorkspaceQueryCaches();
   clearAuthStorage();
   if (typeof window !== 'undefined') {
+    if (userId) {
+      sessionStorage.removeItem(`transpak_notifications_cache:${userId}`);
+      sessionStorage.removeItem(`transpak_notifications_cache_at:${userId}`);
+      sessionStorage.removeItem(`tp:${userId}:notif-last-sync`);
+    }
     sessionStorage.removeItem('transpak_notifications_cache');
     sessionStorage.removeItem('transpak_notifications_cache_at');
     sessionStorage.removeItem('tp:notif-last-sync');

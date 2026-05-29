@@ -1,23 +1,29 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
-import { shouldUseAdminShell } from '../../utils/rbac.js';
+import { hasCommercialRole } from '../../utils/authSession.js';
+import { isCommercialSession } from '../../utils/rbac.js';
+import { resolveAdminShell } from '../../utils/rbac.js';
 import ReviewPromptModal from './ReviewPromptModal.jsx';
 
-const STORAGE_KEY = 'tp_review_dismissed';
+function dismissedKey(userId) {
+  return userId ? `tp:${userId}:review_dismissed` : 'tp_review_dismissed';
+}
 
-function loadDismissed() {
+function loadDismissed(userId) {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(dismissedKey(userId));
     return raw ? new Set(JSON.parse(raw)) : new Set();
   } catch {
     return new Set();
   }
 }
 
-function saveDismissed(set) {
+function saveDismissed(userId, set) {
+  if (!userId) return;
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
+    sessionStorage.setItem(dismissedKey(userId), JSON.stringify([...set]));
   } catch {
     /* ignore */
   }
@@ -25,17 +31,24 @@ function saveDismissed(set) {
 
 const ReviewPromptHost = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const { request } = useApi();
   const [prompt, setPrompt] = useState(null);
-  const dismissedRef = useRef(loadDismissed());
+  const dismissedRef = useRef(new Set());
   const queueRef = useRef([]);
+
+  useEffect(() => {
+    dismissedRef.current = user?.id ? loadDismissed(user.id) : new Set();
+    queueRef.current = [];
+    setPrompt(null);
+  }, [user?.id]);
 
   const dismissKey = (p) =>
     p?.kind === 'space'
       ? `space:${p.spaceRequestId}`
       : p?.loadId
-      ? `load:${p.loadId}`
-      : null;
+        ? `load:${p.loadId}`
+        : null;
 
   const showNext = useCallback(() => {
     while (queueRef.current.length) {
@@ -65,13 +78,14 @@ const ReviewPromptHost = () => {
 
   const fetchPending = useCallback(async () => {
     if (!user?.id) return;
+    if (!isCommercialSession(user)) return;
     try {
-      const data = await request({ method: 'GET', url: '/reviews/pending' });
+      const data = await request({ method: 'GET', url: '/reviews/pending', skipGlobalErrorToast: true });
       if (Array.isArray(data) && data.length) enqueue(data);
     } catch {
       /* optional endpoint */
     }
-  }, [user?.id, request, enqueue]);
+  }, [user, request, enqueue]);
 
   useEffect(() => {
     fetchPending();
@@ -94,7 +108,7 @@ const ReviewPromptHost = () => {
     const key = dismissKey(prompt);
     if (key) {
       dismissedRef.current.add(key);
-      saveDismissed(dismissedRef.current);
+      saveDismissed(user?.id, dismissedRef.current);
     }
     setPrompt(null);
     setTimeout(showNext, 300);
@@ -104,11 +118,13 @@ const ReviewPromptHost = () => {
     const key = dismissKey(p);
     if (key) {
       dismissedRef.current.add(key);
-      saveDismissed(dismissedRef.current);
+      saveDismissed(user?.id, dismissedRef.current);
     }
   };
 
-  if (shouldUseAdminShell(user)) return null;
+  if (resolveAdminShell(user, location.pathname)) return null;
+  if (!hasCommercialRole(user)) return null;
+  if (!isCommercialSession(user)) return null;
 
   return <ReviewPromptModal prompt={prompt} onClose={handleClose} onSubmitted={handleSubmitted} />;
 };
