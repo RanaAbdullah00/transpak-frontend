@@ -8,7 +8,6 @@ import api from '../services/api.js';
 import { unwrapResponseData, ensureArray } from '../utils/unwrapApi.js';
 import { notifyApiError } from '../utils/notifySystem.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { playNotificationSound } from '../utils/notificationSound.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
 import { workspaceQueryParams } from '../utils/workspaceApi.js';
 import { getWorkspace } from '../utils/workspace.js';
@@ -52,7 +51,7 @@ function mapNotificationRow(r) {
 }
 
 export const AppProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, sessionVersion } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [notificationsCursor, setNotificationsCursor] = useState(null);
   const [notificationsHasMore, setNotificationsHasMore] = useState(false);
@@ -68,6 +67,7 @@ export const AppProvider = ({ children }) => {
   const socketLostRef = useRef(false);
   const [socketStatus, setSocketStatus] = useState('idle');
   const addNotificationRef = useRef(null);
+  const welcomeToastShownRef = useRef(false);
   const lastReconnectSyncRef = useRef(0);
   const userRef = useRef(user);
   userRef.current = user;
@@ -115,9 +115,15 @@ export const AppProvider = ({ children }) => {
       });
       if (dup) return prev;
       const next = [{ id: nid ?? `local-${Date.now()}`, read: Boolean(normalized.read), ...normalized }, ...prev];
-      return user ? notificationsForWorkspace(next, user) : next;
+      const scoped = user ? notificationsForWorkspace(next, user) : next;
+      if (showToast) {
+        queueMicrotask(() => {
+          routeRealtimeNotification(normalized);
+          window.dispatchEvent(new CustomEvent('tp:notification-sound'));
+        });
+      }
+      return scoped;
     });
-    if (showToast) routeRealtimeNotification(normalized);
   }, [user?.id, user?.activeRole]);
 
   addNotificationRef.current = (n) => addNotification(n, { showToast: true });
@@ -134,6 +140,7 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     if (!user?.id) {
       setNotifications([]);
+      welcomeToastShownRef.current = false;
       return undefined;
     }
 
@@ -149,9 +156,23 @@ export const AppProvider = ({ children }) => {
         });
         if (cancelled) return;
         const page = normalizeNotificationsPayload(unwrapResponseData(res));
-        setNotifications(ensureArray(page.items).map(mapNotificationRow));
+        const items = ensureArray(page.items).map(mapNotificationRow);
+        setNotifications(items);
         setNotificationsCursor(page.nextCursor);
         setNotificationsHasMore(page.hasMore);
+        const welcome = items.find(
+          (n) => String(n.type || n.title || '').toUpperCase() === 'LOGIN_SUCCESS' && !n.read
+        );
+        if (welcome && !welcomeToastShownRef.current) {
+          const age = Date.now() - new Date(welcome.createdAt || 0).getTime();
+          if (age >= 0 && age < 120000) {
+            welcomeToastShownRef.current = true;
+            queueMicrotask(() => {
+              routeRealtimeNotification(welcome);
+              window.dispatchEvent(new CustomEvent('tp:notification-sound'));
+            });
+          }
+        }
       } catch (err) {
         if (err?.response?.status !== 401) notifyApiError(err);
       }
@@ -276,11 +297,11 @@ export const AppProvider = ({ children }) => {
   }, [refetchNotifications]);
 
   useEffect(() => {
-    if (!user?.id) return undefined;
+    if (!user?.id || socketStatus === 'connected') return undefined;
 
     const reconcileMs = Number(import.meta.env.VITE_CACHE_RECONCILE_MS || 300000);
     const reconcileId = window.setInterval(async () => {
-      if (document.hidden) return;
+      if (document.hidden || socketConnectedRef.current) return;
       pruneWorkspaceQueryCaches();
       try {
         const count = await fetchUnreadCount(user);
@@ -291,10 +312,10 @@ export const AppProvider = ({ children }) => {
     }, reconcileMs);
 
     return () => window.clearInterval(reconcileId);
-  }, [user?.id, user?.activeRole]);
+  }, [user?.id, user?.activeRole, socketStatus]);
 
   useEffect(() => {
-    if (!user?.id) return undefined;
+    if (!user?.id || socketStatus === 'connected') return undefined;
 
     const pollMs = Number(import.meta.env.VITE_NOTIFICATION_POLL_MS || 28000);
     const pollId = window.setInterval(async () => {
@@ -335,10 +356,7 @@ export const AppProvider = ({ children }) => {
 
     const ingestNotification = (n) => {
       if (!workspaceScoped(n)) return;
-      if (n?.eventId && !shouldProcessRealtimeEvent(n.eventId)) return;
       addNotificationRef.current?.(n);
-      window.dispatchEvent(new CustomEvent('tp:notification-sound'));
-      playNotificationSound();
     };
 
     const client = createSocketClient({
@@ -433,7 +451,7 @@ export const AppProvider = ({ children }) => {
       socketClientRef.current = null;
       setSocketStatus('idle');
     };
-  }, [user?.id]);
+  }, [user?.id, sessionVersion]);
 
   useEffect(() => {
     const ws = user?.activeRole ? getWorkspace(user) : null;

@@ -6,7 +6,6 @@ import RoleSelector from './RoleSelector.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { loginApi, fetchProfileApi, patchActiveRoleApi } from '../../services/authService.js';
 import PasswordField from '../ui/PasswordField.jsx';
-import { notifySuccess } from '../ui/ToastProvider.jsx';
 import { notifyAuthError, notifyUserError } from '../../utils/notifySystem.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapErrorCode } from '../../utils/unwrapApi.js';
@@ -89,7 +88,6 @@ const LoginForm = () => {
       }
       const sessionToStore = applyDemoAdminSession(session, emailNorm);
       if (sessionToStore?.user) login(sessionToStore);
-      notifySuccess(t('auth.welcomeBack'));
       const activeRole =
         sessionToStore?.user?.activeRole ??
         sessionToStore?.currentRole ??

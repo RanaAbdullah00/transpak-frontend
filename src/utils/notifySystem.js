@@ -117,7 +117,7 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.BID_ACCEPTED, msg);
     return;
   }
-  if (type.includes('BID_REJECTED') || type.includes('REJECTED')) {
+  if (type.includes('BID_REJECTED') || (type.includes('REJECTED') && type.includes('BID'))) {
     notifySystem(SystemNotifyType.BID_REJECTED, msg);
     return;
   }
@@ -138,6 +138,7 @@ export function routeRealtimeNotification(normalized) {
     return;
   }
   if (type.includes('LOGIN_SUCCESS')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
     return;
   }
   if (type.includes('TRACKING') || type.includes('LOCATION')) {

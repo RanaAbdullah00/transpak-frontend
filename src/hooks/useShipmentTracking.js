@@ -16,7 +16,7 @@ const TRACK_POLL_MS = Number(import.meta.env.VITE_TRACK_POLL_MS || 8000);
 export function useShipmentTracking({ trackRef, shareLive = false, enabled = true }) {
   const localRef = String(trackRef || '').trim();
   const { t } = useLanguage();
-  const { registerTrackingHandler, getSocket } = useContext(AppContext) || {};
+  const { registerTrackingHandler, getSocket, socketStatus } = useContext(AppContext) || {};
   const [payload, setPayload] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -92,11 +92,12 @@ export function useShipmentTracking({ trackRef, shareLive = false, enabled = tru
 
   useEffect(() => {
     if (!enabled || !localRef) return undefined;
+    if (socketStatus === 'connected') return undefined;
     const id = setInterval(() => {
       fetchTrack({ silent: true });
     }, TRACK_POLL_MS);
     return () => clearInterval(id);
-  }, [enabled, localRef, fetchTrack]);
+  }, [enabled, localRef, fetchTrack, socketStatus]);
 
   const applyUpdate = useCallback(
     (incoming) => {

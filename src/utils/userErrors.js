@@ -1,4 +1,4 @@
-import { unwrapErrorCode, unwrapErrorDetail } from './unwrapApi.js';
+import { unwrapErrorCode, unwrapErrorDetail, formatStructuredApiError } from './unwrapApi.js';
 import { translations } from '../i18n/translations.js';
 
 const TECH =
@@ -48,8 +48,18 @@ export function formatUserError(err, t, options = {}) {
     return fallback ?? '';
   }
 
-  if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') {
-    return networkMessage(t);
+  const structured = formatStructuredApiError(err);
+  if (structured.message) {
+    const { endpoint, status, type } = structured;
+    if (endpoint || status != null || type) {
+      const statusPart = status != null ? ` (HTTP ${status})` : '';
+      const prefix = endpoint ? `${type}: ${endpoint}${statusPart}` : `${type}:`;
+      if (structured.message.includes(endpoint) || structured.message.includes(String(status))) {
+        return structured.message;
+      }
+      return `${prefix} — ${structured.message}`;
+    }
+    return structured.message;
   }
 
   const apiCode = unwrapErrorCode(err);
@@ -71,10 +81,6 @@ export function formatUserError(err, t, options = {}) {
 
   const { displayMessage, message } = unwrapErrorDetail(err);
   const rawUnwrap = displayMessage || message;
-  if (typeof rawUnwrap === 'string' && /Unable to reach the server/i.test(rawUnwrap)) {
-    return networkMessage(t);
-  }
-
   const status = err?.response?.status;
   if ((status === 502 || status === 504) && !message) {
     return serverUnavailableMessage(t);

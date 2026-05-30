@@ -3,7 +3,7 @@ import { FaGavel } from 'react-icons/fa';
 import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { isActiveBidStatus } from '../../utils/bidStatus.js';
+import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 
 // List of bids. mode: 'shipper' | 'carrier' controls which actions are shown.
 const BidList = memo(({
@@ -26,10 +26,21 @@ const BidList = memo(({
     mode === 'carrier' ? t('pages.bids.emptyCarrier') : t('pages.bids.emptyShipper');
   const resolvedEmpty = emptyMessage ?? defaultEmpty;
 
-  const { activeBids, acceptedBids } = useMemo(() => {
-    const active = bids.filter((bid) => !bid.status || isActiveBidStatus(bid.status));
-    const accepted = bids.filter((bid) => bid.status === 'accepted');
-    return { activeBids: active, acceptedBids: accepted };
+  const { activeBids, acceptedBids, closedBids } = useMemo(() => {
+    const active = [];
+    const accepted = [];
+    const closed = [];
+    for (const bid of Array.isArray(bids) ? bids : []) {
+      const status = normalizeBidStatus(bid.status);
+      if (status === BID_STATUS.ACCEPTED) {
+        accepted.push(bid);
+      } else if (!bid.status || isActiveBidStatus(bid.status)) {
+        active.push(bid);
+      } else {
+        closed.push(bid);
+      }
+    }
+    return { activeBids: active, acceptedBids: accepted, closedBids: closed };
   }, [bids]);
   const isShipper = mode === 'shipper';
   const isCarrier = mode === 'carrier';
@@ -69,6 +80,22 @@ const BidList = memo(({
               {acceptedBids.map((bid) => (
                 <BidCard
                   key={`accepted-${bid.id}`}
+                  bid={bid}
+                  isShipper={isShipper}
+                  isCarrier={isCarrier}
+                  ratingTargetUserId={ratingTargetFor(bid)}
+                  counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
+                />
+              ))}
+            </>
+          )}
+          {closedBids.length > 0 && (
+            <>
+              <hr className="my-4" />
+              <h6 className="text-muted mb-3">{t('pages.bids.closedBidsHeading')}</h6>
+              {closedBids.map((bid) => (
+                <BidCard
+                  key={`closed-${bid.id}`}
                   bid={bid}
                   isShipper={isShipper}
                   isCarrier={isCarrier}

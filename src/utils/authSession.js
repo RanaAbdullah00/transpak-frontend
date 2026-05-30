@@ -2,6 +2,7 @@
 
 import { clearAuthToken, getAuthToken, setAuthToken } from './authTokenStorage.js';
 import { persistWorkspaceContext, clearWorkspaceContext } from './workspaceContext.js';
+import { ensureRolesArray } from './unwrapApi.js';
 
 export function isDemoAdminEmail(email) {
   const norm = String(email || '')
@@ -69,15 +70,9 @@ export function mergeAuthUser(apiData) {
   const activeRole = resolveActiveRole(user, apiData);
   const id = user.id || (user._id != null ? String(user._id) : null);
 
-  let roles = Array.isArray(user.roles)
-    ? user.roles.map((r) => String(r).trim().toLowerCase()).filter(Boolean)
-    : [];
-  if (!roles.length && typeof user.roles === 'string' && user.roles.trim()) {
-    roles = [String(user.roles).trim().toLowerCase()];
-  }
-
+  let roles = ensureRolesArray(user.roles);
   if (!roles.length && Array.isArray(apiData.roles) && apiData.roles.length) {
-    roles = apiData.roles.map((r) => String(r).trim().toLowerCase()).filter(Boolean);
+    roles = ensureRolesArray(apiData.roles);
   }
 
   if (!roles.length && activeRole) {

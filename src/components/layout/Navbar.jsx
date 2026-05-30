@@ -99,7 +99,7 @@ const Navbar = () => {
             <FaBars />
           </button>
           <Link to="/" className="navbar-brand fw-bold mb-0 d-flex align-items-center gap-2">
-            <BrandLogo variant="mark" title={t('common.appName')} />
+            <BrandLogo variant="auth" title={t('common.appName')} className="tp-navbar-brand" />
             {user && !adminShell ? (
               <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />
             ) : null}
@@ -120,7 +120,7 @@ const Navbar = () => {
       >
         <div className="container-fluid px-3">
           <Link to="/" className="navbar-brand d-flex align-items-center gap-2 fw-bold">
-            <BrandLogo variant="mark" title={t('common.appName')} />
+            <BrandLogo variant="auth" title={t('common.appName')} className="tp-navbar-brand" />
             {user && !adminShell ? (
               <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />
             ) : null}

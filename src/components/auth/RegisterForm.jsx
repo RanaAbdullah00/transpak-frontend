@@ -108,10 +108,10 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
     blockNativeFormSubmit(e);
     setError('');
     setSuccess('');
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      if (upgradeRole && user?.id) {
+
+    if (upgradeRole && user?.id) {
+      setLoading(true);
+      try {
         const res = await addRoleApi(upgradeRole);
         const payload = safeUnwrapAuthResponse(res);
         if (payload?.token) {
@@ -128,12 +128,20 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
         }
         login(session);
         notifySuccess(t('auth.roleAddedSuccess'));
-        onDone?.(session?.user);
-        const role = session?.user?.activeRole ?? upgradeRole;
-        navigate(safeDashboardPath(role), { replace: true });
-        return;
+        if (onDone) onDone(session);
+        else navigate(safeDashboardPath(session?.user?.activeRole ?? upgradeRole), { replace: true });
+      } catch (err) {
+        notifyAuthError(err, t, 'register');
+        setError(formatUserError(err, t));
+      } finally {
+        setLoading(false);
       }
+      return;
+    }
 
+    if (!validate()) return;
+    setLoading(true);
+    try {
       const res = await registerApi({
         name: form.name,
         email: form.email,

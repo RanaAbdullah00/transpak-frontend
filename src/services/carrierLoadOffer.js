@@ -33,19 +33,13 @@ export async function submitCounterOffer(request, load, counterAmount) {
   });
   const bidId = bid?.id;
   if (!bidId) return bid;
-  await request({
+  const updated = await request({
     method: 'PUT',
     url: `/bids/${bidId}/suggest-carrier`,
     data: { amount }
   });
   emitRealtimeRefresh('bids');
-  return {
-    ...bid,
-    status: 'counter_offered',
-    flowStatus: 'COUNTER_OFFERED',
-    suggestedAmount: amount,
-    suggestedBy: 'carrier'
-  };
+  return updated || bid;
 }
 
 export async function rejectLoadForCarrier(request, load) {

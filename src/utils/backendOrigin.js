@@ -7,7 +7,6 @@ export function getBackendOrigin() {
   const base = resolveViteApiOrigin();
   if (base) return base;
   if (import.meta.env.DEV && typeof window !== 'undefined') return window.location.origin;
-  if (typeof window !== 'undefined') return window.location.origin;
   return '';
 }
 

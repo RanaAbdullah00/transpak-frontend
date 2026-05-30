@@ -24,14 +24,9 @@ export function createSocketClient({
   onReconnect,
   onConnectionChange
 }) {
-  const explicitSocket = typeof import.meta.env.VITE_SOCKET_URL === 'string' ? import.meta.env.VITE_SOCKET_URL.trim() : '';
-  let url = explicitSocket;
-  if (!url) {
-    if (import.meta.env.DEV && !import.meta.env.VITE_API_URL?.trim()) {
-      url = window.location.origin;
-    } else {
-      url = getBackendOrigin() || window.location.origin;
-    }
+  let url = getBackendOrigin();
+  if (!url && import.meta.env.DEV) {
+    url = window.location.origin;
   }
 
   let socket = null;
@@ -73,9 +68,6 @@ export function createSocketClient({
       if (reconnectExhausted) return;
       lastReconnectRefreshAt = Date.now();
       onReconnect?.();
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
-      }
     }, delay);
   };
 

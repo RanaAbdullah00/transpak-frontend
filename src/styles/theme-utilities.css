@@ -160,6 +160,21 @@
   border-left: 3px solid var(--tp-role-accent, #334155);
 }
 
+.tp-dashboard--admin .tp-admin-stat-card--clickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.tp-dashboard--admin .tp-admin-stat-card--clickable:hover {
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.tp-dashboard--admin .tp-admin-stat-card--clickable:focus-visible {
+  outline: 2px solid var(--pak-primary);
+  outline-offset: 2px;
+}
+
 /* Role dashboards */
 .tp-dashboard {
   --tp-dash-accent: var(--tp-role-accent, var(--pak-primary));

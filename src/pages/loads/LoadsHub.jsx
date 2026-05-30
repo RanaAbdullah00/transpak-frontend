@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import SegmentTabs from '../../components/ui/SegmentTabs.jsx';
 import ManageLoads from './ManageLoads.jsx';
+import AvailableLoads from './AvailableLoads.jsx';
 import CapacityMarketplace from '../../components/carrier/CapacityMarketplace.jsx';
 import Button from '../../components/ui/Button.jsx';
 import PostCarrierSpace from '../carrier/PostCarrierSpace.jsx';
@@ -16,7 +17,7 @@ const LoadsHub = () => {
   const isCarrier = activeRole === 'carrier';
 
   const [params, setParams] = useSearchParams();
-  const defaultTab = isShipper ? 'posted' : 'capacity';
+  const defaultTab = isShipper ? 'posted' : 'freight';
   const tab = params.get('tab') || defaultTab;
 
   const tabs = useMemo(() => {
@@ -26,8 +27,15 @@ const LoadsHub = () => {
         { id: 'market', label: t('loadsHub.capacityMarket') }
       ];
     }
+    if (isCarrier) {
+      return [
+        { id: 'freight', label: t('pages.dashboard.statOpenMarketplace') },
+        { id: 'capacity', label: t('loadsHub.navCapacityHub') },
+        { id: 'publish', label: t('loadsHub.publishCapacity') }
+      ];
+    }
     return [];
-  }, [isShipper, t]);
+  }, [isShipper, isCarrier, t]);
 
   useEffect(() => {
     document.body.classList.remove('tp-role-shipper', 'tp-role-carrier');
@@ -42,21 +50,26 @@ const LoadsHub = () => {
     return <div className="container py-3 text-muted">{t('loadsHub.roleRequired')}</div>;
   }
 
-  if (isCarrier) {
-    return (
-      <div className="container py-3">
-        <div className="mb-3">
-          <h5 className="mb-1">{t('loadsHub.capacityHubTitle')}</h5>
-          <p className="text-muted small mb-0">{t('loadsHub.capacityHubSubtitle')}</p>
-        </div>
-        <PostCarrierSpace embedded />
-      </div>
-    );
-  }
-
   const setTab = (id) => {
     setParams({ tab: id }, { replace: true });
   };
+
+  if (isCarrier) {
+    return (
+      <div className="container py-3">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h5 className="mb-1">{t('loadsHub.title')}</h5>
+            <p className="text-muted small mb-0">{t('loadsHub.carrierFreightSubtitle')}</p>
+          </div>
+          <SegmentTabs tabs={tabs} active={tab} onChange={setTab} />
+        </div>
+        {tab === 'freight' ? <AvailableLoads embedded /> : null}
+        {tab === 'capacity' ? <CapacityMarketplace /> : null}
+        {tab === 'publish' ? <PostCarrierSpace embedded /> : null}
+      </div>
+    );
+  }
 
   return (
     <div className="container py-3">

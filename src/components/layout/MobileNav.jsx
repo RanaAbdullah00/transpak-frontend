@@ -8,8 +8,7 @@ import {
   FaUserShield,
   FaClipboardCheck,
   FaExclamationTriangle,
-  FaBell,
-  FaShippingFast
+  FaBell
 } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -31,21 +30,13 @@ const MobileNav = () => {
             <FaHome />
             <span>{t('nav.adminDashboard')}</span>
           </NavLink>
-          <NavLink to="/admin/users" className={mobileNavClass}>
-            <FaUserShield />
-            <span>{t('nav.adminUsers')}</span>
-          </NavLink>
-          <NavLink to="/admin/verification" className={mobileNavClass}>
-            <FaClipboardCheck />
-            <span>{t('nav.verification')}</span>
+          <NavLink to="/admin/fleet" className={mobileNavClass}>
+            <FaTruck />
+            <span>{t('nav.fleetApproval')}</span>
           </NavLink>
           <NavLink to="/admin/loads" className={mobileNavClass}>
             <FaListUl />
             <span>{t('nav.adminModeration')}</span>
-          </NavLink>
-          <NavLink to="/admin/shipments" className={mobileNavClass}>
-            <FaShippingFast />
-            <span>{t('nav.shipments')}</span>
           </NavLink>
           <NavLink to="/admin/disputes" className={mobileNavClass}>
             <FaExclamationTriangle />
@@ -65,10 +56,11 @@ const MobileNav = () => {
 
   const roleSlot =
     activeRole === 'carrier'
-      ? { to: '/fleet', icon: <FaTools />, label: t('common.fleet') }
+      ? { to: '/carrier/truck-details', icon: <FaTools />, label: t('nav.truckDetails') }
       : { to: '/loads/manage', icon: <FaTools />, label: t('common.manage') };
 
-  const loadsPath = activeRole === 'carrier' ? '/carrier/space/post' : '/loads/manage';
+  const loadsPath = activeRole === 'carrier' ? '/loads/manage?tab=freight' : '/loads/manage';
+  const bidsPath = activeRole === 'carrier' ? '/bids/mine' : '/bids';
 
   return (
     <nav className={`mobile-bottom-nav d-md-none ${isUrdu ? 'tp-rtl' : ''}`}>
@@ -81,9 +73,9 @@ const MobileNav = () => {
           <FaListUl />
           <span>{t('common.loads')}</span>
         </NavLink>
-        <NavLink to="/shipments/tracking" className={mobileNavClass} end>
-          <FaTruck />
-          <span>{t('common.track')}</span>
+        <NavLink to={bidsPath} className={mobileNavClass} end>
+          <FaClipboardCheck />
+          <span>{t('pages.bids.management')}</span>
         </NavLink>
         <NavLink to={roleSlot.to} className={mobileNavClass}>
           {roleSlot.icon}

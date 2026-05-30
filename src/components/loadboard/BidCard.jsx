@@ -7,7 +7,7 @@ import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { translateBidStatus } from '../../utils/i18nLabels.js';
-import { isAwaitingShipper, isCounterOffered, normalizeBidStatus } from '../../utils/bidStatus.js';
+import { isAwaitingShipper, isCounterOffered, isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 
 function formatHHMMSS(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -82,10 +82,10 @@ const BidCard = ({
 
   const [confirmState, setConfirmState] = useState(null); // { kind: 'accept'|'reject', handler: fn }
 
-  const showActions = (bid.status === 'pending' || bid.status === 'suggested') && !isExpired;
+  const showActions = isActiveBidStatus(bid.status) && !isExpired;
 
   const canAccept = isShipper
-    ? showActions && (bid.status === 'pending' || suggestedByCarrier) && typeof onAccept === 'function'
+    ? showActions && (isAwaitingShipper(bid.status) || suggestedByCarrier) && typeof onAccept === 'function'
     : isCarrier
     ? showActions && suggestedByShipper && typeof onAcceptSuggestion === 'function'
     : false;
@@ -142,7 +142,17 @@ const BidCard = ({
             {bid.vehicleType} · {bid.transitTime} {t('bidCard.daysSuffix')}
           </small>
         </div>
-        <Badge variant={bid.status === 'accepted' ? 'success' : bid.status === 'suggested' ? 'info' : isExpired ? 'secondary' : 'warning'}>
+        <Badge
+          variant={
+            canonStatus === BID_STATUS.ACCEPTED
+              ? 'success'
+              : isCounterOffered(bid.status)
+                ? 'info'
+                : isExpired
+                  ? 'secondary'
+                  : 'warning'
+          }
+        >
           {statusBadgeLabel}
         </Badge>
       </div>

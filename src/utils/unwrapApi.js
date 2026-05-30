@@ -52,6 +52,96 @@ export function ensureRolesArray(value) {
   return [s.toLowerCase()];
 }
 
+/** Resolve full request URL from axios config. */
+export function resolveRequestUrl(config) {
+  if (!config) return '';
+  const url = String(config.url || '');
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = String(config.baseURL || '').replace(/\/$/, '');
+  return `${base}${url.startsWith('/') ? url : `/${url}`}`;
+}
+
+/**
+ * Classify transport-layer failures (CORS, timeout, no response).
+ * @returns {{ type: string, code: string, httpStatus: number|null, endpoint: string, displayMessage: string }|null}
+ */
+export function classifyTransportFailure(err, config) {
+  const endpoint = resolveRequestUrl(config);
+  const httpStatus = err?.response?.status ?? null;
+
+  if (err?.code === 'ECONNABORTED' || /timeout/i.test(String(err?.message || ''))) {
+    return {
+      type: 'TIMEOUT',
+      code: 'TIMEOUT',
+      httpStatus,
+      endpoint,
+      displayMessage: `Timeout contacting ${endpoint || 'API'} — no response within limit`
+    };
+  }
+
+  if (err?.code === 'ERR_NETWORK' || (!err?.response && err?.request)) {
+    return {
+      type: 'CORS',
+      code: 'ERR_NETWORK',
+      httpStatus: null,
+      endpoint,
+      displayMessage: `Network/CORS failure: ${endpoint || 'API'} — no HTTP response (verify VITE_API_URL and Render CORS allowlist)`
+    };
+  }
+
+  if (httpStatus === 401) {
+    return {
+      type: 'AUTH',
+      code: 'UNAUTHORIZED',
+      httpStatus: 401,
+      endpoint,
+      displayMessage: `Auth required: ${endpoint || 'API'} (HTTP 401)`
+    };
+  }
+
+  if (httpStatus === 403) {
+    return {
+      type: 'FORBIDDEN',
+      code: 'FORBIDDEN',
+      httpStatus: 403,
+      endpoint,
+      displayMessage: `Forbidden: ${endpoint || 'API'} (HTTP 403)`
+    };
+  }
+
+  if (httpStatus != null && httpStatus >= 500) {
+    return {
+      type: 'SERVER',
+      code: 'SERVER_ERROR',
+      httpStatus,
+      endpoint,
+      displayMessage: `Server error: ${endpoint || 'API'} (HTTP ${httpStatus})`
+    };
+  }
+
+  return null;
+}
+
+/** Structured API error for UI — endpoint, status, type, message. */
+export function formatStructuredApiError(err) {
+  const detail = unwrapErrorDetail(err);
+  let type = detail.errorType || detail.error || null;
+  if (type === 'CORS_OR_NETWORK' || type === 'FORBIDDEN') {
+    type = type === 'FORBIDDEN' ? 'AUTH' : 'CORS';
+  }
+  if (!type && detail.httpStatus === 401) type = 'AUTH';
+  if (!type && detail.httpStatus === 403) type = 'AUTH';
+  if (!type && detail.httpStatus != null && detail.httpStatus >= 500) type = 'SERVER';
+  if (!type && detail.code === 'TIMEOUT') type = 'TIMEOUT';
+  if (!type && detail.code === 'ERR_NETWORK') type = 'NETWORK';
+  return {
+    endpoint: detail.endpoint || resolveRequestUrl(err?.config) || '',
+    status: detail.httpStatus ?? err?.response?.status ?? null,
+    type: type || (detail.httpStatus ? 'SERVER' : 'NETWORK'),
+    message: detail.displayMessage || detail.message || String(err?.message || '').trim()
+  };
+}
+
 /** Admin list endpoints — always return an array (never undefined). */
 export function ensureAdminList(data, key) {
   if (key && data && typeof data === 'object' && !Array.isArray(data)) {
@@ -76,13 +166,22 @@ export function unwrapErrorMessage(err) {
  * @returns {{ message: string, code: string|null, error: string|null, displayMessage: string }}
  */
 export function unwrapErrorDetail(err) {
+  const transport = classifyTransportFailure(err, err?.config);
+  if (transport) {
+    return {
+      message: transport.displayMessage,
+      code: transport.code,
+      error: transport.type,
+      displayMessage: transport.displayMessage,
+      httpStatus: transport.httpStatus,
+      endpoint: transport.endpoint,
+      errorType: transport.type,
+      type: transport.type
+    };
+  }
+
   const d = err?.response?.data;
   if (!d || typeof d !== 'object') {
-    if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') {
-      const networkMsg =
-        'Unable to reach the server. Check backend is running, VITE_API_URL points to Render (https), and CORS allows your Cloudflare Pages domain.';
-      return { message: networkMsg, code: 'ERR_NETWORK', error: 'ERR_NETWORK', displayMessage: networkMsg };
-    }
     const fallback = String(err?.message || '').trim();
     return { message: fallback, code: null, error: null, displayMessage: fallback };
   }
@@ -111,10 +210,28 @@ export function unwrapErrorDetail(err) {
     displayMessage = String(err?.message || '').trim();
   }
 
+  const endpoint = resolveRequestUrl(err?.config);
+  const httpStatus = err?.response?.status ?? null;
+  if (endpoint && httpStatus && !displayMessage.includes(String(httpStatus))) {
+    displayMessage = `${displayMessage} — ${endpoint} (HTTP ${httpStatus})`;
+  } else if (endpoint && !displayMessage.includes(endpoint)) {
+    displayMessage = `${displayMessage} — ${endpoint}`;
+  }
+
+  const bodyEndpoint = typeof d?.endpoint === 'string' ? d.endpoint.trim() : '';
+  const bodyType = typeof d?.type === 'string' ? d.type.trim().toUpperCase() : '';
+  const bodyStatus = d?.status != null ? Number(d.status) : null;
+
   return {
     message,
     code,
     error: errorField || code,
-    displayMessage
+    displayMessage: bodyEndpoint && !displayMessage.includes(bodyEndpoint)
+      ? `${displayMessage} — ${bodyEndpoint}${bodyStatus ? ` (HTTP ${bodyStatus})` : ''}`
+      : displayMessage,
+    httpStatus: Number.isFinite(bodyStatus) ? bodyStatus : httpStatus,
+    endpoint: bodyEndpoint || endpoint,
+    type: bodyType || (httpStatus === 401 || httpStatus === 403 ? 'AUTH' : httpStatus >= 500 ? 'SERVER' : code || null),
+    errorType: bodyType || (httpStatus === 401 || httpStatus === 403 ? 'AUTH' : httpStatus >= 500 ? 'SERVER' : code || null)
   };
 }

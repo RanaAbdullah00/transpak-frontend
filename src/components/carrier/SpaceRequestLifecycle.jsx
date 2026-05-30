@@ -4,6 +4,7 @@ import FlowTimeline, { SPACE_STEPS } from '../ui/FlowTimeline.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { spaceStepId } from '../../utils/spaceFlow.js';
+import { formatTons } from '../../utils/weightUnits.js';
 
 const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplete, showCarrierActions }) => {
   const { t } = useLanguage();
@@ -19,7 +20,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           ) : (
             <ProfileLink userId={row.carrierId} name={row.carrierName} showBadge role={t('auth.carrier')} />
           )}{' '}
-          · {row.requestedKg} kg
+          · {formatTons(row.requestedKg)} t
         </div>
         <span className="badge text-bg-secondary text-uppercase">{status.replace('_', ' ')}</span>
       </div>

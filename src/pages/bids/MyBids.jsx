@@ -6,19 +6,27 @@ import { useApi } from '../../hooks/useApi.js';
 import { normalizeTrucksResponse } from '../../utils/fleetApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { normalizeBids } from '../../adapters/normalize.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
-import { filterActiveBids } from '../../utils/bidStatus.js';
+import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
+
+import { isTruckMatchingEligible } from '../../utils/fleetApi.js';
+import { isActiveBidStatus } from '../../utils/bidStatus.js';
 
 const isTruckComplete = (t) =>
-  t && (t.engineNumber || t.truckNumber) && (t.truckCardFrontImage || t.truckFrontImage) && (t.truckCardBackImage || t.truckBackImage);
+  isTruckMatchingEligible(t) &&
+  (t.engineNumber || t.truckNumber) &&
+  (t.truckCardFrontImage || t.truckFrontImage) &&
+  (t.truckCardBackImage || t.truckBackImage);
 
 const MyBids = () => {
   const { t, isUrdu } = useLanguage();
   const { user } = useAuth();
   const profileComplete = user?.profileComplete === true;
   const { request, loading } = useApi();
+  const pollingAllowed = usePollingAllowed();
   const [bids, setBids] = useState([]);
   const [trucks, setTrucks] = useState([]);
   const [loadMetaByLoad, setLoadMetaByLoad] = useState({});
@@ -37,7 +45,7 @@ const MyBids = () => {
   const fetchBidsData = useCallback(async () => {
     try {
       const data = await request({ method: 'GET', url: '/bids/mine' });
-      setBids(normalizeBids(data));
+      setBids(normalizeBids(ensureArray(data)));
     } catch (err) {
       notifyError(t('pages.bids.loadBidsFailed'));
       setBids([]);
@@ -49,12 +57,13 @@ const MyBids = () => {
   }, [fetchBidsData]);
 
   useEffect(() => {
+    if (!pollingAllowed) return undefined;
     const tick = () => {
       if (document.visibilityState === 'visible') fetchBidsData();
     };
     const interval = setInterval(tick, 25000);
     return () => clearInterval(interval);
-  }, [fetchBidsData]);
+  }, [fetchBidsData, pollingAllowed]);
 
   useEffect(() => {
     fetchTrucks();
@@ -136,7 +145,7 @@ const MyBids = () => {
         </div>
       ) : (
         <>
-          {actionsDisabled && (bids.some((b) => b.status === 'suggested') || bids.some((b) => b.status === 'pending')) && (
+          {actionsDisabled && bids.some((b) => isActiveBidStatus(b.status)) && (
             <div className="alert alert-warning mb-3">
               {t('pages.bids.completeProfilePrefix')}{' '}
               <Link to="/profile" className="alert-link">
@@ -150,7 +159,7 @@ const MyBids = () => {
             </div>
           )}
           <BidList
-            bids={filterActiveBids(bids)}
+            bids={bids}
             mode="carrier"
             onAcceptSuggestion={handleAcceptSuggestion}
             onRejectSuggestion={handleRejectSuggestion}

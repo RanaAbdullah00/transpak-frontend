@@ -10,6 +10,7 @@ import { notifySuccess, notifyError } from '../../components/ui/ToastProvider.js
 import { formatUserError } from '../../utils/userErrors.js';
 import { logApiSuccess, logApiFailure } from '../../utils/apiDevLog.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { shouldUseAdminShell } from '../../utils/rbac.js';
 
 const PostLoad = () => {
@@ -63,7 +64,7 @@ const PostLoad = () => {
         type: 'load',
         message: t('pages.loads.postLoadNotify', { code })
       });
-      window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
+      emitRealtimeRefresh('loads');
       setFormKey((k) => k + 1);
       navigate('/loads/manage', { replace: true });
     } catch (error) {

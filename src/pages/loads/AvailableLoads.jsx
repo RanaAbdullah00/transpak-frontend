@@ -9,7 +9,7 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
 import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
-import { filterOpenLoads } from '../../utils/loadBidding.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
 import CitySelect from '../../components/ui/CitySearchSelect.jsx';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
@@ -33,7 +33,6 @@ const AvailableLoads = ({ embedded = false }) => {
     sort: 'newest'
   });
   const [loads, setLoads] = useState([]);
-  const [myBidLoadIds, setMyBidLoadIds] = useState(new Set());
   const [offerBusyId, setOfferBusyId] = useState(null);
   const debouncedFilters = useDebouncedValue(filters, 400);
 
@@ -41,112 +40,60 @@ const AvailableLoads = ({ embedded = false }) => {
   const activeRole = user?.activeRole ?? user?.roles?.[0];
   const isCarrier = activeRole === 'carrier';
 
-  const fetchMyBids = useCallback(async () => {
+  const fetchAvailableLoads = useCallback(async () => {
     try {
-      const data = await request({ method: 'GET', url: '/bids/mine' });
-      const ids = new Set(
-        (Array.isArray(data) ? data : [])
-          .filter((b) =>
-            [
-              'pending_shipper_confirmation',
-              'counter_offered',
-              'pending',
-              'suggested',
-              'accepted'
-            ].includes(String(b.status || '').toLowerCase())
-          )
-          .map((b) => String(b.loadId))
-      );
-      setMyBidLoadIds(ids);
-    } catch {
-      setMyBidLoadIds(new Set());
+      const data = await request({
+        method: 'GET',
+        url: '/loads',
+        params: {
+          origin: debouncedFilters.origin || undefined,
+          destination: debouncedFilters.destination || undefined,
+          vehicleType: debouncedFilters.vehicleType || undefined,
+          city: debouncedFilters.city || undefined,
+          minPrice: debouncedFilters.minPrice || undefined,
+          maxPrice: debouncedFilters.maxPrice || undefined,
+          minWeight: debouncedFilters.minWeight || undefined,
+          maxWeight: debouncedFilters.maxWeight || undefined,
+          pickupFrom: debouncedFilters.pickupFrom || undefined,
+          pickupTo: debouncedFilters.pickupTo || undefined,
+          sort: debouncedFilters.sort || 'newest',
+          limit: 60
+        },
+        skipGlobalErrorToast: true
+      });
+      setLoads(normalizeLoads(ensureArray(data)));
+    } catch (err) {
+      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+      setLoads([]);
     }
-  }, [request]);
+  }, [debouncedFilters, request, t]);
 
   useEffect(() => {
-    fetchMyBids();
-  }, [fetchMyBids, activeRole]);
+    fetchAvailableLoads();
+  }, [fetchAvailableLoads, activeRole]);
 
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'bids') return;
-      fetchMyBids().catch(() => {});
+      if (scope && scope !== 'all' && scope !== 'loads') return;
+      fetchAvailableLoads().catch(() => {});
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
     return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
-  }, [fetchMyBids]);
-
-  useEffect(() => {
-    const fetchAvailableLoads = async () => {
-      try {
-        const data = await request({
-          method: 'GET',
-          url: '/loads',
-          params: {
-            origin: debouncedFilters.origin || undefined,
-            destination: debouncedFilters.destination || undefined,
-            vehicleType: debouncedFilters.vehicleType || undefined,
-            city: debouncedFilters.city || undefined,
-            minPrice: debouncedFilters.minPrice || undefined,
-            maxPrice: debouncedFilters.maxPrice || undefined,
-            minWeight: debouncedFilters.minWeight || undefined,
-            maxWeight: debouncedFilters.maxWeight || undefined,
-            pickupFrom: debouncedFilters.pickupFrom || undefined,
-            pickupTo: debouncedFilters.pickupTo || undefined,
-            sort: debouncedFilters.sort || 'newest',
-            limit: 60
-          }
-        });
-        const raw = Array.isArray(data) ? data : data?.items ?? [];
-        const normalized = normalizeLoads(raw);
-        const openOnly = filterOpenLoads(normalized);
-        const filtered = openOnly.filter((l) => !myBidLoadIds.has(String(l.id)));
-        setLoads(filtered);
-      } catch {
-        notifyError(t('pages.loads.failedLoadDetail'));
-        setLoads([]);
-      }
-    };
-    fetchAvailableLoads();
-  }, [debouncedFilters, request, myBidLoadIds, t, activeRole]);
-
-  useEffect(() => {
-    const tick = setInterval(() => {
-      setLoads((prev) => filterOpenLoads(prev));
-    }, 60000);
-    return () => clearInterval(tick);
-  }, []);
+  }, [fetchAvailableLoads]);
 
   const handleBid = (load) => {
     if (isCarrier) return;
     return navigate(`/loads/${encodeURIComponent(load.id)}`);
   };
 
-  const optimisticallyRemoveLoad = (loadId) => {
-    setOfferBusyId(loadId);
-    setMyBidLoadIds((prev) => new Set(prev).add(String(loadId)));
-    setLoads((prev) => prev.filter((l) => String(l.id) !== String(loadId)));
-  };
-
-  const rollbackLoad = (load) => {
-    setOfferBusyId(null);
-    setMyBidLoadIds((prev) => {
-      const next = new Set(prev);
-      next.delete(String(load.id));
-      return next;
-    });
-    setLoads((prev) => (prev.some((l) => String(l.id) === String(load.id)) ? prev : [load, ...prev]));
-  };
-
   const handleCarrierAccept = async (load) => {
-    optimisticallyRemoveLoad(load.id);
+    setOfferBusyId(load.id);
     try {
       await acceptLoadAtListedFare(request, load);
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
-      fetchMyBids().catch(() => {});
+      await fetchAvailableLoads();
     } catch (err) {
-      rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
     } finally {
       setOfferBusyId(null);
@@ -154,12 +101,12 @@ const AvailableLoads = ({ embedded = false }) => {
   };
 
   const handleCarrierReject = async (load) => {
-    optimisticallyRemoveLoad(load.id);
+    setOfferBusyId(load.id);
     try {
       await rejectLoadForCarrier(request, load);
       notifySuccess(t('pages.loads.carrierRejectSuccess'));
+      await fetchAvailableLoads();
     } catch (err) {
-      rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
     } finally {
       setOfferBusyId(null);
@@ -167,13 +114,12 @@ const AvailableLoads = ({ embedded = false }) => {
   };
 
   const handleCarrierCounter = async (load, amount) => {
-    optimisticallyRemoveLoad(load.id);
+    setOfferBusyId(load.id);
     try {
       await submitCounterOffer(request, load, amount);
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
-      fetchMyBids().catch(() => {});
+      await fetchAvailableLoads();
     } catch (err) {
-      rollbackLoad(load);
       notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
     } finally {
       setOfferBusyId(null);

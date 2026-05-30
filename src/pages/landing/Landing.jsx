@@ -55,8 +55,7 @@ const Landing = () => {
       <header className="tp-landing-nav sticky-top border-bottom">
         <div className="container py-2 d-flex align-items-center justify-content-between gap-3 flex-wrap">
           <Link to="/" className="text-decoration-none text-body d-flex align-items-center gap-2">
-            <BrandLogo variant="mark" title={t('common.appName')} className="tp-landing-nav__brand" />
-            <span className="fw-bold small text-uppercase letter-spacing-1 d-none d-sm-inline">{t('common.appName')}</span>
+            <BrandLogo variant="auth" title={t('common.appName')} className="tp-landing-nav__brand" />
           </Link>
           <nav className="d-flex align-items-center gap-1 gap-md-2 flex-wrap small">
             <a href="#features" className="tp-landing-nav__link d-none d-md-inline">

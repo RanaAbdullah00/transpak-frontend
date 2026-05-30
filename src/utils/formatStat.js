@@ -1,8 +1,7 @@
-/** Dashboard stat display — never show em-dash when value is 0. */
+/** Dashboard stat display — null means unknown/unavailable, not zero. */
 export function formatStatValue(value, { loading = false, failed = false } = {}) {
   if (loading) return null;
-  if (failed && (value === null || value === undefined)) return '—';
-  if (value === null || value === undefined) return '0';
+  if (value === null || value === undefined) return failed ? '—' : '—';
   const n = Number(value);
   if (Number.isFinite(n)) return n.toLocaleString();
   return String(value);

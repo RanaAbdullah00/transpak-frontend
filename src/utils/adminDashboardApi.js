@@ -1,4 +1,4 @@
-import { unwrapErrorCode, ensureArray, ensureObject } from './unwrapApi.js';
+import { unwrapErrorCode, ensureArray, ensureObject, unwrapErrorDetail } from './unwrapApi.js';
 
 export const ADMIN_DASHBOARD_WIDGETS = ['users', 'loads', 'bids', 'shipments', 'audit', 'observability'];
 
@@ -84,21 +84,14 @@ export function normalizeWidgetPayload(data) {
 }
 
 function classifyWidgetError(err) {
-  const httpStatus = err?.httpStatus ?? err?.response?.status ?? null;
-  const code = unwrapErrorCode(err) || err?.code || null;
-  let message = err?.message || 'Unavailable';
-  if (httpStatus === 401 || code === 'UNAUTHORIZED' || code === 'INVALID_TOKEN') {
-    message = 'Session expired';
-  } else if (httpStatus === 403 || code === 'FORBIDDEN' || code === 'FORBIDDEN_ROLE') {
-    message = 'Access denied';
-  } else if (httpStatus >= 500 || code === 'SERVER_ERROR' || code === 'WIDGET_ERROR') {
-    message = 'Server error';
-  } else if (httpStatus === 503 || code === 'DATABASE_UNAVAILABLE') {
-    message = 'Database unavailable';
-  } else if (!httpStatus && (code === 'ERR_NETWORK' || String(message).toLowerCase().includes('network'))) {
-    message = 'Network error';
-  }
-  return { message, code, httpStatus };
+  const detail = unwrapErrorDetail(err);
+  return {
+    message: detail.displayMessage || err?.message || 'Unavailable',
+    code: detail.code || unwrapErrorCode(err) || err?.code || null,
+    httpStatus: detail.httpStatus ?? err?.httpStatus ?? err?.response?.status ?? null,
+    endpoint: detail.endpoint || null,
+    errorType: detail.errorType || detail.error || null
+  };
 }
 
 function isAbortError(err) {
@@ -188,6 +181,8 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
       lastError.httpStatus = classified.httpStatus;
       lastError.code = classified.code;
       lastError.message = classified.message;
+      lastError.endpoint = classified.endpoint;
+      lastError.errorType = classified.errorType;
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.warn('[admin-widget]', id, 'failed', classified.code || classified.message, `attempt ${attempt + 1}`);
@@ -215,6 +210,8 @@ export async function fetchAllAdminWidgets(request, { onWidget } = {}) {
           error: classified.message,
           code: classified.code,
           httpStatus: classified.httpStatus,
+          endpoint: classified.endpoint,
+          errorType: classified.errorType,
           attempts: err?.attempt || 0
         };
         if (onWidget) onWidget(widget, results[widget]);

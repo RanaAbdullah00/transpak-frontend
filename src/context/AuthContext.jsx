@@ -5,7 +5,8 @@ import { emitRoleSwitchComplete, getUserRoles } from '../utils/roleSwitch.js';
 import {
   applyAuthSessionFromApi,
   clearAuthStorage,
-  setAuthToken
+  setAuthToken,
+  canAccessAdminRoutes
 } from '../utils/authSession.js';
 import { refreshAuthSessionFromServer } from '../utils/authRefresh.js';
 import { clearEntireSession, prepareWorkspaceSwitch } from '../utils/sessionCleanup.js';
@@ -152,9 +153,6 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Admin accounts cannot switch workspace');
     }
     if (current.activeRole === nextRole) return;
-    if (current.activeRole && nextRole !== current.activeRole) {
-      throw new Error('Role switching is disabled');
-    }
 
     switchLockRef.current = true;
     setRoleSwitching(true);

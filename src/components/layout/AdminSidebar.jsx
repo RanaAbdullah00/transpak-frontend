@@ -2,17 +2,15 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   FaTachometerAlt,
-  FaUserShield,
-  FaClipboardCheck,
   FaTruck,
   FaExclamationTriangle,
   FaListUl,
-  FaFileAlt,
   FaBell,
   FaUserTag,
-  FaShippingFast,
+  FaUsers,
   FaCog,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaGavel
 } from 'react-icons/fa';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import SafeAvatar from '../ui/SafeAvatar.jsx';
@@ -41,16 +39,16 @@ const AdminSidebar = () => {
           {t('nav.adminDashboard')}
         </NavLink>
         <NavLink to="/admin/users" className={navLinkClass}>
-          <FaUserShield />
-          {t('nav.adminUsers')}
-        </NavLink>
-        <NavLink to="/admin/verification" className={navLinkClass}>
-          <FaClipboardCheck />
-          {t('nav.verification')}
+          <FaUsers />
+          {t('pages.admin.usersTitle')}
         </NavLink>
         <NavLink to="/admin/fleet" className={navLinkClass}>
           <FaTruck />
           {t('nav.fleetApproval')}
+        </NavLink>
+        <NavLink to="/admin/bids" className={navLinkClass}>
+          <FaGavel />
+          {t('pages.admin.bidsTitle')}
         </NavLink>
         <NavLink to="/admin/disputes" className={navLinkClass}>
           <FaExclamationTriangle />
@@ -59,14 +57,6 @@ const AdminSidebar = () => {
         <NavLink to="/admin/loads" className={navLinkClass}>
           <FaListUl />
           {t('nav.adminModeration')}
-        </NavLink>
-        <NavLink to="/admin/shipments" className={navLinkClass}>
-          <FaShippingFast />
-          {t('nav.shipments')}
-        </NavLink>
-        <NavLink to="/admin/otp-logs" className={navLinkClass}>
-          <FaFileAlt />
-          {t('nav.adminReports')}
         </NavLink>
         <NavLink to="/admin/notifications" className={navLinkClass}>
           <FaBell />

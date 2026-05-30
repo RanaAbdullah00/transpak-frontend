@@ -65,14 +65,14 @@ const MobileDrawer = ({ open, onClose }) => {
             )}
             {activeRole === 'carrier' && (
               <>
-                <NavLink to="/carrier/space/post" className={linkClass} onClick={onClose}>
+                <NavLink to="/loads/manage?tab=freight" className={linkClass} onClick={onClose}>
+                  {t('pages.dashboard.statOpenMarketplace')}
+                </NavLink>
+                <NavLink to="/loads/manage?tab=capacity" className={linkClass} onClick={onClose}>
                   {t('loadsHub.navCapacityHub')}
                 </NavLink>
                 <NavLink to="/bids/mine" className={linkClass} onClick={onClose}>
                   {t('nav.myBids')}
-                </NavLink>
-                <NavLink to="/fleet" className={linkClass} onClick={onClose}>
-                  {t('nav.fleet')}
                 </NavLink>
                 <NavLink to="/carrier/truck-details" className={linkClass} onClick={onClose}>
                   {t('nav.truckDetails')}
@@ -90,23 +90,20 @@ const MobileDrawer = ({ open, onClose }) => {
                 <NavLink to="/admin/dashboard" className={linkClass} onClick={onClose}>
                   {t('nav.adminDashboard')}
                 </NavLink>
-                <NavLink to="/admin/users" className={linkClass} onClick={onClose}>
-                  {t('nav.adminUsers')}
+                <NavLink to="/admin/fleet" className={linkClass} onClick={onClose}>
+                  {t('nav.fleetApproval')}
                 </NavLink>
-                <NavLink to="/admin/verification" className={linkClass} onClick={onClose}>
-                  {t('nav.verification')}
+                <NavLink to="/admin/bids" className={linkClass} onClick={onClose}>
+                  {t('pages.admin.bidsTitle')}
                 </NavLink>
                 <NavLink to="/admin/disputes" className={linkClass} onClick={onClose}>
                   {t('nav.disputes')}
                 </NavLink>
+                <NavLink to="/admin/users" className={linkClass} onClick={onClose}>
+                  {t('pages.admin.usersTitle')}
+                </NavLink>
                 <NavLink to="/admin/loads" className={linkClass} onClick={onClose}>
                   {t('nav.adminModeration')}
-                </NavLink>
-                <NavLink to="/admin/shipments" className={linkClass} onClick={onClose}>
-                  {t('nav.shipments')}
-                </NavLink>
-                <NavLink to="/admin/otp-logs" className={linkClass} onClick={onClose}>
-                  {t('nav.adminReports')}
                 </NavLink>
                 <NavLink to="/admin/notifications" className={linkClass} onClick={onClose}>
                   {t('pages.admin.notificationsTitle')}

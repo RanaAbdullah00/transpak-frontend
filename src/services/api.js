@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getApiRoot, API_BASE, resolveViteApiOrigin } from '../config/apiConfig.js';
 import { notifyApiError } from '../utils/notifySystem.js';
-import { unwrapErrorDetail } from '../utils/unwrapApi.js';
+import { unwrapErrorDetail, formatStructuredApiError } from '../utils/unwrapApi.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
 import { logApiRequest, logApiResponse, logApiError } from '../utils/apiRequestLog.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
@@ -175,13 +175,15 @@ api.interceptors.response.use(
   (error) => {
     logApiError(error, error.config);
     if (!error.response && error.code === 'ERR_NETWORK') {
-      const target = API_BASE || resolveViteApiOrigin() || BASE_URL;
-      const failedUrl = fullUrl(error.config || {});
-      error.message = import.meta.env.DEV
-        ? `Cannot reach API (${target}). Start transpak-backend and set VITE_PROXY_TARGET.`
-        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Check CORS on Render allows your Cloudflare domain. Failed: ${failedUrl}`;
+      const detail = unwrapErrorDetail(error);
+      error.message = detail.displayMessage || error.message;
       // eslint-disable-next-line no-console
-      console.error('[api] network failure', { url: failedUrl, base: BASE_URL, viteApiUrl: import.meta.env.VITE_API_URL });
+      console.error('[api] network failure', {
+        url: detail.endpoint || fullUrl(error.config || {}),
+        base: BASE_URL,
+        viteApiUrl: import.meta.env.VITE_API_URL,
+        errorType: detail.errorType || detail.code
+      });
     }
     const body = error.response?.data;
     if (body && typeof body === 'object') {
@@ -210,6 +212,7 @@ api.interceptors.response.use(
         dispatchAuthUnauthorized();
       }
     }
+    error.structured = formatStructuredApiError(error);
     if (!isCanceledError(error)) {
       handleApiFailure(error, error.config || {});
     }

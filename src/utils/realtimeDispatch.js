@@ -7,9 +7,12 @@ const SCOPE_REFRESH = {
   BID_REJECTED: 'bids',
   COUNTER_OFFERED: 'bids',
   SHIPMENT_STATUS: 'shipments',
+  TRUCK_UPDATED: 'all',
   TRUCK_APPROVED: 'all',
   TRUCK_REJECTED: 'all',
-  TRUCK_SUSPENDED: 'all'
+  TRUCK_SUSPENDED: 'all',
+  SPACE_LISTED: 'loads',
+  CAPACITY_PUBLISHED: 'loads'
 };
 
 /**

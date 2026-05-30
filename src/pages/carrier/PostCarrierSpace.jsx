@@ -8,6 +8,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
 import { ratePerTonToKg, tonsToKg } from '../../utils/weightUnits.js';
 
@@ -71,7 +72,7 @@ const PostCarrierSpace = ({ embedded = false }) => {
       }
       notifySuccess(t('loadsHub.spaceListed'));
       setForm(emptyForm());
-      window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
+      emitRealtimeRefresh('loads');
       if (!embedded) {
         navigate('/dashboard/carrier', { replace: true });
       }

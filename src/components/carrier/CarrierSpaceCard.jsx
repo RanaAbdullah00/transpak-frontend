@@ -36,7 +36,7 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
       </div>
       <div className="small text-muted mb-2">
         <VehicleTypeLabel value={listing.vehicleType || 'Truck'} /> ·{' '}
-        {t('loadsHub.remainingKg', { kg: remTons })} / {capTons} t
+        {remTons} / {capTons} {t('loadsHub.tonsUnit')}
       </div>
       <div className="progress tp-progress-thin mb-2">
         <div

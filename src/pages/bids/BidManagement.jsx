@@ -4,10 +4,12 @@ import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { normalizeBids } from '../../adapters/normalize.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
+import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
 
 // Screen summarising bids across loads.
 const BidManagement = () => {
@@ -16,11 +18,12 @@ const BidManagement = () => {
   const { user } = useAuth();
   const profileComplete = user?.profileComplete === true;
   const { request, loading } = useApi();
+  const pollingAllowed = usePollingAllowed();
 
   const fetchBidsData = useCallback(async () => {
     try {
       const data = await request({ method: 'GET', url: '/bids', params: mergeWorkspaceParams(user) });
-      setBids(normalizeBids(data));
+      setBids(normalizeBids(ensureArray(data)));
     } catch (err) {
       notifyError(t('pages.bids.loadBidsFailed'));
       setBids([]);
@@ -62,12 +65,13 @@ const BidManagement = () => {
   }, [fetchBidsData]);
 
   useEffect(() => {
+    if (!pollingAllowed) return undefined;
     const tick = () => {
       if (document.visibilityState === 'visible') fetchBidsData();
     };
     const interval = setInterval(tick, 25000);
     return () => clearInterval(interval);
-  }, [fetchBidsData]);
+  }, [fetchBidsData, pollingAllowed]);
 
   return (
     <div className={`container py-3 ${isUrdu ? 'tp-rtl' : ''}`}>

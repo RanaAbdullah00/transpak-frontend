@@ -344,64 +344,93 @@ const TruckDetails = () => {
               <div className="text-muted small tp-empty-state py-4 text-center">{t('pages.truckDetailsPage.empty')}</div>
             ) : (
               <div className="list-group list-group-flush tp-truck-list">
-                {trucks.map((row) => (
-                  <div key={row.id} className="list-group-item px-0 border-0 border-bottom">
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
-                      <div className="min-w-0 flex-grow-1">
-                        <div className="fw-semibold d-flex align-items-center gap-2 flex-wrap">
-                          <span className="text-break">{row.engineNumber || row.truckNumber}</span>
-                          <span
-                            className={`badge ${fleetStatusBadgeClass(row.statusLabel || row.status)}`}
-                            style={{ fontSize: 9 }}
-                          >
-                            {row.statusLabel || row.status || t('pages.fleet.statusPending')}
-                          </span>
-                          {row.isDefault ? (
-                            <span className="badge bg-primary" style={{ fontSize: 9 }}>
-                              {t('pages.truckDetailsPage.defaultBadge')}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="small text-muted text-break">
-                          {row.truckType} · {row.capacity || 0}t · {row.licensePlate}
-                        </div>
-                        {isTruckMatchingEligible(row) ? (
-                          <div className="small text-success">{t('pages.truckDetailsPage.matchingEligible')}</div>
-                        ) : (
-                          <div className="small text-warning">{t('pages.truckDetailsPage.notMatchingEligible')}</div>
-                        )}
-                      </div>
-                      <div className="d-flex flex-column gap-1 flex-shrink-0 w-100 w-sm-auto">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="tp-touch-target"
-                          onClick={() => startEdit(row)}
+                {trucks.map((row) => {
+                  const thumb = row.truckCardFrontImage || row.truckFrontImage || '';
+                  const statusKey = String(row.statusLabel || row.status || '').toUpperCase();
+                  const isSuspended = statusKey === 'SUSPENDED';
+                  return (
+                    <div key={row.id} className="list-group-item px-0 border-0 border-bottom py-3">
+                      <div className="d-flex flex-row align-items-start gap-3">
+                        <div
+                          className="flex-shrink-0 rounded border overflow-hidden bg-light"
+                          style={{ width: 88, height: 66 }}
                         >
-                          {t('pages.truckDetailsPage.edit')}
-                        </Button>
-                        {isTruckMatchingEligible(row) && !row.isDefault ? (
+                          {thumb ? (
+                            <SafeImage
+                              src={thumb}
+                              alt=""
+                              className="w-100 h-100"
+                              style={{ objectFit: 'cover' }}
+                              fallback={
+                                <div className="w-100 h-100 d-flex align-items-center justify-content-center small text-muted">
+                                  —
+                                </div>
+                              }
+                            />
+                          ) : (
+                            <div className="w-100 h-100 d-flex align-items-center justify-content-center small text-muted">
+                              —
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-grow-1">
+                          <div className="fw-semibold d-flex align-items-center gap-2 flex-wrap">
+                            <span className="text-break">{row.engineNumber || row.truckNumber}</span>
+                            <span
+                              className={`badge ${fleetStatusBadgeClass(row.statusLabel || row.status)}`}
+                              style={{ fontSize: 9 }}
+                            >
+                              {row.statusLabel || row.status || t('pages.fleet.statusPending')}
+                            </span>
+                            {row.isDefault ? (
+                              <span className="badge bg-primary" style={{ fontSize: 9 }}>
+                                {t('pages.truckDetailsPage.defaultBadge')}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="small text-muted text-break mt-1">
+                            {row.truckType} · {row.capacity || 0}t · {row.licensePlate}
+                          </div>
+                          {isSuspended ? (
+                            <div className="small text-danger mt-1">{t('pages.truckDetailsPage.suspendedHint')}</div>
+                          ) : isTruckMatchingEligible(row) ? (
+                            <div className="small text-success mt-1">{t('pages.truckDetailsPage.matchingEligible')}</div>
+                          ) : (
+                            <div className="small text-warning mt-1">{t('pages.truckDetailsPage.notMatchingEligible')}</div>
+                          )}
+                        </div>
+                        <div className="d-flex flex-column gap-1 flex-shrink-0">
                           <Button
-                            variant="outline-secondary"
+                            variant="outline-primary"
                             size="sm"
                             className="tp-touch-target"
-                            onClick={() => setAsDefault(row)}
+                            onClick={() => startEdit(row)}
                           >
-                            {t('pages.truckDetailsPage.setDefault')}
+                            {t('pages.truckDetailsPage.edit')}
                           </Button>
-                        ) : null}
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          className="tp-touch-target"
-                          onClick={() => removeTruck(row)}
-                        >
-                          {t('pages.truckDetailsPage.delete')}
-                        </Button>
+                          {isTruckMatchingEligible(row) && !row.isDefault ? (
+                            <Button
+                              variant="outline-secondary"
+                              size="sm"
+                              className="tp-touch-target"
+                              onClick={() => setAsDefault(row)}
+                            >
+                              {t('pages.truckDetailsPage.setDefault')}
+                            </Button>
+                          ) : null}
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            className="tp-touch-target"
+                            onClick={() => removeTruck(row)}
+                          >
+                            {t('pages.truckDetailsPage.delete')}
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>

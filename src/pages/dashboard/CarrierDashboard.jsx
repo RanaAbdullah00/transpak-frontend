@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaTruck } from 'react-icons/fa';
 import StatsCards from '../../components/dashboard/StatsCards.jsx';
@@ -12,7 +12,7 @@ import { useDashboardMetrics } from '../../hooks/useDashboardMetrics.js';
 import ActiveShipmentPanel from '../../components/dashboard/ActiveShipmentPanel.jsx';
 import ActiveTripBanner from '../../components/dashboard/ActiveTripBanner.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
-import { filterOpenLoads } from '../../utils/loadBidding.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 import { acceptLoadAtListedFare, submitCounterOffer } from '../../services/carrierLoadOffer.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
@@ -32,36 +32,38 @@ const CarrierDashboard = () => {
   const [offerBusyId, setOfferBusyId] = useState(null);
   const { request } = useApi();
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshBoard = useCallback(async () => {
     setLoadingBoard(true);
-    setOpenLoads([]);
-    setMyBids([]);
-    setFleetCount(0);
-    (async () => {
-      try {
-        const [loadsRaw, bidsRaw, trucksRaw] = await Promise.all([
-          request({ method: 'GET', url: '/loads', skipGlobalErrorToast: true }).catch(() => []),
-          request({ method: 'GET', url: '/bids/mine', skipGlobalErrorToast: true }).catch(() => []),
-          request({ method: 'GET', url: '/trucks/mine', skipGlobalErrorToast: true }).catch(() => [])
-        ]);
-        if (cancelled) return;
-        setOpenLoads(filterOpenLoads(normalizeLoads(Array.isArray(loadsRaw) ? loadsRaw : [])).slice(0, 6));
-        setMyBids(Array.isArray(bidsRaw) ? bidsRaw : []);
-        setFleetCount(normalizeTrucksResponse(trucksRaw).length);
-      } catch {
-        if (!cancelled) {
-          setOpenLoads([]);
-          setFleetCount(0);
-        }
-      } finally {
-        if (!cancelled) setLoadingBoard(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
+    try {
+      const [loadsRaw, bidsRaw, trucksRaw] = await Promise.all([
+        request({ method: 'GET', url: '/loads', skipGlobalErrorToast: true }).catch(() => []),
+        request({ method: 'GET', url: '/bids/mine', skipGlobalErrorToast: true }).catch(() => []),
+        request({ method: 'GET', url: '/trucks/mine', skipGlobalErrorToast: true }).catch(() => [])
+      ]);
+      setOpenLoads(normalizeLoads(ensureArray(loadsRaw)).slice(0, 6));
+      setMyBids(ensureArray(bidsRaw));
+      setFleetCount(normalizeTrucksResponse(trucksRaw).length);
+    } catch {
+      setOpenLoads([]);
+      setFleetCount(0);
+    } finally {
+      setLoadingBoard(false);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    refreshBoard();
+  }, [refreshBoard, user?.activeRole]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids') return;
+      refreshBoard().catch(() => {});
     };
-  }, [request, user?.activeRole]);
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refreshBoard]);
 
   const stats = useMemo(() => {
     const c = ops?.carrier;
@@ -86,24 +88,13 @@ const CarrierDashboard = () => {
     enabled: Boolean(activeTrackRef)
   });
 
-  const optimisticallyRemoveLoad = (load) => {
-    setOfferBusyId(load.id);
-    setOpenLoads((prev) => prev.filter((l) => String(l.id) !== String(load.id)));
-    return load;
-  };
-
-  const rollbackLoad = (load) => {
-    setOfferBusyId(null);
-    setOpenLoads((prev) => (prev.some((l) => String(l.id) === String(load.id)) ? prev : [load, ...prev]));
-  };
-
   const handleCarrierAccept = async (load) => {
-    optimisticallyRemoveLoad(load);
+    setOfferBusyId(load.id);
     try {
       await acceptLoadAtListedFare(request, load);
       notifySystem(SystemNotifyType.SUCCESS, t('pages.loads.carrierAcceptSuccess'));
+      await refreshBoard();
     } catch (err) {
-      rollbackLoad(load);
       notifyApiError(err);
     } finally {
       setOfferBusyId(null);
@@ -111,12 +102,12 @@ const CarrierDashboard = () => {
   };
 
   const handleCarrierCounter = async (load, amount) => {
-    optimisticallyRemoveLoad(load);
+    setOfferBusyId(load.id);
     try {
       await submitCounterOffer(request, load, amount);
       notifySystem(SystemNotifyType.SUCCESS, t('pages.loads.carrierCounterSuccess'));
+      await refreshBoard();
     } catch (err) {
-      rollbackLoad(load);
       notifyApiError(err);
     } finally {
       setOfferBusyId(null);
@@ -138,7 +129,7 @@ const CarrierDashboard = () => {
               {t('pages.dashboard.incompleteProfileCta')}
             </Link>
           )}
-          <Link to="/loads" className="btn btn-outline-primary btn-sm rounded-lg">
+          <Link to="/loads/manage?tab=freight" className="btn btn-outline-primary btn-sm rounded-lg">
             {t('pages.dashboard.statOpenMarketplace')}
           </Link>
         </div>
@@ -156,7 +147,7 @@ const CarrierDashboard = () => {
         <div className="col-12 col-lg-7">
           <div className="d-flex justify-content-between align-items-center mb-2">
             <h6 className="mb-0">{t('pages.dashboard.recommendedLoads')}</h6>
-            <Link to="/loads" className="small text-decoration-none">
+            <Link to="/loads/manage?tab=freight" className="small text-decoration-none">
               {t('common.viewAll')}
             </Link>
           </div>

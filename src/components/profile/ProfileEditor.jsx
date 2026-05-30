@@ -541,90 +541,36 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
 
   return (
     <Card className="p-3">
-      <div className="row g-3">
-        <div className="col-md-4">
-          <label className="form-label small fw-semibold text-body">
-            {t('auth.fullName')} ({t('profile.displayPicture')})
-          </label>
-          {photoBlock}
-          <label className="form-label small fw-semibold text-body">
-            {t('auth.fullName')} ({t('profile.fullNamePhoto')})
-          </label>
+      {photoBlock}
+      <label className="form-label small fw-semibold text-body">
+        {t('auth.fullName')} ({t('profile.fullNamePhoto')})
+      </label>
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="form-control form-control-sm mb-3"
+        onChange={(e) => setFiles((p) => ({ ...p, profile_image: e.target.files?.[0] || null }))}
+      />
+      <div className="row g-2">
+        <div className="col-md-6">
+          <label className="form-label small fw-semibold text-body">{t('auth.fullName')}</label>
           <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
+            name="full_name"
             className="form-control form-control-sm"
-            onChange={(e) => setFiles((p) => ({ ...p, profile_image: e.target.files?.[0] || null }))}
+            value={form.full_name}
+            onChange={handleChange}
           />
-          <div className="mt-3">
-            <label className="form-label small fw-semibold text-body">{t('profile.cnicFrontLabel')}</label>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="form-control form-control-sm"
-              onChange={(e) => setFiles((p) => ({ ...p, cnic_image: e.target.files?.[0] || null }))}
-            />
-            {cnicFrontUrl ? (
-              <img
-                src={cnicFrontUrl}
-                alt=""
-                className="mt-2"
-                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pak-border)' }}
-              />
-            ) : null}
-          </div>
-          <div className="mt-3">
-            <label className="form-label small fw-semibold text-body">{t('profile.cnicBackLabel')}</label>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="form-control form-control-sm"
-              onChange={(e) => setFiles((p) => ({ ...p, cnic_image_back: e.target.files?.[0] || null }))}
-            />
-            {cnicBackUrl ? (
-              <img
-                src={cnicBackUrl}
-                alt=""
-                className="mt-2"
-                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pak-border)' }}
-              />
-            ) : null}
-          </div>
         </div>
-        <div className="col-md-8">
-          <div className="row g-2">
-            <div className="col-md-6">
-              <label className="form-label small fw-semibold text-body">{t('auth.fullName')}</label>
-              <input
-                name="full_name"
-                className="form-control form-control-sm"
-                value={form.full_name}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label small fw-semibold text-body">{t('auth.email')}</label>
-              <input className="form-control form-control-sm" value={form.email} disabled />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label small fw-semibold text-body">{t('auth.mobile')}</label>
-              <input name="phone" className="form-control form-control-sm" value={form.phone} onChange={handleChange} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label small fw-semibold text-body">{t('auth.cnic')}</label>
-              <input
-                name="cnic_number"
-                className={`form-control form-control-sm ${cnicValid ? '' : 'is-invalid'}`}
-                value={form.cnic_number}
-                onChange={handleChange}
-                disabled={!canEditCnic}
-                placeholder={t('auth.cnicPlaceholder')}
-              />
-              {!cnicValid ? <div className="invalid-feedback">{t('errors.cnicInvalid')}</div> : null}
-            </div>
-          </div>
+        <div className="col-md-6">
+          <label className="form-label small fw-semibold text-body">{t('auth.email')}</label>
+          <input className="form-control form-control-sm" value={form.email} disabled />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label small fw-semibold text-body">{t('auth.mobile')}</label>
+          <input name="phone" className="form-control form-control-sm" value={form.phone} onChange={handleChange} />
         </div>
       </div>
+      {cnicEditableBlock}
       <div className="d-flex justify-content-end mt-3">
         <Button variant="primary" onClick={handleSave} disabled={loading}>
           {loading ? <Loader light size="sm" /> : t('common.save')}

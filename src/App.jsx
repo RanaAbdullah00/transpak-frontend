@@ -16,9 +16,7 @@ import {
   AdminLoads,
   AdminBids,
   AdminNotifications,
-  AdminOtpLogs,
   AdminRoleManagement,
-  VerificationQueue,
   AdminFleetQueue,
   Disputes,
   ShipmentControl,
@@ -270,14 +268,8 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/verification"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <VerificationQueue />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/admin/verification" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/admin/otp-logs" element={<Navigate to="/admin/dashboard" replace />} />
               <Route
                 path="/admin/fleet"
                 element={
@@ -318,15 +310,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/otp-logs"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminOtpLogs />
-                  </ProtectedRoute>
-                }
-              />
-
               {/* Loads */}
               <Route
                 path="/loads/post"
@@ -356,7 +339,7 @@ function App() {
                 path="/loads"
                 element={
                   <ProtectedRoute allowedRoles={['carrier']}>
-                    <Navigate to="/carrier/space/post" replace />
+                    <Navigate to="/loads/manage?tab=freight" replace />
                   </ProtectedRoute>
                 }
               />
@@ -457,7 +440,7 @@ function App() {
               <Route
                 path="/shipments/tracking/:trackId?"
                 element={
-                  <ProtectedRoute allowedRoles={['shipper', 'carrier', 'admin']}>
+                  <ProtectedRoute allowedRoles={['shipper', 'carrier']}>
                     <ShipmentTracking />
                   </ProtectedRoute>
                 }
@@ -465,7 +448,7 @@ function App() {
               <Route
                 path="/shipments/history"
                 element={
-                  <ProtectedRoute allowedRoles={['shipper', 'carrier', 'admin']}>
+                  <ProtectedRoute allowedRoles={['shipper', 'carrier']}>
                     <ShipmentHistory />
                   </ProtectedRoute>
                 }

@@ -62,6 +62,8 @@ export function useAdminDashboardWidgets(request) {
               error: state.error ?? null,
               code: state.code ?? null,
               httpStatus: state.httpStatus ?? null,
+              endpoint: state.endpoint ?? null,
+              errorType: state.errorType ?? null,
               attempts: state.attempts ?? 0
             });
           }
@@ -90,6 +92,8 @@ export function useAdminDashboardWidgets(request) {
           error: err?.message || 'Unavailable',
           code: err?.code || null,
           httpStatus: err?.httpStatus ?? err?.response?.status ?? null,
+          endpoint: err?.endpoint ?? null,
+          errorType: err?.errorType ?? null,
           attempts: err?.attempt || 0
         });
       }
@@ -101,7 +105,17 @@ export function useAdminDashboardWidgets(request) {
   const safeLive = live ?? EMPTY_ADMIN_DASHBOARD;
 
   const widgetFailed = useCallback(
-    (id) => Boolean(widgetState?.[id]?.error && !widgetState?.[id]?.data),
+    (id) => {
+      const w = widgetState?.[id];
+      if (w?.error && !w?.data) return true;
+      if (w?.data?.partialFailure) return true;
+      const stats = w?.data?.stats;
+      if (stats && typeof stats === 'object') {
+        const vals = Object.values(stats).filter((v) => v === null);
+        if (vals.length > 0) return true;
+      }
+      return false;
+    },
     [widgetState]
   );
 

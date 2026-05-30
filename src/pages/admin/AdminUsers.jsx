@@ -7,10 +7,14 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { ensureArray, ensureRolesArray } from '../../utils/unwrapApi.js';
 import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { useSearchParams } from 'react-router-dom';
 
 const AdminUsers = () => {
   const { request } = useApi();
   const { t } = useLanguage();
+  const [searchParams] = useSearchParams();
+  const filter = searchParams.get('filter') || '';
+  const roleFilter = searchParams.get('role') || '';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userPendingDelete, setUserPendingDelete] = useState(null);
@@ -18,14 +22,23 @@ const AdminUsers = () => {
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await request({ url: '/admin/users', expectList: true });
-      setUsers(ensureArray(data));
+      const params = {};
+      if (roleFilter) params.role = roleFilter;
+      if (filter === 'incomplete') params.verified = 'false';
+      const data = await request({ url: '/admin/users', params, expectList: true });
+      let rows = ensureArray(data);
+      if (filter === 'active') {
+        rows = rows.filter((u) => !u.blocked && u.verified !== false);
+      } else if (filter === 'incomplete') {
+        rows = rows.filter((u) => !u.profileComplete);
+      }
+      setUsers(rows);
     } catch (e) {
       setUsers([]);
     } finally {
       setLoading(false);
     }
-  }, [request]);
+  }, [request, filter, roleFilter]);
 
   useEffect(() => {
     refresh();
