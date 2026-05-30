@@ -47,11 +47,16 @@ const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
+    if (!isAdminLogin && !uiRolePref) {
+      notifyUserError(t('errors.roleRequired'));
+      return;
+    }
     setLoading(true);
     try {
       const res = await loginApi({
         email: form.email,
-        password: form.password
+        password: form.password,
+        roleHint: isAdminLogin ? undefined : uiRolePref
       });
       const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;

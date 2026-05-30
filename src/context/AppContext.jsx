@@ -120,6 +120,8 @@ export const AppProvider = ({ children }) => {
         queueMicrotask(() => {
           routeRealtimeNotification(normalized);
           window.dispatchEvent(new CustomEvent('tp:notification-sound'));
+          const unread = scoped.filter((n) => !(n.read || n.isRead)).length;
+          window.dispatchEvent(new CustomEvent('tp:unread-sync', { detail: { count: unread } }));
         });
       }
       return scoped;

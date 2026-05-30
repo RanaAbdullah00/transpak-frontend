@@ -1,6 +1,18 @@
 import { normalizeBidStatus } from '../utils/bidStatus.js';
+import { estimateLocalFare } from '../utils/localFareEstimate.js';
 
 // Data normalization adapters so UI never breaks on field mismatches.
+
+function resolveLoadDistance(raw) {
+  const fromApi = raw.distanceKm ?? raw.distance_km ?? raw.distance;
+  const n = Number(fromApi);
+  if (Number.isFinite(n) && n > 0) return Math.round(n);
+  const origin = raw.origin ?? raw.pickup ?? '';
+  const destination = raw.destination ?? raw.delivery ?? '';
+  const est = estimateLocalFare(origin, destination, raw.vehicleType ?? raw.vehicle_type ?? 'Truck');
+  if (est?.distanceKm > 0) return Math.round(est.distanceKm);
+  return null;
+}
 
 export const normalizeLoad = (raw) => {
   if (!raw) return null;
@@ -23,7 +35,8 @@ export const normalizeLoad = (raw) => {
     destination: raw.destination ?? raw.delivery ?? '',
     weight: raw.weight ?? 0,
     vehicleType: raw.vehicleType ?? raw.type ?? 'Truck',
-    distance: raw.distance ?? 0,
+    distance: resolveLoadDistance(raw),
+    distanceKm: resolveLoadDistance(raw),
     expectedPrice: price,
     pickupDate: raw.pickupDate ?? raw.date ?? '',
     deadlineHours: raw.deadlineHours != null ? raw.deadlineHours : 2,
@@ -63,7 +76,7 @@ export const normalizeBid = (raw) => {
     transitTime: raw.transitTime ?? raw.etaDays ?? 2,
     price,
     amount: price,
-    status: normalizeBidStatus(raw.status ?? raw.flowStatus ?? 'pending'),
+    status: normalizeBidStatus(raw.status ?? raw.flowStatus ?? 'pending_shipper_confirmation'),
     flowStatus: raw.flowStatus ?? null,
     suggestedAmount: raw.suggestedAmount != null ? Number(raw.suggestedAmount) : null,
     suggestedAt: raw.suggestedAt ?? null,

@@ -10,6 +10,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 // Screen summarising bids across loads.
 const BidManagement = () => {
@@ -34,6 +35,7 @@ const BidManagement = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
       notifySuccess(t('pages.bids.bidAccepted'));
+      emitRealtimeRefresh('bids');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptFailed') }));
@@ -44,6 +46,7 @@ const BidManagement = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject` });
       notifySuccess(t('pages.bids.bidRejected'));
+      emitRealtimeRefresh('bids');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectFailed') }));
@@ -54,6 +57,7 @@ const BidManagement = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
       notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
+      emitRealtimeRefresh('bids');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
@@ -62,6 +66,16 @@ const BidManagement = () => {
 
   useEffect(() => {
     fetchBidsData();
+  }, [fetchBidsData]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'bids') return;
+      fetchBidsData();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
   }, [fetchBidsData]);
 
   useEffect(() => {

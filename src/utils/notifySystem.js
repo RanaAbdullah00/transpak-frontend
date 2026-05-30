@@ -121,7 +121,7 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.BID_REJECTED, msg);
     return;
   }
-  if (type.includes('BID_RECEIVED') || type.includes('CONFIRMATION')) {
+  if (type.includes('BID_RECEIVED') || type.includes('CONFIRMATION') || type.includes('COUNTER_OFFERED')) {
     notifySystem(SystemNotifyType.BID_RECEIVED, msg);
     return;
   }
@@ -177,6 +177,7 @@ export function mapAuthError(err, t, flow = 'login') {
   }
 
   if (code === 'INVALID_CREDENTIALS') return t('errors.invalidCredentials');
+  if (code === 'WRONG_ROLE') return t('errors.wrongRoleForAccount');
   if (code === 'ACCOUNT_BLOCKED') return t('errors.accountBlocked');
   if (code === 'EMAIL_NOT_VERIFIED') return t('errors.emailNotVerified');
   if (code === 'INVALID_ROLE' || code === 'ROLE_NOT_AVAILABLE') return t('errors.invalidRole');

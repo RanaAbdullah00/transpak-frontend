@@ -10,6 +10,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifySuccess, notifyError, notifyInfo } from '../../components/ui/ToastProvider.jsx';
 import { notifyProfileIncomplete } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 // Carrier bid placement page. Expects "load" object from AvailableLoads route state.
 const PlaceBid = () => {
@@ -80,7 +81,7 @@ const PlaceBid = () => {
       }
 
       notifySuccess(t('pages.placeBid.bidPlaced', { code: load.code }));
-      window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
+      emitRealtimeRefresh('bids');
       navigate('/loads');
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.placeBid.bidFailed') }));

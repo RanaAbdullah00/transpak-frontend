@@ -30,7 +30,6 @@ import {
   PublicProfile
 } from './routes/lazyPages.js';
 import PostLoad from './pages/loads/PostLoad.jsx';
-import PostCarrierSpace from './pages/carrier/PostCarrierSpace.jsx';
 import EditLoad from './pages/loads/EditLoad.jsx';
 import PlaceBid from './pages/bids/PlaceBid.jsx';
 import ApproveCarrier from './pages/bids/ApproveCarrier.jsx';
@@ -331,7 +330,7 @@ function App() {
                 path="/carrier/space/post"
                 element={
                   <ProtectedRoute allowedRoles={['carrier']}>
-                    <PostCarrierSpace />
+                    <Navigate to="/loads/manage?tab=freight" replace />
                   </ProtectedRoute>
                 }
               />

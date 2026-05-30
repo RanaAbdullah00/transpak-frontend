@@ -91,7 +91,9 @@ const BidCard = ({
     : false;
 
   const canReject = isShipper
-    ? showActions && isAwaitingShipper(bid.status) && typeof onReject === 'function'
+    ? showActions &&
+      (isAwaitingShipper(bid.status) || suggestedByCarrier) &&
+      typeof onReject === 'function'
     : isCarrier
     ? showActions && suggestedByShipper && typeof onRejectSuggestion === 'function'
     : false;

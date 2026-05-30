@@ -11,6 +11,7 @@ import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { getVehicleTypeLabel } from '../../data/vehicleTypes.js';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import SpaceSentRequestsPanel from './SpaceSentRequestsPanel.jsx';
+import CarrierSpaceCard from './CarrierSpaceCard.jsx';
 import { kgToTons, tonsToKg } from '../../utils/weightUnits.js';
 
 const DEFAULT_FILTERS = {

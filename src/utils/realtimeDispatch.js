@@ -6,6 +6,7 @@ const SCOPE_REFRESH = {
   BID_ACCEPTED: 'bids',
   BID_REJECTED: 'bids',
   COUNTER_OFFERED: 'bids',
+  SHIPPER_CONFIRMATION_REQUEST: 'bids',
   SHIPMENT_STATUS: 'shipments',
   TRUCK_UPDATED: 'all',
   TRUCK_APPROVED: 'all',

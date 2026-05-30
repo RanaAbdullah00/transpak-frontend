@@ -5,7 +5,6 @@ import ManageLoads from './ManageLoads.jsx';
 import AvailableLoads from './AvailableLoads.jsx';
 import CapacityMarketplace from '../../components/carrier/CapacityMarketplace.jsx';
 import Button from '../../components/ui/Button.jsx';
-import PostCarrierSpace from '../carrier/PostCarrierSpace.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
@@ -27,15 +26,14 @@ const LoadsHub = () => {
         { id: 'market', label: t('loadsHub.capacityMarket') }
       ];
     }
-    if (isCarrier) {
-      return [
-        { id: 'freight', label: t('pages.dashboard.statOpenMarketplace') },
-        { id: 'capacity', label: t('loadsHub.navCapacityHub') },
-        { id: 'publish', label: t('loadsHub.publishCapacity') }
-      ];
-    }
     return [];
-  }, [isShipper, isCarrier, t]);
+  }, [isShipper, t]);
+
+  useEffect(() => {
+    if (isCarrier && tab !== 'freight') {
+      setParams({ tab: 'freight' }, { replace: true });
+    }
+  }, [isCarrier, tab, setParams]);
 
   useEffect(() => {
     document.body.classList.remove('tp-role-shipper', 'tp-role-carrier');
@@ -57,16 +55,11 @@ const LoadsHub = () => {
   if (isCarrier) {
     return (
       <div className="container py-3">
-        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          <div>
-            <h5 className="mb-1">{t('loadsHub.title')}</h5>
-            <p className="text-muted small mb-0">{t('loadsHub.carrierFreightSubtitle')}</p>
-          </div>
-          <SegmentTabs tabs={tabs} active={tab} onChange={setTab} />
+        <div className="mb-3">
+          <h5 className="mb-1">{t('pages.dashboard.statOpenMarketplace')}</h5>
+          <p className="text-muted small mb-0">{t('loadsHub.carrierFreightSubtitle')}</p>
         </div>
-        {tab === 'freight' ? <AvailableLoads embedded /> : null}
-        {tab === 'capacity' ? <CapacityMarketplace /> : null}
-        {tab === 'publish' ? <PostCarrierSpace embedded /> : null}
+        <AvailableLoads embedded />
       </div>
     );
   }

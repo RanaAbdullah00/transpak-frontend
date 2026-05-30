@@ -68,9 +68,6 @@ const MobileDrawer = ({ open, onClose }) => {
                 <NavLink to="/loads/manage?tab=freight" className={linkClass} onClick={onClose}>
                   {t('pages.dashboard.statOpenMarketplace')}
                 </NavLink>
-                <NavLink to="/loads/manage?tab=capacity" className={linkClass} onClick={onClose}>
-                  {t('loadsHub.navCapacityHub')}
-                </NavLink>
                 <NavLink to="/bids/mine" className={linkClass} onClick={onClose}>
                   {t('nav.myBids')}
                 </NavLink>

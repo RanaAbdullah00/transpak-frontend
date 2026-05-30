@@ -21,7 +21,8 @@ import {
 import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
-import { isActiveBidStatus } from '../../utils/bidStatus.js';
+import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 const LoadDetails = () => {
   const { id } = useParams();
@@ -70,10 +71,21 @@ const LoadDetails = () => {
     fetchData();
   }, [id, user?.id, fetchData]);
 
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'bids' && scope !== 'loads') return;
+      fetchData();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [fetchData]);
+
   const handleAccept = async (bid) => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
       notifyBidAccepted(t('pages.bids.bidAccepted'));
+      emitRealtimeRefresh('bids');
       await fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.acceptFailed') }));
@@ -84,6 +96,7 @@ const LoadDetails = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject` });
       notifyBidRejected(t('pages.bids.bidRejected'));
+      emitRealtimeRefresh('bids');
       await fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.rejectFailed') }));
@@ -94,6 +107,7 @@ const LoadDetails = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
       notifyCounterOffer(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
+      emitRealtimeRefresh('bids');
       await fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.suggestFailed') }));
@@ -123,7 +137,7 @@ const LoadDetails = () => {
   if (!load) return <div className="container py-3 text-muted">{t('pages.loads.failedLoadDetail')}</div>;
 
   const isOpen = load.status === 'open';
-  const approvedBid = bids.find((b) => b.status === 'accepted');
+  const approvedBid = bids.find((b) => normalizeBidStatus(b.status) === BID_STATUS.ACCEPTED);
 
   return (
     <div className="container py-3">

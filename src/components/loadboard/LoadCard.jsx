@@ -21,7 +21,9 @@ const LoadCard = ({
 }) => {
   const { t } = useLanguage();
   const expectedPrice = Number(load?.expectedPrice ?? 0);
-  const distance = load?.distance ?? '—';
+  const distRaw = load?.distance ?? load?.distanceKm;
+  const distance =
+    distRaw != null && Number(distRaw) > 0 ? Math.round(Number(distRaw)) : '—';
   const shipperId = load?.shipperId || null;
   const deadlineMs = load?.deadline ? new Date(load.deadline).getTime() : null;
   const isDeadlinePast = deadlineMs != null && !Number.isNaN(deadlineMs) && Date.now() > deadlineMs;

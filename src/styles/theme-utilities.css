@@ -175,6 +175,30 @@
   outline-offset: 2px;
 }
 
+.tp-dashboard--admin .tp-admin-activity-list .list-group-item {
+  background: var(--tp-surface, #fff);
+  color: var(--tp-text, #0f172a);
+  border-color: var(--tp-border, rgba(15, 23, 42, 0.08));
+}
+
+.tp-dashboard--admin .tp-admin-activity-list .list-group-item-action:hover,
+.tp-dashboard--admin .tp-admin-activity-list .list-group-item-action:focus {
+  background: var(--tp-surface-muted, #f8fafc);
+  color: var(--tp-text, #0f172a);
+}
+
+body.dark-theme .tp-dashboard--admin .tp-admin-activity-list .list-group-item,
+body.dark-mode .tp-dashboard--admin .tp-admin-activity-list .list-group-item {
+  background: var(--tp-surface, #1e293b);
+  color: var(--tp-text, #f1f5f9);
+  border-color: var(--tp-border, rgba(148, 163, 184, 0.2));
+}
+
+body.dark-theme .tp-dashboard--admin .tp-admin-activity-list .list-group-item-action:hover,
+body.dark-mode .tp-dashboard--admin .tp-admin-activity-list .list-group-item-action:hover {
+  background: var(--tp-surface-muted, #334155);
+}
+
 /* Role dashboards */
 .tp-dashboard {
   --tp-dash-accent: var(--tp-role-accent, var(--pak-primary));

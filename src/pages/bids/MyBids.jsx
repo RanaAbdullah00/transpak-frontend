@@ -11,6 +11,7 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 import { isTruckMatchingEligible } from '../../utils/fleetApi.js';
 import { isActiveBidStatus } from '../../utils/bidStatus.js';
@@ -54,6 +55,16 @@ const MyBids = () => {
 
   useEffect(() => {
     fetchBidsData();
+  }, [fetchBidsData]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'bids') return;
+      fetchBidsData();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
   }, [fetchBidsData]);
 
   useEffect(() => {
@@ -110,6 +121,7 @@ const MyBids = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept-suggestion` });
       notifySuccess(t('pages.bids.suggestionAccepted'));
+      emitRealtimeRefresh('bids');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptSuggestionFailed') }));
@@ -120,6 +132,7 @@ const MyBids = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject-suggestion` });
       notifySuccess(t('pages.bids.suggestionRejected'));
+      emitRealtimeRefresh('bids');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectSuggestionFailed') }));
@@ -130,6 +143,7 @@ const MyBids = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/suggest-carrier`, data: { amount } });
       notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
+      emitRealtimeRefresh('bids');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
