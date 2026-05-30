@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import api from '../services/api.js';
-import { unwrapBody } from '../utils/unwrapApi.js';
+import { unwrapBody, ensureAdminList } from '../utils/unwrapApi.js';
 import { formatUserError } from '../utils/userErrors.js';
 import { notifyApiError } from '../utils/notifySystem.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
@@ -15,7 +15,9 @@ export const useApi = () => {
     setError(null);
     try {
       const response = await api({ ...config, skipGlobalErrorToast: skipToast });
-      return unwrapBody(response.data);
+      const data = unwrapBody(response.data);
+      if (config?.expectList) return ensureAdminList(data, config.listKey);
+      return data ?? {};
     } catch (err) {
       const canceled =
         err?.code === 'ERR_CANCELED' ||

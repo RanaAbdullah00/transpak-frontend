@@ -20,7 +20,6 @@ import { useAuth } from '../../hooks/useAuth.js';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
 import { SidebarProfileSheet } from '../profile/ProfileSheet.jsx';
 import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
-import BrandLogo from './BrandLogo.jsx';
 
 const navLinkClass = ({ isActive }) =>
   `nav-link d-flex align-items-center gap-2 rounded-lg px-3 py-2 mb-1 ${isActive ? 'active' : ''}`;
@@ -40,9 +39,6 @@ const Sidebar = () => {
 
   return (
     <aside className="d-none d-md-block sidebar-fixed sidebar-aside d-flex flex-column">
-      <div className="px-3 pt-3 pb-2 border-bottom border-secondary-subtle">
-        <BrandLogo variant="mark" title={t('common.appName')} />
-      </div>
       <nav className="nav flex-column p-3 small flex-grow-1 overflow-auto tp-sidebar-nav">
         <NavLink to={dashboardPath} className={navLinkClass} end>
           <FaTachometerAlt />

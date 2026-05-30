@@ -2,7 +2,7 @@
 
 let debounceTimer = null;
 let lastDispatchAt = 0;
-const MIN_GAP_MS = 2800;
+const MIN_GAP_MS = 6000;
 
 export function dispatchAuthUnauthorized() {
   const now = Date.now();

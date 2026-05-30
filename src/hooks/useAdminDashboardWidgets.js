@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ADMIN_DASHBOARD_WIDGETS,
+  EMPTY_ADMIN_DASHBOARD,
   fetchAdminDashboardResilient,
   fetchAdminWidget,
-  mergeAdminDashboardWidgets
+  mergeAdminDashboardWidgets,
+  normalizeWidgetPayload
 } from '../utils/adminDashboardApi.js';
 
 const emptyWidgetState = () =>
@@ -52,6 +54,7 @@ export function useAdminDashboardWidgets(request) {
             data: state.data ?? null,
             error: state.error ?? null,
             code: state.code ?? null,
+            httpStatus: state.httpStatus ?? null,
             attempts: state.attempts ?? 0
           });
         }
@@ -67,13 +70,14 @@ export function useAdminDashboardWidgets(request) {
       try {
         const out = await fetchAdminWidget(request, widget);
         if (!mountedRef.current) return;
-        patchWidget(widget, { loading: false, data: out.data, error: null, attempts: out.attempts });
+        patchWidget(widget, { loading: false, data: normalizeWidgetPayload(out.data), error: null, attempts: out.attempts });
       } catch (err) {
         if (!mountedRef.current) return;
         patchWidget(widget, {
           loading: false,
           error: err?.message || 'Unavailable',
           code: err?.code || null,
+          httpStatus: err?.httpStatus ?? err?.response?.status ?? null,
           attempts: err?.attempt || 0
         });
       }
@@ -82,23 +86,25 @@ export function useAdminDashboardWidgets(request) {
   );
 
   const live = useMemo(() => mergeAdminDashboardWidgets(widgetState), [widgetState]);
+  const safeLive = live ?? EMPTY_ADMIN_DASHBOARD;
 
   const widgetFailed = useCallback(
-    (id) => Boolean(widgetState[id]?.error && !widgetState[id]?.data),
+    (id) => Boolean(widgetState?.[id]?.error && !widgetState?.[id]?.data),
     [widgetState]
   );
 
-  const widgetLoading = useCallback((id) => Boolean(widgetState[id]?.loading), [widgetState]);
+  const widgetLoading = useCallback((id) => Boolean(widgetState?.[id]?.loading), [widgetState]);
 
   return {
     widgetState,
-    live,
+    live: safeLive,
     initialLoading,
     loadAll,
     retryWidget,
     widgetFailed,
     widgetLoading,
-    anyOk: live.anyOk,
-    allFailed: live.allFailed
+    anyOk: safeLive.anyOk,
+    allFailed: safeLive.allFailed,
+    authRequired: safeLive.authRequired
   };
 }

@@ -6,7 +6,6 @@ import { useAuth } from '../../hooks/useAuth.js';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
-import BrandLogo from './BrandLogo.jsx';
 
 const linkClass = ({ isActive }) =>
   `list-group-item list-group-item-action border-0 rounded-lg mb-1 ${isActive ? 'active' : ''}`;
@@ -42,10 +41,7 @@ const MobileDrawer = ({ open, onClose }) => {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
-            <div className="d-flex align-items-center gap-2">
-              <BrandLogo variant="mark" title="TransPak" className="tp-drawer-brand" />
-              <div className="fw-bold mb-0">{t('nav.menu')}</div>
-            </div>
+            <div className="fw-bold mb-0">{t('nav.menu')}</div>
             <button type="button" className="btn btn-sm btn-outline-secondary rounded-lg" onClick={onClose}>
               {t('nav.close')}
             </button>

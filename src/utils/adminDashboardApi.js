@@ -1,11 +1,104 @@
-import { unwrapErrorCode } from './unwrapApi.js';
+import { unwrapErrorCode, ensureArray, ensureObject } from './unwrapApi.js';
 
 export const ADMIN_DASHBOARD_WIDGETS = ['users', 'loads', 'bids', 'shipments', 'audit', 'observability'];
+
+/** Safe defaults for merged admin dashboard live payload. */
+export const EMPTY_ADMIN_DASHBOARD = {
+  meta: { dbReachable: true, partialFailure: false, widgetMode: true },
+  stats: { generatedAt: new Date().toISOString() },
+  observability: null,
+  recentLoads: [],
+  recentBids: [],
+  recentShipments: [],
+  recentUsers: [],
+  recentTrucks: [],
+  auditEvents: [],
+  recentDisputes: [],
+  anyOk: false,
+  allFailed: true,
+  authRequired: false
+};
+
+export function coerceAdminDashboardLive(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return { ...EMPTY_ADMIN_DASHBOARD };
+  }
+  return {
+    meta:
+      raw.meta && typeof raw.meta === 'object'
+        ? { ...EMPTY_ADMIN_DASHBOARD.meta, ...raw.meta }
+        : { ...EMPTY_ADMIN_DASHBOARD.meta },
+    stats:
+      raw.stats && typeof raw.stats === 'object'
+        ? { ...EMPTY_ADMIN_DASHBOARD.stats, ...raw.stats }
+        : { ...EMPTY_ADMIN_DASHBOARD.stats },
+    observability:
+      raw.observability && typeof raw.observability === 'object' ? raw.observability : null,
+    recentLoads: ensureArray(raw.recentLoads),
+    recentBids: ensureArray(raw.recentBids),
+    recentShipments: ensureArray(raw.recentShipments),
+    recentUsers: ensureArray(raw.recentUsers),
+    recentTrucks: ensureArray(raw.recentTrucks),
+    auditEvents: ensureArray(raw.auditEvents),
+    recentDisputes: ensureArray(raw.recentDisputes),
+    widgetState: raw.widgetState ?? null,
+    anyOk: Boolean(raw.anyOk),
+    allFailed: Boolean(raw.allFailed),
+    authRequired: Boolean(raw.authRequired)
+  };
+}
 
 const WIDGET_RETRY_MS = [0, 450, 900];
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Strip widget envelope — keep stats/lists for merge. */
+export function normalizeWidgetPayload(data) {
+  if (!data || typeof data !== 'object' || data.ok === false) return null;
+  const { ok, widget, durationMs, error, ...rest } = data;
+  const payload = Object.keys(rest).length ? { ...rest } : { ...data };
+  delete payload.ok;
+  delete payload.widget;
+  delete payload.durationMs;
+  delete payload.error;
+
+  for (const key of [
+    'recentLoads',
+    'recentBids',
+    'recentShipments',
+    'recentUsers',
+    'recentTrucks',
+    'auditEvents',
+    'recentDisputes'
+  ]) {
+    if (key in payload) payload[key] = ensureArray(payload[key]);
+  }
+  if (payload.stats) payload.stats = ensureObject(payload.stats);
+  if (payload.meta) payload.meta = ensureObject(payload.meta);
+  if (payload.observability && typeof payload.observability !== 'object') {
+    payload.observability = null;
+  }
+  return payload;
+}
+
+function classifyWidgetError(err) {
+  const httpStatus = err?.httpStatus ?? err?.response?.status ?? null;
+  const code = unwrapErrorCode(err) || err?.code || null;
+  let message = err?.message || 'Unavailable';
+  if (httpStatus === 401 || code === 'UNAUTHORIZED' || code === 'INVALID_TOKEN') {
+    message = 'Session expired';
+  } else if (httpStatus === 403 || code === 'FORBIDDEN' || code === 'FORBIDDEN_ROLE') {
+    message = 'Access denied';
+  } else if (httpStatus >= 500 || code === 'SERVER_ERROR' || code === 'WIDGET_ERROR') {
+    message = 'Server error';
+  } else if (httpStatus === 503 || code === 'DATABASE_UNAVAILABLE') {
+    message = 'Database unavailable';
+  } else if (!httpStatus && (code === 'ERR_NETWORK' || String(message).toLowerCase().includes('network'))) {
+    message = 'Network error';
+  }
+  return { message, code, httpStatus };
 }
 
 function isAbortError(err) {
@@ -68,10 +161,11 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
         skipGlobalErrorToast: true
       });
       if (data?.ok === false) {
-        const err = new Error(data?.error?.message || 'Widget unavailable');
+        const err = new Error(data?.error?.message || 'Widget query failed');
         err.code = data?.error?.code || 'WIDGET_ERROR';
         err.widget = id;
         err.attempt = attempt + 1;
+        err.httpStatus = 200;
         lastError = err;
         if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
@@ -79,7 +173,8 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
         }
         continue;
       }
-      return { widget: id, data, error: null, attempts: attempt + 1 };
+      const normalized = normalizeWidgetPayload(data);
+      return { widget: id, data: normalized, error: null, attempts: attempt + 1 };
     } catch (err) {
       if (isAbortError(err)) {
         lastError = err;
@@ -89,9 +184,13 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
       lastError = err;
       lastError.widget = id;
       lastError.attempt = attempt + 1;
+      const classified = classifyWidgetError(err);
+      lastError.httpStatus = classified.httpStatus;
+      lastError.code = classified.code;
+      lastError.message = classified.message;
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
-        console.warn('[admin-widget]', id, 'failed', unwrapErrorCode(err) || err.message, `attempt ${attempt + 1}`);
+        console.warn('[admin-widget]', id, 'failed', classified.code || classified.message, `attempt ${attempt + 1}`);
       }
     }
   }
@@ -110,10 +209,12 @@ export async function fetchAllAdminWidgets(request, { onWidget } = {}) {
         results[widget] = { ...base, data: out.data, attempts: out.attempts };
         if (onWidget) onWidget(widget, results[widget]);
       } catch (err) {
+        const classified = classifyWidgetError(err);
         results[widget] = {
           ...base,
-          error: err?.message || 'Unavailable',
-          code: err?.code || unwrapErrorCode(err),
+          error: classified.message,
+          code: classified.code,
+          httpStatus: classified.httpStatus,
           attempts: err?.attempt || 0
         };
         if (onWidget) onWidget(widget, results[widget]);
@@ -132,41 +233,50 @@ export function mergeAdminDashboardWidgets(widgetState) {
   let recentBids = [];
   let recentShipments = [];
   let recentUsers = [];
+  let recentTrucks = [];
   let auditEvents = [];
   let recentDisputes = [];
 
-  const users = widgetState?.users?.data;
-  if (users?.stats) Object.assign(stats, users.stats);
-  if (users?.partialFailure) meta = { ...meta, partialFailure: true };
-  if (users?.recentUsers) recentUsers = users.recentUsers;
+  const users = ensureObject(widgetState?.users?.data);
+  if (users.stats) Object.assign(stats, ensureObject(users.stats));
+  if (users.partialFailure) meta = { ...meta, partialFailure: true };
+  recentUsers = ensureArray(users.recentUsers);
 
-  const loads = widgetState?.loads?.data;
-  if (loads?.stats) Object.assign(stats, loads.stats);
-  if (loads?.partialFailure) meta = { ...meta, partialFailure: true };
-  if (loads?.recentLoads) recentLoads = loads.recentLoads;
+  const loads = ensureObject(widgetState?.loads?.data);
+  if (loads.stats) Object.assign(stats, ensureObject(loads.stats));
+  if (loads.partialFailure) meta = { ...meta, partialFailure: true };
+  recentLoads = ensureArray(loads.recentLoads);
 
-  const bids = widgetState?.bids?.data;
-  if (bids?.stats) Object.assign(stats, bids.stats);
-  if (bids?.partialFailure) meta = { ...meta, partialFailure: true };
-  if (bids?.recentBids) recentBids = bids.recentBids;
+  const bids = ensureObject(widgetState?.bids?.data);
+  if (bids.stats) Object.assign(stats, ensureObject(bids.stats));
+  if (bids.partialFailure) meta = { ...meta, partialFailure: true };
+  recentBids = ensureArray(bids.recentBids);
 
-  const shipments = widgetState?.shipments?.data;
-  if (shipments?.stats) Object.assign(stats, shipments.stats);
-  if (shipments?.partialFailure) meta = { ...meta, partialFailure: true };
-  if (shipments?.recentShipments) recentShipments = shipments.recentShipments;
+  const shipments = ensureObject(widgetState?.shipments?.data);
+  if (shipments.stats) Object.assign(stats, ensureObject(shipments.stats));
+  if (shipments.partialFailure) meta = { ...meta, partialFailure: true };
+  recentShipments = ensureArray(shipments.recentShipments);
 
-  const audit = widgetState?.audit?.data;
-  if (audit?.auditEvents) auditEvents = audit.auditEvents;
-  if (audit?.recentDisputes) recentDisputes = audit.recentDisputes;
+  const audit = ensureObject(widgetState?.audit?.data);
+  auditEvents = ensureArray(audit.auditEvents);
+  recentDisputes = ensureArray(audit.recentDisputes);
 
-  const obs = widgetState?.observability?.data;
-  if (obs?.meta) meta = { ...meta, ...obs.meta };
-  if (obs?.observability) observability = obs.observability;
+  const obs = ensureObject(widgetState?.observability?.data);
+  if (obs.meta) meta = { ...meta, ...ensureObject(obs.meta) };
+  if (obs.observability && typeof obs.observability === 'object') {
+    observability = obs.observability;
+  }
 
   const anyOk = ADMIN_DASHBOARD_WIDGETS.some((w) => widgetState?.[w]?.data);
   const allFailed = ADMIN_DASHBOARD_WIDGETS.every((w) => widgetState?.[w]?.error && !widgetState?.[w]?.data);
+  const authRequired =
+    allFailed &&
+    ADMIN_DASHBOARD_WIDGETS.every((w) => {
+      const st = widgetState?.[w];
+      return st?.httpStatus === 401 || st?.code === 'UNAUTHORIZED' || st?.code === 'INVALID_TOKEN';
+    });
 
-  return {
+  return coerceAdminDashboardLive({
     meta,
     stats,
     observability,
@@ -174,12 +284,14 @@ export function mergeAdminDashboardWidgets(widgetState) {
     recentBids,
     recentShipments,
     recentUsers,
+    recentTrucks,
     auditEvents,
     recentDisputes,
     widgetState,
     anyOk,
-    allFailed
-  };
+    allFailed,
+    authRequired
+  });
 }
 
 /**
@@ -194,8 +306,8 @@ export async function fetchAdminDashboard(request) {
     const isLegacy = path === '/admin/stats';
     try {
       const data = await request({ url: path, skipGlobalErrorToast: true });
-      if (isLegacy) return legacyStatsPayload(data);
-      return data;
+      if (isLegacy) return coerceAdminDashboardLive(legacyStatsPayload(data));
+      return coerceAdminDashboardLive(data);
     } catch (err) {
       lastError = err;
       const status = err?.response?.status;
@@ -218,17 +330,20 @@ export async function fetchAdminDashboardResilient(request, { onWidget } = {}) {
   if (merged.anyOk) {
     return merged;
   }
+  if (merged.authRequired) {
+    return merged;
+  }
 
   try {
     const legacy = await fetchAdminDashboard(request);
-    return {
+    return coerceAdminDashboardLive({
       ...legacy,
       widgetState,
       anyOk: true,
       allFailed: false,
       meta: { ...(legacy.meta || {}), fallback: 'monolithic' }
-    };
+    });
   } catch {
-    return { ...merged, allFailed: true };
+    return coerceAdminDashboardLive({ ...merged, allFailed: true });
   }
 }

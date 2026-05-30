@@ -10,6 +10,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAdminDashboardWidgets } from '../../hooks/useAdminDashboardWidgets.js';
 import { canAccessAdminRoutes } from '../../utils/authSession.js';
 import { formatLoadDisplayId } from '../../utils/displayId.js';
+import { describeAdminWidgetError } from '../../utils/adminWidgetErrors.js';
 import { formatStatValue } from '../../utils/formatStat.js';
 
 const POLL_MS = 28000;
@@ -48,7 +49,7 @@ const AdminDashboardPage = () => {
   const { request } = useApi();
   const { t, isUrdu } = useLanguage();
   const locale = isUrdu ? 'ur-PK' : 'en-PK';
-  const { live, widgetState, initialLoading, loadAll, retryWidget, widgetFailed, widgetLoading, anyOk } =
+  const { live, widgetState, initialLoading, loadAll, retryWidget, widgetFailed, widgetLoading, anyOk, authRequired } =
     useAdminDashboardWidgets(request);
 
   const adminReady =
@@ -60,9 +61,16 @@ const AdminDashboardPage = () => {
   }, [loadAll, adminReady]);
 
   useEffect(() => {
-    const onRefresh = () => loadAll();
+    let timer = null;
+    const onRefresh = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => loadAll(), 1200);
+    };
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+    };
   }, [loadAll]);
 
   useSafeInterval(() => loadAll(), POLL_MS, { enabled: adminReady });
@@ -212,6 +220,13 @@ const AdminDashboardPage = () => {
         </button>
       </div>
 
+      {authRequired ? (
+        <div className="alert alert-warning rounded-3 border-0 shadow-sm mb-3" role="alert">
+          <div className="fw-semibold mb-1">{t('pages.admin.widgetAuthError')}</div>
+          <p className="small mb-0 text-muted">{t('pages.admin.widgetAuthErrorHint')}</p>
+        </div>
+      ) : null}
+
       {meta?.dbReachable === false ? (
         <div className="alert alert-danger rounded-3 border-0 shadow-sm mb-3" role="alert">
           <div className="fw-semibold mb-1">{t('pages.admin.dbUnreachable')}</div>
@@ -258,7 +273,9 @@ const AdminDashboardPage = () => {
                   </div>
                   <div className="small text-body-secondary mt-2">{c.hint}</div>
                   {failed ? (
-                    <p className="small text-warning mb-0 mt-1">{t('pages.admin.widgetUnavailable')}</p>
+                    <p className="small text-warning mb-0 mt-1">
+                      {describeAdminWidgetError(widgetState?.[source], t)}
+                    </p>
                   ) : null}
                 </div>
               </div>
@@ -272,7 +289,7 @@ const AdminDashboardPage = () => {
           <AdminWidgetShell
             title={t('pages.admin.observabilityTitle')}
             loading={widgetLoading('observability')}
-            error={widgetFailed('observability') ? widgetState.observability?.error : null}
+            error={widgetFailed('observability') ? describeAdminWidgetError(widgetState?.observability, t) : null}
             onRetry={() => retryWidget('observability')}
           >
             {live?.observability ? (
@@ -311,14 +328,14 @@ const AdminDashboardPage = () => {
               <AdminWidgetShell
                 title={t('pages.admin.auditLogTitle')}
                 loading={widgetLoading('audit')}
-                error={widgetFailed('audit') ? widgetState.audit?.error : null}
+                error={widgetFailed('audit') ? describeAdminWidgetError(widgetState?.audit, t) : null}
                 onRetry={() => retryWidget('audit')}
               >
-                {!live?.auditEvents?.length ? (
+                {(live?.auditEvents ?? []).length === 0 ? (
                   <p className="small text-muted mb-0">{t('pages.admin.auditLogEmpty')}</p>
                 ) : (
                   <ul className="list-group list-group-flush tp-admin-activity-list mb-0">
-                    {live.auditEvents.map((ev) => (
+                    {(live?.auditEvents ?? []).map((ev) => (
                       <li key={ev.id} className="list-group-item px-0 border-0 border-bottom tp-border-theme">
                         <div className="d-flex justify-content-between gap-2">
                           <div className="min-w-0">
@@ -347,7 +364,18 @@ const AdminDashboardPage = () => {
               <AdminWidgetShell
                 title={t('pages.admin.recentActivity')}
                 loading={activityLoading && !activity.length}
-                error={activityWidgetsFailed ? t('pages.admin.widgetUnavailable') : null}
+                error={
+                  activityWidgetsFailed
+                    ? describeAdminWidgetError(
+                        widgetState?.loads?.error
+                          ? widgetState.loads
+                          : widgetState?.bids?.error
+                            ? widgetState.bids
+                            : widgetState?.shipments,
+                        t
+                      )
+                    : null
+                }
                 onRetry={retryActivity}
               >
                 {!activity.length ? (

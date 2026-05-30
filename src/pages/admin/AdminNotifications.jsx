@@ -5,6 +5,7 @@ import EmptyState from '../../components/ui/EmptyState.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
 
 const AdminNotifications = () => {
@@ -19,10 +20,13 @@ const AdminNotifications = () => {
     (async () => {
       try {
         setLoading(true);
-        const data = await request({ url: '/admin/notifications' });
-        if (!cancelled) setRows(Array.isArray(data) ? data : []);
+        const data = await request({ url: '/admin/notifications', expectList: true });
+        if (!cancelled) setRows(ensureArray(data));
       } catch (e) {
-        if (!cancelled) setError(formatUserError(e, t, { fallback: t('pages.admin.notificationsLoadFailed') }));
+        if (!cancelled) {
+          setError(formatUserError(e, t, { fallback: t('pages.admin.notificationsLoadFailed') }));
+          setRows([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -1,30 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
-const SocketReconnectIndicator = ({ socket }) => {
+const SocketReconnectIndicator = ({ status = 'idle' }) => {
   const { t } = useLanguage();
-  const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    if (!socket) return undefined;
-    const onDisconnect = () => setVisible(true);
-    const onConnect = () => {
-      setVisible(false);
-    };
-    socket.on('disconnect', onDisconnect);
-    socket.on('connect', onConnect);
-    if (!socket.connected) setVisible(true);
-    return () => {
-      socket.off('disconnect', onDisconnect);
-      socket.off('connect', onConnect);
-    };
-  }, [socket]);
+  if (status === 'connected' || status === 'idle') return null;
 
-  if (!visible) return null;
+  const isLost = status === 'lost';
 
   return (
-    <div className="tp-socket-status tp-socket-status--visible" role="status" aria-live="polite">
-      {t('realtime.reconnecting')}
+    <div
+      className={`tp-socket-status tp-socket-status--visible ${isLost ? 'tp-socket-status--lost' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
+      {isLost ? t('realtime.connectionLost') : t('realtime.reconnecting')}
     </div>
   );
 };

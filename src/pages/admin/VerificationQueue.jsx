@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const VerificationQueue = () => {
@@ -14,8 +15,8 @@ const VerificationQueue = () => {
   useEffect(() => {
     (async () => {
       try {
-        const data = await request({ url: '/admin/users?verified=false' });
-        setUsers(Array.isArray(data) ? data : []);
+        const data = await request({ url: '/admin/users?verified=false', expectList: true });
+        setUsers(ensureArray(data));
       } catch {
         setUsers([]);
       }

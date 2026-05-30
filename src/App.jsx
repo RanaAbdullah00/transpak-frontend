@@ -145,7 +145,7 @@ function AppRealtimeChrome() {
   const app = useContext(AppContext);
   return (
     <>
-      <SocketReconnectIndicator socket={app?.getSocket?.()} />
+      <SocketReconnectIndicator status={app?.socketStatus} />
       <ReviewPromptHost />
     </>
   );

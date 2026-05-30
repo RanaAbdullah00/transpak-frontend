@@ -66,14 +66,18 @@ const PlaceBid = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await request({
+      const bid = await request({
         url: '/bids',
         method: 'POST',
         data: {
           loadId: load.id,
           amount: Number(amount)
-        }
+        },
+        skipGlobalErrorToast: true
       });
+      if (!bid?.id && !bid?.loadId) {
+        throw new Error(t('pages.placeBid.bidFailed'));
+      }
 
       notifySuccess(t('pages.placeBid.bidPlaced', { code: load.code }));
       window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));

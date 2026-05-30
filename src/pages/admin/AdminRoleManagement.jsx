@@ -6,6 +6,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { ensureArray, ensureRolesArray } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
 
 const ROLE_OPTIONS = ['shipper', 'carrier', 'admin'];
@@ -26,13 +27,14 @@ const AdminRoleManagement = () => {
     try {
       setLoading(true);
       setListError(null);
-      const data = await request({ url: '/admin/users' });
-      const list = Array.isArray(data) ? data : [];
+      const data = await request({ url: '/admin/users', expectList: true });
+      const list = ensureArray(data);
       setRows(list);
       const nextDrafts = {};
       for (const u of list) {
         const id = u.id;
-        const initial = ROLE_OPTIONS.includes(u.activeRole) ? u.activeRole : u.roles?.[0] || 'shipper';
+        const roles = ensureRolesArray(u.roles);
+        const initial = ROLE_OPTIONS.includes(u.activeRole) ? u.activeRole : roles[0] || 'shipper';
         nextDrafts[id] = initial;
       }
       setDrafts(nextDrafts);

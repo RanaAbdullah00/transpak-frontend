@@ -5,6 +5,7 @@ import ConfirmActionModal from '../../components/ui/ConfirmActionModal.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { ensureArray, ensureRolesArray } from '../../utils/unwrapApi.js';
 import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const AdminUsers = () => {
@@ -17,8 +18,8 @@ const AdminUsers = () => {
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await request({ url: '/admin/users' });
-      setUsers(Array.isArray(data) ? data : []);
+      const data = await request({ url: '/admin/users', expectList: true });
+      setUsers(ensureArray(data));
     } catch (e) {
       setUsers([]);
     } finally {
@@ -75,7 +76,7 @@ const AdminUsers = () => {
               </thead>
               <tbody>
                 {users.map((u) => {
-                  const isAdmin = (u.roles || []).includes('admin');
+                  const isAdmin = ensureRolesArray(u.roles).includes('admin');
                   return (
                     <tr key={u.id}>
                       <td className="ps-3 py-3 fw-semibold">{u.name}</td>
@@ -86,7 +87,7 @@ const AdminUsers = () => {
                         <small className="text-muted">{u.cnic}</small>
                       </td>
                       <td className="py-3">
-                        <span className="badge bg-secondary">{(u.roles || []).join(', ')}</span>
+                        <span className="badge bg-secondary">{ensureRolesArray(u.roles).join(', ')}</span>
                       </td>
                       <td className="py-3 text-end">
                         <Button

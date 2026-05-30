@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { translateShipmentOrLoadStatus } from '../../utils/i18nLabels.js';
 
@@ -16,8 +17,8 @@ const AdminLoads = () => {
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await request({ url: '/admin/loads' });
-      setLoads(Array.isArray(data) ? data : []);
+      const data = await request({ url: '/admin/loads', expectList: true });
+      setLoads(ensureArray(data));
     } catch {
       setLoads([]);
     } finally {

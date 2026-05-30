@@ -6,6 +6,7 @@ import EmptyState from '../../components/ui/EmptyState.jsx';
 import { SkeletonCard } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const Disputes = () => {
@@ -16,8 +17,8 @@ const Disputes = () => {
   useEffect(() => {
     (async () => {
       try {
-        const data = await request({ url: '/admin/disputes' });
-        setDisputes(Array.isArray(data) ? data : []);
+        const data = await request({ url: '/admin/disputes', expectList: true });
+        setDisputes(ensureArray(data));
       } catch {
         setDisputes([]);
       }

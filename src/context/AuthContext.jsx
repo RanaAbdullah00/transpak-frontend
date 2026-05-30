@@ -1,30 +1,27 @@
 import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import { fetchProfileApi, patchActiveRoleApi } from '../services/authService.js';
 import { safeUnwrapAuthResponse } from '../utils/authApiSafe.js';
 import { emitRoleSwitchComplete, getUserRoles } from '../utils/roleSwitch.js';
 import {
   applyAuthSessionFromApi,
-  canAccessAdminRoutes,
   clearAuthStorage,
-  mergeAuthUser,
   setAuthToken
 } from '../utils/authSession.js';
 import { refreshAuthSessionFromServer } from '../utils/authRefresh.js';
 import { clearEntireSession, prepareWorkspaceSwitch } from '../utils/sessionCleanup.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
-import { isAdminRoutePath } from '../utils/rbac.js';
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [roleSwitching, setRoleSwitching] = useState(false);
   const [sessionVersion, setSessionVersion] = useState(0);
   const userRef = useRef(null);
   const switchLockRef = useRef(false);
+  const lastTokenRef = useRef(null);
+  const tokenRefreshLockRef = useRef(false);
 
   userRef.current = user;
 
@@ -51,8 +48,14 @@ export const AuthProvider = ({ children }) => {
   const refreshSession = useCallback(async () => {
     const result = await refreshAuthSessionFromServer();
     if (result?.user) {
+      const prev = userRef.current;
       setUser(result.user);
-      setSessionVersion((v) => v + 1);
+      const identityChanged =
+        String(prev?.id || '') !== String(result.user.id || '') ||
+        String(prev?.activeRole || '') !== String(result.user.activeRole || '');
+      if (identityChanged) {
+        setSessionVersion((v) => v + 1);
+      }
     }
     return result;
   }, []);
@@ -80,23 +83,6 @@ export const AuthProvider = ({ children }) => {
             return;
           }
           login({ ...data, token: data.token || token || undefined });
-
-          if (
-            canAccessAdminRoutes(mergeAuthUser(data)) &&
-            isAdminRoutePath(location.pathname) &&
-            data.user.activeRole !== 'admin'
-          ) {
-            try {
-              await patchActiveRoleApi('admin');
-              const again = await fetchProfileApi();
-              const refreshed = safeUnwrapAuthResponse(again);
-              if (!cancelled && refreshed?.user) {
-                login({ ...refreshed, token: refreshed.token || token });
-              }
-            } catch {
-              /* admin bootstrap optional */
-            }
-          }
         } else if (!cancelled) {
           logout();
         }
@@ -118,16 +104,26 @@ export const AuthProvider = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, [login, logout, location.pathname]);
+  }, [login, logout]);
 
   useEffect(() => {
+    lastTokenRef.current = getAuthToken();
     const onTokenChanged = () => {
       const token = getAuthToken();
       if (!token) {
         logout();
         return;
       }
-      refreshSession().catch(() => logout());
+      if (token === lastTokenRef.current || tokenRefreshLockRef.current) return;
+      tokenRefreshLockRef.current = true;
+      refreshSession()
+        .catch((err) => {
+          if (err?.response?.status === 401) logout();
+        })
+        .finally(() => {
+          tokenRefreshLockRef.current = false;
+          lastTokenRef.current = getAuthToken();
+        });
     };
     const onStorage = (e) => {
       if (e.key === 'transpak_token' && e.storageArea === sessionStorage) {
@@ -196,10 +192,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const onUnauthorized = async () => {
+      if (tokenRefreshLockRef.current) return;
       try {
         await refreshSession();
-      } catch {
-        logout();
+      } catch (err) {
+        if (err?.response?.status === 401) logout();
       }
     };
     const onRefreshed = (e) => {

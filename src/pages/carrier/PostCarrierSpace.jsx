@@ -47,7 +47,7 @@ const PostCarrierSpace = ({ embedded = false }) => {
     }
     setLoading(true);
     try {
-      await request({
+      const data = await request({
         method: 'POST',
         url: '/carrier-space',
         data: {
@@ -58,8 +58,12 @@ const PostCarrierSpace = ({ embedded = false }) => {
           vehicleType: form.vehicleType,
           ratePerKg: form.ratePerKg ? Number(form.ratePerKg) : null,
           notes: form.notes.trim() || null
-        }
+        },
+        skipGlobalErrorToast: true
       });
+      if (!data?.id) {
+        throw new Error(t('loadsHub.spaceListFailed'));
+      }
       notifySuccess(t('loadsHub.spaceListed'));
       setForm(emptyForm());
       window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));

@@ -1,14 +1,15 @@
 /** Normalize GET /trucks/mine — supports legacy array or paginated payload. */
+import { ensureArray } from './unwrapApi.js';
+
 export function normalizeTrucksResponse(data) {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.items)) return data.items;
-  return [];
+  return ensureArray(data);
 }
 
 export function normalizeFleetListResponse(data) {
-  if (Array.isArray(data)) return { items: data, total: data.length };
-  if (data && Array.isArray(data.items)) {
-    return { items: data.items, total: Number(data.total) || data.items.length };
+  const items = ensureArray(data);
+  if (Array.isArray(data)) return { items, total: items.length };
+  if (data && typeof data === 'object' && Array.isArray(data.items)) {
+    return { items, total: Number(data.total) || items.length };
   }
   return { items: [], total: 0 };
 }

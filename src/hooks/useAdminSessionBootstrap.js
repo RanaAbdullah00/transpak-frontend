@@ -2,12 +2,15 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth.js';
 import { canAccessAdminRoutes } from '../utils/authSession.js';
+import { patchActiveRoleApi, fetchProfileApi } from '../services/authService.js';
+import { safeUnwrapAuthResponse } from '../utils/authApiSafe.js';
+import { applyAuthSessionFromApi } from '../utils/authSession.js';
 
 /**
- * When an admin account opens /admin/*, persist workspace as admin (no UI toggle).
+ * When an admin account opens /admin/*, sync workspace to admin via API (not UI role switch).
  */
 export function useAdminSessionBootstrap() {
-  const { user, setActiveRole } = useAuth();
+  const { user, login } = useAuth();
   const location = useLocation();
   const bootstrappedRef = useRef(false);
 
@@ -21,8 +24,25 @@ export function useAdminSessionBootstrap() {
     if (user.activeRole === 'admin') return;
     if (bootstrappedRef.current) return;
     bootstrappedRef.current = true;
-    setActiveRole('admin').catch(() => {
-      bootstrappedRef.current = false;
-    });
-  }, [user?.id, user?.activeRole, location.pathname, setActiveRole]);
+
+    (async () => {
+      try {
+        const res = await patchActiveRoleApi('admin');
+        const data = safeUnwrapAuthResponse(res);
+        if (data?.user) {
+          applyAuthSessionFromApi(data);
+          login(data, { clearPrevious: false });
+          return;
+        }
+        const prof = await fetchProfileApi();
+        const fresh = safeUnwrapAuthResponse(prof);
+        if (fresh?.user) {
+          applyAuthSessionFromApi(fresh);
+          login(fresh, { clearPrevious: false });
+        }
+      } catch {
+        bootstrappedRef.current = false;
+      }
+    })();
+  }, [user?.id, user?.activeRole, location.pathname, login]);
 }

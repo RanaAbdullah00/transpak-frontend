@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { notifySuccess } from '../../components/ui/ToastProvider.jsx';
 
 const ShipmentControl = () => {
@@ -15,8 +16,8 @@ const ShipmentControl = () => {
   useEffect(() => {
     (async () => {
       try {
-        const data = await request({ url: '/admin/shipments' });
-        setShipments(Array.isArray(data) ? data : []);
+        const data = await request({ url: '/admin/shipments', expectList: true });
+        setShipments(ensureArray(data));
       } catch (e) {
         setShipments([]);
       }

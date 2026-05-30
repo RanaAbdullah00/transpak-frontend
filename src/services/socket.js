@@ -1,11 +1,17 @@
 import { io } from 'socket.io-client';
 import { getBackendOrigin } from '../utils/backendOrigin.js';
 
-const RECONNECT_REFRESH_MIN_MS = Number(import.meta.env.VITE_SOCKET_RECONNECT_MIN_MS || 2200);
-const PROD_MAX_RECONNECT_ATTEMPTS = Number(import.meta.env.VITE_SOCKET_MAX_RECONNECT || 30);
+const RECONNECT_REFRESH_MIN_MS = Number(import.meta.env.VITE_SOCKET_RECONNECT_MIN_MS || 8000);
+const MAX_RECONNECT_ATTEMPTS = Number(import.meta.env.VITE_SOCKET_MAX_RECONNECT || 3);
+
+function isAuthConnectError(err) {
+  const msg = String(err?.message || err || '').toLowerCase();
+  return /auth|jwt|unauthorized|forbidden|invalid token|not authenticated/.test(msg);
+}
 
 /**
  * Socket.io client (JWT in handshake). Server-delivered events only.
+ * One instance per session — max 3 reconnect attempts, then static "connection lost".
  */
 export function createSocketClient({
   token,
@@ -31,6 +37,7 @@ export function createSocketClient({
   let socket = null;
   let reconnectTimer = null;
   let lastReconnectRefreshAt = 0;
+  let reconnectExhausted = false;
   const handlers = [];
 
   const registerHandler = (event, fn) => {
@@ -42,7 +49,8 @@ export function createSocketClient({
   if (!token) {
     return {
       socket: null,
-      disconnect: () => {}
+      disconnect: () => {},
+      rejoinWorkspace: () => {}
     };
   }
 
@@ -51,22 +59,40 @@ export function createSocketClient({
       // eslint-disable-next-line no-console
       console.warn('[socket] No backend URL — set VITE_API_URL (or VITE_SOCKET_URL) in production');
     }
-    return { socket: null, disconnect: () => {} };
+    return { socket: null, disconnect: () => {}, rejoinWorkspace: () => {} };
   }
 
   const scheduleReconnectRefresh = () => {
+    if (reconnectExhausted) return;
     const now = Date.now();
     const elapsed = now - lastReconnectRefreshAt;
     const delay = Math.max(RECONNECT_REFRESH_MIN_MS - elapsed, 0);
     if (reconnectTimer) window.clearTimeout(reconnectTimer);
     reconnectTimer = window.setTimeout(() => {
       reconnectTimer = null;
+      if (reconnectExhausted) return;
       lastReconnectRefreshAt = Date.now();
       onReconnect?.();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('tp:realtime-refresh'));
       }
     }, delay);
+  };
+
+  const markExhausted = () => {
+    if (reconnectExhausted) return;
+    reconnectExhausted = true;
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    try {
+      if (socket?.io) socket.io.reconnection(false);
+      socket?.disconnect();
+    } catch {
+      /* ignore */
+    }
+    onConnectionChange?.(false, { exhausted: true });
   };
 
   try {
@@ -79,14 +105,13 @@ export function createSocketClient({
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: import.meta.env.PROD ? PROD_MAX_RECONNECT_ATTEMPTS : Infinity,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+      reconnectionDelay: 5000,
       reconnectionDelayMax: 10000,
       randomizationFactor: 0.4,
       timeout: 20000
     });
 
-    let hadConnected = false;
     const emitWorkspaceJoin = () => {
       if (ws && socket?.connected) {
         socket.emit('workspace:join', { workspace: ws });
@@ -94,19 +119,21 @@ export function createSocketClient({
     };
 
     const onConnect = () => {
+      reconnectExhausted = false;
       emitWorkspaceJoin();
       onConnectionChange?.(true);
-      hadConnected = true;
     };
 
     const onIoReconnect = () => {
+      if (reconnectExhausted) return;
       onConnectionChange?.(true);
       emitWorkspaceJoin();
       scheduleReconnectRefresh();
     };
 
     const onDisconnect = (reason) => {
-      onConnectionChange?.(false);
+      if (reconnectExhausted) return;
+      onConnectionChange?.(false, { reconnecting: reason !== 'io client disconnect' });
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.info('[socket] disconnected:', reason);
@@ -114,15 +141,28 @@ export function createSocketClient({
     };
 
     const onConnectError = (err) => {
+      if (isAuthConnectError(err)) {
+        markExhausted();
+        return;
+      }
+      if (!reconnectExhausted) {
+        onConnectionChange?.(false, { reconnecting: true });
+      }
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.warn('[socket] connect_error:', err?.message || err);
       }
     };
 
+    const onReconnectFailed = () => {
+      markExhausted();
+    };
+
     registerHandler('connect', onConnect);
     socket.io.on('reconnect', onIoReconnect);
     handlers.push(['__io_reconnect', onIoReconnect]);
+    socket.io.on('reconnect_failed', onReconnectFailed);
+    handlers.push(['__io_reconnect_failed', onReconnectFailed]);
 
     registerHandler('disconnect', onDisconnect);
     registerHandler('connect_error', onConnectError);
@@ -140,9 +180,21 @@ export function createSocketClient({
     socket = null;
   }
 
+  const rejoinWorkspace = (nextWorkspace) => {
+    const w =
+      nextWorkspace === 'shipper' || nextWorkspace === 'carrier' || nextWorkspace === 'admin'
+        ? nextWorkspace
+        : null;
+    if (w && socket?.connected) {
+      socket.emit('workspace:join', { workspace: w });
+    }
+  };
+
   return {
     socket,
+    rejoinWorkspace,
     disconnect: () => {
+      reconnectExhausted = true;
       if (reconnectTimer) {
         window.clearTimeout(reconnectTimer);
         reconnectTimer = null;
@@ -151,12 +203,17 @@ export function createSocketClient({
         if (socket) {
           handlers.forEach(([event, fn]) => {
             if (event === '__io_reconnect') {
-              socket.io.off('reconnect', fn);
+              socket.io?.off('reconnect', fn);
+            } else if (event === '__io_reconnect_failed') {
+              socket.io?.off('reconnect_failed', fn);
             } else {
               socket.off(event, fn);
             }
           });
+          socket.io?.off('reconnect');
+          socket.io?.off('reconnect_failed');
           socket.removeAllListeners();
+          if (socket.io?.removeAllListeners) socket.io.removeAllListeners();
           socket.disconnect();
         }
       } catch {
@@ -166,4 +223,4 @@ export function createSocketClient({
       socket = null;
     }
   };
-}
+};

@@ -72,6 +72,9 @@ export function mergeAuthUser(apiData) {
   let roles = Array.isArray(user.roles)
     ? user.roles.map((r) => String(r).trim().toLowerCase()).filter(Boolean)
     : [];
+  if (!roles.length && typeof user.roles === 'string' && user.roles.trim()) {
+    roles = [String(user.roles).trim().toLowerCase()];
+  }
 
   if (!roles.length && Array.isArray(apiData.roles) && apiData.roles.length) {
     roles = apiData.roles.map((r) => String(r).trim().toLowerCase()).filter(Boolean);

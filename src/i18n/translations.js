@@ -123,7 +123,8 @@ export const translations = {
       resetFilters: 'Reset filters'
     },
     realtime: {
-      reconnecting: 'Reconnecting…'
+      reconnecting: 'Reconnecting…',
+      connectionLost: 'Connection lost — refresh the page to retry live updates.'
     },
     publicProfile: {
       notFound: 'Profile not found',
@@ -1104,6 +1105,14 @@ export const translations = {
         dbUnreachableHint: 'Stats may be incomplete until the connection is restored.',
         partialStatsWarning: 'Some statistics could not be loaded. Counts shown use safe defaults.',
         widgetUnavailable: 'This section is temporarily unavailable. Other dashboard areas still work.',
+        widgetAuthError: 'Session expired — sign in again to refresh this section.',
+        widgetAuthErrorHint: 'Your admin session may have expired. Sign in again; other dashboard areas stay available.',
+        widgetForbiddenError: 'Access denied for this section.',
+        widgetServerError: 'Server error — try again shortly.',
+        widgetNetworkError: 'Cannot reach server — check your connection.',
+        widgetNotFoundError: 'This data source is not available on the server.',
+        widgetDataError: 'Data could not be loaded.',
+        widgetEmpty: 'No data yet.',
         usersTitle: 'Users',
         loadsTitle: 'Loads',
         totalBookings: 'Total bookings',
@@ -1497,7 +1506,8 @@ export const translations = {
       mockOff: 'لائیو سروس'
     },
     realtime: {
-      reconnecting: 'دوبارہ منسلک ہو رہا ہے…'
+      reconnecting: 'دوبارہ منسلک ہو رہا ہے…',
+      connectionLost: 'کنکشن منقطع — لائیو اپڈیٹس کے لیے صفحہ ریفریش کریں۔'
     },
     profile: {
       basicInfo: 'بنیادی معلومات',
@@ -2415,6 +2425,14 @@ export const translations = {
         dbUnreachableHint: 'کنکشن بحال ہونے تک اعداد نامکمل ہو سکتے ہیں۔',
         partialStatsWarning: 'کچھ اعداد لوڈ نہیں ہوئے — محفوظ ڈیفالٹ دکھائے جا رہے ہیں۔',
         widgetUnavailable: 'یہ حصہ عارضی طور پر دستیاب نہیں۔ باقی ڈیش بورڈ کام کر رہا ہے۔',
+        widgetAuthError: 'سیشن ختم — دوبارہ سائن ان کریں۔',
+        widgetAuthErrorHint: 'آپ کا ایڈمن سیشن ختم ہو سکتا ہے۔ دوبارہ سائن ان کریں؛ باقی ڈیش بورڈ دستیاب رہے گا۔',
+        widgetForbiddenError: 'اس حصے تک رسائی نہیں۔',
+        widgetServerError: 'سرور خرابی — تھوڑی دیر بعد دوبارہ کوشش کریں۔',
+        widgetNetworkError: 'سرور تک رسائی نہیں — کنکشن چیک کریں۔',
+        widgetNotFoundError: 'یہ ڈیٹا سرور پر دستیاب نہیں۔',
+        widgetDataError: 'ڈیٹا لوڈ نہیں ہو سکا۔',
+        widgetEmpty: 'ابھی کوئی ڈیٹا نہیں۔',
         usersTitle: 'صارفین',
         loadsTitle: 'لوڈز',
         totalBookings: 'کل بکنگز',

@@ -3,6 +3,7 @@ import Card from '../../components/ui/Card.jsx';
 import { SkeletonTable } from '../../components/ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
 
 const AdminOtpLogs = () => {
@@ -18,8 +19,8 @@ const AdminOtpLogs = () => {
       setLoading(true);
       setError(null);
       const url = q.trim() ? `/admin/otp-logs?email=${encodeURIComponent(q.trim())}` : '/admin/otp-logs';
-      const data = await request({ url });
-      setRows(Array.isArray(data) ? data : []);
+      const data = await request({ url, expectList: true });
+      setRows(ensureArray(data));
     } catch (e) {
       setError(formatUserError(e, t, { fallback: t('pages.admin.otpLoadFailed') }));
       setRows([]);
