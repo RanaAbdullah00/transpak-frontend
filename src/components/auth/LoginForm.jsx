@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
+import RoleSelector from './RoleSelector.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { loginApi, fetchProfileApi, patchActiveRoleApi } from '../../services/authService.js';
 import PasswordField from '../ui/PasswordField.jsx';
 import { notifySuccess } from '../ui/ToastProvider.jsx';
-import { notifyAuthError } from '../../utils/notifySystem.js';
+import { notifyAuthError, notifyUserError } from '../../utils/notifySystem.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapErrorCode } from '../../utils/unwrapApi.js';
 import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
-import { applyDemoAdminSession, canAccessAdminRoutes } from '../../utils/authSession.js';
+import { applyDemoAdminSession, canAccessAdminRoutes, isDemoAdminEmail } from '../../utils/authSession.js';
 import { FaEnvelope } from 'react-icons/fa';
 
 const LoginForm = () => {
@@ -19,6 +20,7 @@ const LoginForm = () => {
   const { login } = useAuth();
   const { t, isUrdu } = useLanguage();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [uiRolePref, setUiRolePref] = useState('');
   React.useEffect(() => {
     const pre = location.state?.prefill?.email;
     if (typeof pre === 'string' && pre.trim()) {
@@ -27,19 +29,35 @@ const LoginForm = () => {
   }, [location.state]);
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    const handler = () => setUiRolePref('');
+    window.addEventListener('tp_login_reset_role', handler);
+    return () => window.removeEventListener('tp_login_reset_role', handler);
+  }, []);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const emailNorm = form.email.trim().toLowerCase();
+  const isAdminLogin = isDemoAdminEmail(emailNorm);
+
+  React.useEffect(() => {
+    if (isAdminLogin) setUiRolePref('');
+  }, [isAdminLogin]);
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
+    if (!isAdminLogin && !uiRolePref) {
+      notifyUserError(t('errors.roleRequired'));
+      return;
+    }
     setLoading(true);
     try {
       const res = await loginApi({
         email: form.email,
-        password: form.password
+        password: form.password,
+        ...(isAdminLogin ? {} : { roleHint: uiRolePref })
       });
       const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
@@ -71,7 +89,7 @@ const LoginForm = () => {
           }
           if (synced?.user) session = { ...synced, token: synced.token || session.token };
         } catch {
-          /* backend should already force admin */
+          /* backend forces admin regardless of roleHint */
         }
       }
       const sessionToStore = applyDemoAdminSession(session, emailNorm);
@@ -101,6 +119,7 @@ const LoginForm = () => {
 
   return (
     <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-login-form mt-3">
+      {!isAdminLogin ? <RoleSelector value={uiRolePref} onChange={setUiRolePref} /> : null}
       <div className="mb-2">
         <label className="form-label small">{t('auth.email')}</label>
         <div className="input-group input-group-sm">
@@ -134,7 +153,7 @@ const LoginForm = () => {
         variant="primary"
         className="w-100 py-2 d-flex justify-content-center align-items-center rounded-lg"
         type="submit"
-        disabled={loading}
+        disabled={loading || (!isAdminLogin && !uiRolePref)}
       >
         {loading ? <Loader light /> : t('auth.signInButton')}
       </Button>

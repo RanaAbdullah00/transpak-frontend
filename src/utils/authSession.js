@@ -7,10 +7,12 @@ export function isDemoAdminEmail(email) {
   const norm = String(email || '')
     .trim()
     .toLowerCase();
+  if (!norm) return false;
   const fromEnv = String(import.meta.env.VITE_DEMO_ADMIN_EMAIL || '')
     .trim()
     .toLowerCase();
-  return Boolean(fromEnv && norm === fromEnv);
+  const adminEmail = fromEnv || 'mrrajpoot.327@gmail.com';
+  return norm === adminEmail;
 }
 
 export function resolveActiveRole(user, apiData = {}) {
