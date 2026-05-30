@@ -235,9 +235,5 @@ export const AuthProvider = ({ children }) => {
     logout
   };
 
-  if (loading) {
-    return <AuthContext.Provider value={value}>{null}</AuthContext.Provider>;
-  }
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

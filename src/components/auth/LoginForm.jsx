@@ -48,16 +48,11 @@ const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
-    if (!isAdminLogin && !uiRolePref) {
-      notifyUserError(t('errors.roleRequired'));
-      return;
-    }
     setLoading(true);
     try {
       const res = await loginApi({
         email: form.email,
-        password: form.password,
-        ...(isAdminLogin ? {} : { roleHint: uiRolePref })
+        password: form.password
       });
       const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
@@ -153,7 +148,7 @@ const LoginForm = () => {
         variant="primary"
         className="w-100 py-2 d-flex justify-content-center align-items-center rounded-lg"
         type="submit"
-        disabled={loading || (!isAdminLogin && !uiRolePref)}
+        disabled={loading}
       >
         {loading ? <Loader light /> : t('auth.signInButton')}
       </Button>
