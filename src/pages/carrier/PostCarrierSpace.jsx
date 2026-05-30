@@ -9,14 +9,15 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
+import { ratePerTonToKg, tonsToKg } from '../../utils/weightUnits.js';
 
 const emptyForm = () => ({
   origin: '',
   destination: '',
-  truckCapacityKg: '',
-  remainingSpaceKg: '',
+  truckCapacityTons: '',
+  remainingSpaceTons: '',
   vehicleType: 'Truck',
-  ratePerKg: '',
+  ratePerTon: '',
   notes: ''
 });
 
@@ -35,13 +36,17 @@ const PostCarrierSpace = ({ embedded = false }) => {
       notifyError(t('pages.postLoadForm.cityInvalid'));
       return;
     }
-    const truckCapacityKg = Number(form.truckCapacityKg);
-    const remainingSpaceKg = Number(form.remainingSpaceKg);
-    if (!Number.isFinite(truckCapacityKg) || truckCapacityKg < 1) {
+    const truckCapacityTons = Number(form.truckCapacityTons);
+    const remainingSpaceTons = Number(form.remainingSpaceTons);
+    if (!Number.isFinite(truckCapacityTons) || truckCapacityTons < 0.1) {
       notifyError(t('loadsHub.totalCapacityKg'));
       return;
     }
-    if (!Number.isFinite(remainingSpaceKg) || remainingSpaceKg < 1 || remainingSpaceKg > truckCapacityKg) {
+    if (
+      !Number.isFinite(remainingSpaceTons) ||
+      remainingSpaceTons < 0.1 ||
+      remainingSpaceTons > truckCapacityTons
+    ) {
       notifyError(t('loadsHub.remainingKgLabel'));
       return;
     }
@@ -53,10 +58,10 @@ const PostCarrierSpace = ({ embedded = false }) => {
         data: {
           origin: form.origin.trim(),
           destination: form.destination.trim(),
-          truckCapacityKg,
-          remainingSpaceKg,
+          truckCapacityKg: tonsToKg(truckCapacityTons),
+          remainingSpaceKg: tonsToKg(remainingSpaceTons),
           vehicleType: form.vehicleType,
-          ratePerKg: form.ratePerKg ? Number(form.ratePerKg) : null,
+          ratePerKg: form.ratePerTon ? ratePerTonToKg(Number(form.ratePerTon)) : null,
           notes: form.notes.trim() || null
         },
         skipGlobalErrorToast: true
@@ -105,10 +110,11 @@ const PostCarrierSpace = ({ embedded = false }) => {
             <label className="form-label small">{t('loadsHub.totalCapacityKg')}</label>
             <input
               type="number"
-              name="truckCapacityKg"
+              name="truckCapacityTons"
               className="form-control form-control-sm rounded-3"
-              min="1"
-              value={form.truckCapacityKg}
+              min="0.1"
+              step="0.1"
+              value={form.truckCapacityTons}
               onChange={onChange}
               required
             />
@@ -117,10 +123,11 @@ const PostCarrierSpace = ({ embedded = false }) => {
             <label className="form-label small">{t('loadsHub.remainingKgLabel')}</label>
             <input
               type="number"
-              name="remainingSpaceKg"
+              name="remainingSpaceTons"
               className="form-control form-control-sm rounded-3"
-              min="1"
-              value={form.remainingSpaceKg}
+              min="0.1"
+              step="0.1"
+              value={form.remainingSpaceTons}
               onChange={onChange}
               required
             />
@@ -135,10 +142,11 @@ const PostCarrierSpace = ({ embedded = false }) => {
             <label className="form-label small">{t('loadsHub.ratePerKgLabel')}</label>
             <input
               type="number"
-              name="ratePerKg"
+              name="ratePerTon"
               className="form-control form-control-sm rounded-3"
               min="0"
-              value={form.ratePerKg}
+              step="1"
+              value={form.ratePerTon}
               onChange={onChange}
             />
           </div>

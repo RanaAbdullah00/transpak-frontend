@@ -3,6 +3,7 @@ import { getApiRoot, API_BASE, resolveViteApiOrigin } from '../config/apiConfig.
 import { notifyApiError } from '../utils/notifySystem.js';
 import { unwrapErrorDetail } from '../utils/unwrapApi.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
+import { logApiRequest, logApiResponse, logApiError } from '../utils/apiRequestLog.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
 import { createTrackedSignal } from '../utils/inflightRequests.js';
 import { dispatchAuthUnauthorized } from '../utils/authUnauthorized.js';
@@ -148,11 +149,14 @@ api.interceptors.request.use((config) => {
     console.log('[api] auth request', { method, url: resolved, payload });
   }
 
+  logApiRequest(config);
+
   return config;
 });
 
 api.interceptors.response.use(
   (response) => {
+    logApiResponse(response.config, response);
     const body = response.data;
     if (body && typeof body.success === 'boolean') {
       if (body.success === false) {
@@ -169,11 +173,15 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    logApiError(error, error.config);
     if (!error.response && error.code === 'ERR_NETWORK') {
       const target = API_BASE || resolveViteApiOrigin() || BASE_URL;
+      const failedUrl = fullUrl(error.config || {});
       error.message = import.meta.env.DEV
         ? `Cannot reach API (${target}). Start transpak-backend and set VITE_PROXY_TARGET.`
-        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Rebuild with correct VITE_API_URL.`;
+        : `Cannot reach API (${target || 'VITE_API_URL not set'}). Check CORS on Render allows your Cloudflare domain. Failed: ${failedUrl}`;
+      // eslint-disable-next-line no-console
+      console.error('[api] network failure', { url: failedUrl, base: BASE_URL, viteApiUrl: import.meta.env.VITE_API_URL });
     }
     const body = error.response?.data;
     if (body && typeof body === 'object') {

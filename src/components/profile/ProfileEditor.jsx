@@ -39,8 +39,8 @@ function profileFormFromUser(user, row = null) {
     email: row?.email ?? user?.email ?? '',
     phone: row?.phone ?? user?.phone ?? '',
     cnic_number: row?.cnic_number ?? user?.cnicNumber ?? user?.cnic ?? '',
-    cnic_image: row?.cnic_image ?? user?.cnicImage ?? '',
-    cnic_image_back: row?.cnic_image_back ?? '',
+    cnic_image: row?.cnic_image ?? user?.cnicImage ?? user?.cnic_image ?? '',
+    cnic_image_back: row?.cnic_image_back ?? user?.cnicImageBack ?? user?.cnic_image_back ?? '',
     profile_image: row?.profile_image ?? user?.profileImage ?? user?.profile_image ?? ''
   };
 }
@@ -185,8 +185,8 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
           full_name: prof.full_name || '',
           phone: prof.phone || '',
           cnic_number: prof.cnic_number || '',
-          cnic_image: prof.cnic_image || '',
-          cnic_image_back: prof.cnic_image_back || '',
+          cnic_image: prof.cnic_image || prof.cnicImage || p.cnic_image || '',
+          cnic_image_back: prof.cnic_image_back || prof.cnicImageBack || p.cnic_image_back || '',
           profile_image: prof.profile_image || ''
         }));
         setCnicLocked(Boolean(prof.cnic_number));

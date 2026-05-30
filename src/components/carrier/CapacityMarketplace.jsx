@@ -11,12 +11,13 @@ import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { getVehicleTypeLabel } from '../../data/vehicleTypes.js';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import SpaceSentRequestsPanel from './SpaceSentRequestsPanel.jsx';
+import { kgToTons, tonsToKg } from '../../utils/weightUnits.js';
 
 const DEFAULT_FILTERS = {
   origin: '',
   destination: '',
-  minCapacityKg: '',
-  maxCapacityKg: '',
+  minCapacityTons: '',
+  maxCapacityTons: '',
   availableFrom: '',
   sort: 'newest'
 };
@@ -26,25 +27,31 @@ const CapacityMarketplace = () => {
   const { request, loading } = useApi();
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS }));
   const [listings, setListings] = useState([]);
+  const [listError, setListError] = useState(null);
   const [requestTarget, setRequestTarget] = useState(null);
-  const [requestKg, setRequestKg] = useState('');
+  const [requestTons, setRequestTons] = useState('');
   const debounced = useDebouncedValue(filters, 400);
 
   const refresh = useCallback(async () => {
+    setListError(null);
     try {
+      const minTons = Number(debounced.minCapacityTons);
       const data = await request({
         method: 'GET',
         url: '/carrier-space',
         params: {
           origin: debounced.origin || undefined,
           destination: debounced.destination || undefined,
-          minCapacityKg: debounced.minCapacityKg || undefined,
+          minCapacityKg:
+            Number.isFinite(minTons) && minTons > 0 ? tonsToKg(minTons) : undefined,
           availableFrom: debounced.availableFrom || undefined
-        }
+        },
+        skipGlobalErrorToast: true
       });
       let rows = Array.isArray(data) ? data : [];
-      const maxKg = Number(debounced.maxCapacityKg);
-      if (Number.isFinite(maxKg) && maxKg > 0) {
+      const maxTons = Number(debounced.maxCapacityTons);
+      if (Number.isFinite(maxTons) && maxTons > 0) {
+        const maxKg = tonsToKg(maxTons);
         rows = rows.filter((r) => Number(r.remainingSpaceKg) <= maxKg);
       }
       if (debounced.sort === 'capacity_desc') {
@@ -55,10 +62,11 @@ const CapacityMarketplace = () => {
         );
       }
       setListings(rows);
-    } catch {
+    } catch (err) {
       setListings([]);
+      setListError(formatUserError(err, t, { fallback: t('loadsHub.capacityListFailed') }));
     }
-  }, [request, debounced]);
+  }, [request, debounced, t]);
 
   useEffect(() => {
     refresh();
@@ -74,13 +82,17 @@ const CapacityMarketplace = () => {
         label: getVehicleTypeLabel(filters.vehicleType, lang === 'ur' ? 'ur' : 'en')
       });
     }
-    if (filters.minCapacityKg) badges.push({ key: 'minCapacityKg', label: `≥ ${filters.minCapacityKg} kg` });
-    if (filters.maxCapacityKg) badges.push({ key: 'maxCapacityKg', label: `≤ ${filters.maxCapacityKg} kg` });
+    if (filters.minCapacityTons) {
+      badges.push({ key: 'minCapacityTons', label: `≥ ${filters.minCapacityTons} t` });
+    }
+    if (filters.maxCapacityTons) {
+      badges.push({ key: 'maxCapacityTons', label: `≤ ${filters.maxCapacityTons} t` });
+    }
     if (filters.availableFrom) badges.push({ key: 'availableFrom', label: filters.availableFrom });
     return badges;
   }, [filters, t, lang]);
 
-  const empty = useMemo(() => !loading && listings.length === 0, [loading, listings.length]);
+  const empty = useMemo(() => !loading && !listError && listings.length === 0, [loading, listError, listings.length]);
 
   const setField = (name, value) => setFilters((prev) => ({ ...prev, [name]: value }));
 
@@ -92,11 +104,11 @@ const CapacityMarketplace = () => {
       await request({
         method: 'POST',
         url: `/carrier-space/${requestTarget.id}/request`,
-        data: { requestedKg: Number(requestKg), message: '' }
+        data: { requestedKg: tonsToKg(Number(requestTons)), message: '' }
       });
       notifySuccess(t('loadsHub.requestSent'));
       setRequestTarget(null);
-      setRequestKg('');
+      setRequestTons('');
       refresh();
       emitRealtimeRefresh('space');
     } catch (err) {
@@ -140,18 +152,19 @@ const CapacityMarketplace = () => {
               min="0"
               className="form-control form-control-sm rounded-3"
               placeholder={t('loadsHub.minCapacityKg')}
-              value={filters.minCapacityKg}
-              onChange={(e) => setField('minCapacityKg', e.target.value)}
+              value={filters.minCapacityTons}
+              onChange={(e) => setField('minCapacityTons', e.target.value)}
             />
           </div>
           <div className="col-6 col-md-3">
             <input
               type="number"
               min="0"
+              step="0.1"
               className="form-control form-control-sm rounded-3"
               placeholder={t('loadsHub.maxCapacityKg')}
-              value={filters.maxCapacityKg}
-              onChange={(e) => setField('maxCapacityKg', e.target.value)}
+              value={filters.maxCapacityTons}
+              onChange={(e) => setField('maxCapacityTons', e.target.value)}
             />
           </div>
           <div className="col-6 col-md-3">
@@ -181,7 +194,14 @@ const CapacityMarketplace = () => {
           </div>
         ) : null}
       </div>
-      {loading ? (
+      {listError ? (
+        <Card className="p-4 text-center">
+          <p className="text-danger small mb-3">{listError}</p>
+          <Button variant="outline-primary" size="sm" onClick={refresh}>
+            {t('pages.admin.tryAgain')}
+          </Button>
+        </Card>
+      ) : loading ? (
         <SkeletonCard rows={4} />
       ) : empty ? (
         <Card className="p-4 text-center text-muted small">{t('loadsHub.noCapacity')}</Card>
@@ -189,7 +209,13 @@ const CapacityMarketplace = () => {
         <div className="row g-3">
           {listings.map((row) => (
             <div key={row.id} className="col-md-6 col-lg-4">
-              <CarrierSpaceCard listing={row} onRequest={(l) => { setRequestTarget(l); setRequestKg(''); }} />
+              <CarrierSpaceCard
+                listing={row}
+                onRequest={(l) => {
+                  setRequestTarget(l);
+                  setRequestTons('');
+                }}
+              />
             </div>
           ))}
         </div>
@@ -205,11 +231,12 @@ const CapacityMarketplace = () => {
             <input
               type="number"
               className="form-control form-control-sm rounded-3 mb-3"
-              min="1"
-              max={requestTarget.remainingSpaceKg}
+              min="0.1"
+              step="0.1"
+              max={kgToTons(requestTarget.remainingSpaceKg)}
               placeholder={t('loadsHub.remainingKgLabel')}
-              value={requestKg}
-              onChange={(e) => setRequestKg(e.target.value)}
+              value={requestTons}
+              onChange={(e) => setRequestTons(e.target.value)}
             />
             <div className="d-flex gap-2">
               <Button variant="primary" className="flex-grow-1" onClick={submitRequest}>

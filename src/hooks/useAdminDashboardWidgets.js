@@ -35,33 +35,45 @@ export function useAdminDashboardWidgets(request) {
     }));
   }, []);
 
-  const loadAll = useCallback(async () => {
-    setInitialLoading(true);
-    setWidgetState((prev) => {
-      const next = { ...prev };
-      for (const w of ADMIN_DASHBOARD_WIDGETS) {
-        next[w] = { ...next[w], loading: true, error: null };
-      }
-      return next;
-    });
+  const loadInFlightRef = useRef(null);
 
-    try {
-      await fetchAdminDashboardResilient(request, {
-        onWidget: (widget, state) => {
-          if (!mountedRef.current) return;
-          patchWidget(widget, {
-            loading: Boolean(state.loading),
-            data: state.data ?? null,
-            error: state.error ?? null,
-            code: state.code ?? null,
-            httpStatus: state.httpStatus ?? null,
-            attempts: state.attempts ?? 0
-          });
-        }
-      });
-    } finally {
-      if (mountedRef.current) setInitialLoading(false);
+  const loadAll = useCallback(async () => {
+    if (loadInFlightRef.current) {
+      return loadInFlightRef.current;
     }
+
+    const run = (async () => {
+      setInitialLoading(true);
+      setWidgetState((prev) => {
+        const next = { ...prev };
+        for (const w of ADMIN_DASHBOARD_WIDGETS) {
+          next[w] = { ...next[w], loading: true, error: null };
+        }
+        return next;
+      });
+
+      try {
+        await fetchAdminDashboardResilient(request, {
+          onWidget: (widget, state) => {
+            if (!mountedRef.current) return;
+            patchWidget(widget, {
+              loading: Boolean(state.loading),
+              data: state.data ?? null,
+              error: state.error ?? null,
+              code: state.code ?? null,
+              httpStatus: state.httpStatus ?? null,
+              attempts: state.attempts ?? 0
+            });
+          }
+        });
+      } finally {
+        if (mountedRef.current) setInitialLoading(false);
+        loadInFlightRef.current = null;
+      }
+    })();
+
+    loadInFlightRef.current = run;
+    return run;
   }, [request, patchWidget]);
 
   const retryWidget = useCallback(

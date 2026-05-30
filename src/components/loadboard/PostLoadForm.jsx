@@ -9,6 +9,7 @@ import { notifyError } from '../ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useFareEstimate } from '../../hooks/useFareEstimate.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
+import { localTodayISO, isOnOrAfterLocalToday } from '../../utils/localDate.js';
 
 const defaultForm = () => ({
   cargo: '',
@@ -78,12 +79,8 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null, subm
       return;
     }
     const pickup = String(form.pickupDate || '').trim();
-    const today = new Date();
-    const todayStr = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
-      .toISOString()
-      .slice(0, 10);
-    if (pickup && pickup <= todayStr) {
-      notifyError(t('pages.postLoadForm.pickupFutureError'));
+    if (pickup && !isOnOrAfterLocalToday(pickup)) {
+      notifyError(t('pages.postLoadForm.pickupPastError'));
       return;
     }
     if (!isKnownCity(form.origin) || !isKnownCity(form.destination)) {
@@ -130,16 +127,10 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null, subm
     }
   };
 
-  const tomorrow = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-  })();
-
   const minPickupDate =
-    initialValues?.pickupDate && String(initialValues.pickupDate) < tomorrow
+    initialValues?.pickupDate && String(initialValues.pickupDate) < localTodayISO()
       ? String(initialValues.pickupDate)
-      : tomorrow;
+      : localTodayISO();
 
   return (
     <form onSubmit={handleSubmit}>

@@ -3,6 +3,6 @@ name = "transpak-frontend"
 compatibility_date = "2024-09-01"
 pages_build_output_dir = "dist"
 
-[vars]
-# Production API (also set in Pages Dashboard → Settings → Environment variables)
-# VITE_API_URL = "https://transpak-backend-1.onrender.com"
+# REQUIRED in Cloudflare Pages Dashboard → Settings → Environment variables (Production):
+# VITE_API_URL = https://transpak-backend-1.onrender.com
+# Optional: VITE_API_DEBUG=true (logs all API URLs in browser console)

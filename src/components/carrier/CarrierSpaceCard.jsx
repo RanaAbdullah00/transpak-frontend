@@ -5,9 +5,12 @@ import Button from '../ui/Button.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import VehicleTypeLabel from '../loadboard/VehicleTypeLabel.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
+import { formatTons, ratePerKgToTon } from '../../utils/weightUnits.js';
 
 const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
   const { t } = useLanguage();
+  const remTons = formatTons(listing.remainingSpaceKg ?? 0);
+  const capTons = formatTons(listing.truckCapacityKg ?? 0);
   const rem = Number(listing.remainingSpaceKg ?? 0);
   const cap = Number(listing.truckCapacityKg ?? 0);
   const pct = cap > 0 ? Math.round((rem / cap) * 100) : 0;
@@ -32,8 +35,8 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
         {listing.origin} → {listing.destination}
       </div>
       <div className="small text-muted mb-2">
-        <VehicleTypeLabel value={listing.vehicleType || 'Truck'} /> · {t('loadsHub.remainingKg', { kg: rem.toLocaleString() })} /{' '}
-        {cap.toLocaleString()} kg
+        <VehicleTypeLabel value={listing.vehicleType || 'Truck'} /> ·{' '}
+        {t('loadsHub.remainingKg', { kg: remTons })} / {capTons} t
       </div>
       <div className="progress tp-progress-thin mb-2">
         <div
@@ -45,7 +48,9 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
       </div>
       {listing.ratePerKg != null ? (
         <div className="small mb-2">
-          {t('loadsHub.ratePerKg', { rate: Number(listing.ratePerKg).toLocaleString() })}
+          {t('loadsHub.ratePerKg', {
+            rate: Number(ratePerKgToTon(listing.ratePerKg)).toLocaleString()
+          })}
         </div>
       ) : null}
       {mine && listing.status === 'open' && onClose ? (

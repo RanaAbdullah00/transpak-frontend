@@ -1,4 +1,6 @@
 /** Expose active frontend build id on window for production verification. */
+import { logApiBootstrap } from '../config/apiConfig.js';
+
 export function initTranspakBuildInfo() {
   const buildId = import.meta.env.VITE_APP_BUILD_ID || 'dev';
   const payload = {
@@ -11,6 +13,8 @@ export function initTranspakBuildInfo() {
   if (typeof window !== 'undefined') {
     window.__TRANSPAK_BUILD__ = payload;
   }
+
+  logApiBootstrap();
 
   if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console

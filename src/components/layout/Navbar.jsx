@@ -7,7 +7,7 @@ import BrandLogo from './BrandLogo.jsx';
 import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
-import { resolveNavRoleAction } from '../../utils/roleSwitch.js';
+import { resolveNavRoleAction, getUserRoles } from '../../utils/roleSwitch.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
@@ -21,7 +21,7 @@ const Navbar = () => {
   const { user, setActiveRole, roleSwitching } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const roles = user?.roles?.length ? user.roles : [user?.activeRole].filter(Boolean);
+  const roles = getUserRoles(user);
   const activeRole = user?.activeRole ?? roles[0];
 
   const adminShell = resolveAdminShell(user, location.pathname);
