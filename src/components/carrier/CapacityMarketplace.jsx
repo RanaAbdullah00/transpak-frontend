@@ -8,22 +8,26 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
-import { getVehicleTypeLabel } from '../../data/vehicleTypes.js';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
 import { kgToTons, tonsToKg } from '../../utils/weightUnits.js';
+import { isKnownCity, resolveCityName } from '../../data/pakistanCities.js';
 
 const DEFAULT_FILTERS = {
   origin: '',
   destination: '',
   minCapacityTons: '',
-  maxCapacityTons: '',
   availableFrom: '',
   sort: 'newest'
 };
 
+function filterCityParam(value) {
+  const resolved = resolveCityName(String(value || '').trim());
+  return resolved && isKnownCity(resolved) ? resolved : undefined;
+}
+
 const CapacityMarketplace = () => {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { request, loading } = useApi();
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS }));
   const [listings, setListings] = useState([]);
@@ -40,8 +44,8 @@ const CapacityMarketplace = () => {
         method: 'GET',
         url: '/carrier-space',
         params: {
-          origin: debounced.origin || undefined,
-          destination: debounced.destination || undefined,
+          origin: filterCityParam(debounced.origin),
+          destination: filterCityParam(debounced.destination),
           minCapacityKg:
             Number.isFinite(minTons) && minTons > 0 ? tonsToKg(minTons) : undefined,
           availableFrom: debounced.availableFrom || undefined
@@ -49,11 +53,6 @@ const CapacityMarketplace = () => {
         skipGlobalErrorToast: true
       });
       let rows = Array.isArray(data) ? data : [];
-      const maxTons = Number(debounced.maxCapacityTons);
-      if (Number.isFinite(maxTons) && maxTons > 0) {
-        const maxKg = tonsToKg(maxTons);
-        rows = rows.filter((r) => Number(r.remainingSpaceKg) <= maxKg);
-      }
       if (debounced.sort === 'capacity_desc') {
         rows = [...rows].sort((a, b) => Number(b.remainingSpaceKg) - Number(a.remainingSpaceKg));
       } else if (debounced.sort === 'rate_asc') {
@@ -85,22 +84,15 @@ const CapacityMarketplace = () => {
   const activeFilterBadges = useMemo(() => {
     const badges = [];
     if (filters.origin) badges.push({ key: 'origin', label: `${t('loadsHub.filterOrigin')}: ${filters.origin}` });
-    if (filters.destination) badges.push({ key: 'destination', label: `${t('loadsHub.filterDestination')}: ${filters.destination}` });
-    if (filters.vehicleType) {
-      badges.push({
-        key: 'vehicleType',
-        label: getVehicleTypeLabel(filters.vehicleType, lang === 'ur' ? 'ur' : 'en')
-      });
+    if (filters.destination) {
+      badges.push({ key: 'destination', label: `${t('loadsHub.filterDestination')}: ${filters.destination}` });
     }
     if (filters.minCapacityTons) {
       badges.push({ key: 'minCapacityTons', label: `≥ ${filters.minCapacityTons} t` });
     }
-    if (filters.maxCapacityTons) {
-      badges.push({ key: 'maxCapacityTons', label: `≤ ${filters.maxCapacityTons} t` });
-    }
     if (filters.availableFrom) badges.push({ key: 'availableFrom', label: filters.availableFrom });
     return badges;
-  }, [filters, t, lang]);
+  }, [filters, t]);
 
   const empty = useMemo(() => !loading && !listError && listings.length === 0, [loading, listError, listings.length]);
 
@@ -159,21 +151,11 @@ const CapacityMarketplace = () => {
             <input
               type="number"
               min="0"
+              step="0.1"
               className="form-control form-control-sm rounded-3"
               placeholder={t('loadsHub.minCapacityKg')}
               value={filters.minCapacityTons}
               onChange={(e) => setField('minCapacityTons', e.target.value)}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              className="form-control form-control-sm rounded-3"
-              placeholder={t('loadsHub.maxCapacityKg')}
-              value={filters.maxCapacityTons}
-              onChange={(e) => setField('maxCapacityTons', e.target.value)}
             />
           </div>
           <div className="col-6 col-md-3">

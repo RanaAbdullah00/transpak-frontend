@@ -34,6 +34,12 @@ const BidList = memo(({
       const status = normalizeBidStatus(bid.status);
       if (status === BID_STATUS.ACCEPTED) {
         accepted.push(bid);
+      } else if (
+        status === BID_STATUS.REJECTED ||
+        status === BID_STATUS.CANCELLED ||
+        status === 'expired'
+      ) {
+        /* Phase 11: hidden from commercial user views */
       } else if (!bid.status || isActiveBidStatus(bid.status)) {
         active.push(bid);
       } else {

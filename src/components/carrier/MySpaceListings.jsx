@@ -5,6 +5,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
+import EditCarrierSpaceModal from './EditCarrierSpaceModal.jsx';
 import SpaceRequestsPanel from './SpaceRequestsPanel.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
@@ -13,6 +14,7 @@ const MySpaceListings = () => {
   const { t } = useLanguage();
   const { request, loading } = useApi();
   const [listings, setListings] = useState([]);
+  const [editListing, setEditListing] = useState(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -66,10 +68,21 @@ const MySpaceListings = () => {
       <div className="row g-3">
       {listings.map((row) => (
         <div key={row.id} className="col-md-6 col-lg-4">
-          <CarrierSpaceCard listing={row} mine onClose={() => closeListing(row.id)} />
+          <CarrierSpaceCard
+            listing={row}
+            mine
+            onClose={() => closeListing(row.id)}
+            onEdit={setEditListing}
+          />
         </div>
       ))}
       </div>
+      <EditCarrierSpaceModal
+        listing={editListing}
+        open={Boolean(editListing)}
+        onClose={() => setEditListing(null)}
+        onSaved={refresh}
+      />
     </>
   );
 };

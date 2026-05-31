@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import TrackingMap from '../../components/shipment/TrackingMap.jsx';
 import RouteInfo from '../../components/shipment/RouteInfo.jsx';
@@ -6,11 +6,18 @@ import ShipmentCard from '../../components/shipment/ShipmentCard.jsx';
 import StatusTimeline from '../../components/shipment/StatusTimeline.jsx';
 import ShipmentProgressBox from '../../components/shipment/ShipmentProgressBox.jsx';
 import LifecycleBadge from '../../components/shipment/LifecycleBadge.jsx';
+import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
+import { nextShipmentStatus, normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
+import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { formatUserError } from '../../utils/userErrors.js';
 import Loader from '../../components/ui/Loader.jsx';
 
 const ShipmentTracking = () => {
@@ -18,6 +25,8 @@ const ShipmentTracking = () => {
   const id = trackId?.trim() || '';
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { request } = useApi();
+  const [advancing, setAdvancing] = useState(false);
   const isCarrier =
     user?.activeRole === 'carrier' || (user?.roles || []).includes('carrier');
   const shareLive = isCarrier && Boolean(id);
@@ -27,6 +36,27 @@ const ShipmentTracking = () => {
     shareLive,
     enabled: Boolean(id)
   });
+
+  const canonStatus = normalizeShipmentStatus(payload?.tracking?.status || 'posted');
+  const upcomingStatus = nextShipmentStatus(canonStatus);
+
+  const handleAdvanceStatus = useCallback(async () => {
+    if (!upcomingStatus || !id) return;
+    setAdvancing(true);
+    try {
+      await request({
+        method: 'PUT',
+        url: `/shipments/${encodeURIComponent(id)}/status`,
+        data: { status: upcomingStatus }
+      });
+      notifySuccess(t('pages.tracking.statusUpdated'));
+      emitRealtimeRefresh('shipments');
+    } catch (err) {
+      notifyError(formatUserError(err, t, { fallback: t('pages.tracking.loadFailed') }));
+    } finally {
+      setAdvancing(false);
+    }
+  }, [id, upcomingStatus, request, t]);
 
   const tracking = payload?.tracking;
   const originName = payload?.origin || '';
@@ -187,6 +217,19 @@ const ShipmentTracking = () => {
         />
       </div>
       <StatusTimeline currentStatus={shipment.status} events={timelineEvents} />
+      {isCarrier && upcomingStatus && canonStatus !== 'closed' ? (
+        <div className="mt-3 mb-3">
+          <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>
+          <Button
+            variant="primary"
+            className="tp-touch-target"
+            disabled={advancing}
+            onClick={handleAdvanceStatus}
+          >
+            {advancing ? t('common.loading') : t(advanceStatusLabelKey(upcomingStatus))}
+          </Button>
+        </div>
+      ) : null}
       <RouteInfo distance={routeDistanceKm} duration={null} checkpoints={checkpoints} />
     </div>
   );

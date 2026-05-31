@@ -41,6 +41,9 @@ const SpaceRequestsPanel = () => {
       await request({ method: 'PUT', url: `/carrier-space/requests/${id}/${action}` });
       notifySuccess(action === 'accept' ? t('loadsHub.requestAccepted') : t('loadsHub.requestRejected'));
       emitRealtimeRefresh('space');
+      if (action === 'accept') {
+        emitRealtimeRefresh('shipments');
+      }
       refresh();
     } catch (err) {
       notifyError(formatUserError(err, t));

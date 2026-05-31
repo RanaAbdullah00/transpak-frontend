@@ -192,6 +192,14 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.LOAD_POSTED, msg);
     return;
   }
+  if (type.includes('SPACE_CLOSED')) {
+    notifySystem(SystemNotifyType.WARNING, msg);
+    return;
+  }
+  if (type.includes('USER_REGISTERED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
   if (type.includes('LOGIN_SUCCESS')) {
     notifySystem(SystemNotifyType.SUCCESS, msg);
     return;

@@ -149,6 +149,12 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
     return m;
   }, [form, t]);
 
+  const cnicDocsUploaded = useMemo(
+    () => imageFieldUrl(form.cnic_image) && imageFieldUrl(form.cnic_image_back),
+    [form.cnic_image, form.cnic_image_back]
+  );
+  const awaitingAdminVerification = cnicDocsUploaded && !user?.verified && missingProfilePieces.length === 0;
+
   const completionPercent = useMemo(() => {
     if (profileComplete) return 100;
     const n = missingProfilePieces.length;
@@ -485,7 +491,15 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
       ) : (
         <div className="tp-profile-section rounded-4 p-3 border shadow-sm">
           <p className="tp-secondary-text small mb-2">{t('profile.completionHint')}</p>
-          {missingProfilePieces.length === 0 ? (
+          {awaitingAdminVerification ? (
+            <div className="mb-3">
+              <span className="badge bg-warning text-dark rounded-pill px-3 py-2 mb-2">
+                {t('profile.cnicSubmittedBadge')}
+              </span>
+              <p className="fw-semibold mb-1">{t('profile.cnicAwaitingAdminTitle')}</p>
+              <p className="small tp-secondary-text mb-0">{t('profile.cnicAwaitingAdminBody')}</p>
+            </div>
+          ) : missingProfilePieces.length === 0 ? (
             <p className="small mb-3">{t('profile.completionServerHint')}</p>
           ) : (
             <ul className="list-unstyled mb-3">

@@ -7,7 +7,7 @@ import VehicleTypeLabel from '../loadboard/VehicleTypeLabel.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { formatTons, ratePerKgToTon } from '../../utils/weightUnits.js';
 
-const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
+const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit }) => {
   const { t } = useLanguage();
   const remTons = formatTons(listing.remainingSpaceKg ?? 0);
   const capTons = formatTons(listing.truckCapacityKg ?? 0);
@@ -53,10 +53,19 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest }) => {
           })}
         </div>
       ) : null}
-      {mine && listing.status === 'open' && onClose ? (
-        <Button variant="outline-secondary" size="sm" className="w-100" onClick={onClose}>
-          {t('loadsHub.closeListing')}
-        </Button>
+      {mine && listing.status === 'open' ? (
+        <div className="d-grid gap-2">
+          {onEdit && !Number(listing.acceptedRequestCount) ? (
+            <Button variant="outline-primary" size="sm" className="w-100" onClick={() => onEdit(listing)}>
+              {t('loadsHub.editListing')}
+            </Button>
+          ) : null}
+          {onClose ? (
+            <Button variant="outline-secondary" size="sm" className="w-100" onClick={onClose}>
+              {t('loadsHub.closeListing')}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
       {!mine && listing.status === 'open' && onRequest ? (
         <Button variant="primary" size="sm" className="w-100 mt-2" onClick={() => onRequest(listing)}>

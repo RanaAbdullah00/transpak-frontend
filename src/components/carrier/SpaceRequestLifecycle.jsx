@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
 import FlowTimeline, { SPACE_STEPS } from '../ui/FlowTimeline.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
@@ -10,6 +11,8 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
   const { t } = useLanguage();
   const status = String(row.status || '').toLowerCase();
   const stepId = spaceStepId(status);
+  const trackRef = row.loadCode || row.loadId;
+  const usesShipmentEngine = Boolean(trackRef);
 
   return (
     <div className="border rounded-3 p-3 tp-space-request-row">
@@ -38,12 +41,20 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           </Button>
         </div>
       ) : null}
-      {status === 'active' ? (
+      {usesShipmentEngine && (status === 'active' || status === 'in_transit') ? (
+        <Link
+          to={`/shipments/tracking/${encodeURIComponent(trackRef)}`}
+          className="btn btn-sm btn-primary"
+        >
+          {t('pages.dashboard.viewLiveTracking')}
+        </Link>
+      ) : null}
+      {!usesShipmentEngine && status === 'active' ? (
         <Button size="sm" variant="primary" onClick={() => onInTransit?.(row.id)}>
           {t('loadsHub.markInTransit')}
         </Button>
       ) : null}
-      {status === 'in_transit' ? (
+      {!usesShipmentEngine && status === 'in_transit' ? (
         <Button size="sm" variant="success" onClick={() => onComplete?.(row.id)}>
           {t('loadsHub.markComplete')}
         </Button>

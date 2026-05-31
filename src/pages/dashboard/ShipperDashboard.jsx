@@ -7,10 +7,9 @@ import { useDashboardMetrics } from '../../hooks/useDashboardMetrics.js';
 import StatsCards from '../../components/dashboard/StatsCards.jsx';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
 import LoadList from '../../components/loadboard/LoadList.jsx';
-import ActiveShipmentPanel from '../../components/dashboard/ActiveShipmentPanel.jsx';
+import ActiveShipmentsList from '../../components/dashboard/ActiveShipmentsList.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
-import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import Loader from '../../components/ui/Loader.jsx';
 
 const ShipperDashboard = () => {
@@ -78,17 +77,6 @@ const ShipperDashboard = () => {
 
   const openLoads = useMemo(() => mineLoads.filter((l) => l.status === 'open'), [mineLoads]);
 
-  const activeTrackRef = useMemo(() => {
-    const active = mineLoads.find((l) => String(l.status || '').toLowerCase() === 'booked');
-    return active ? active.code || active.id : null;
-  }, [mineLoads]);
-
-  const { trackingData, loading: loadingTracking } = useShipmentTracking({
-    trackRef: activeTrackRef,
-    shareLive: false,
-    enabled: Boolean(activeTrackRef)
-  });
-
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--shipper">
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -141,12 +129,7 @@ const ShipperDashboard = () => {
 
       <div className="mt-4">
         <h6 className="mb-3">{t('pages.dashboard.myActiveShipments')}</h6>
-        <ActiveShipmentPanel
-          trackingData={trackingData}
-          loadingTracking={loadingTracking}
-          trackHref={
-            activeTrackRef ? `/shipments/tracking/${encodeURIComponent(activeTrackRef)}` : null
-          }
+        <ActiveShipmentsList
           emptyState={
             <div className="text-muted text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed">
               <div className="fw-semibold mb-1">{t('pages.dashboard.emptyNoActiveShipments')}</div>
