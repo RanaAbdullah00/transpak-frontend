@@ -5,7 +5,6 @@ import Loader from '../../components/ui/Loader.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
-import { AppContext } from '../../context/AppContext.jsx';
 import { notifySuccess, notifyError } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { logApiSuccess, logApiFailure } from '../../utils/apiDevLog.js';
@@ -16,10 +15,8 @@ import { shouldUseAdminShell } from '../../utils/rbac.js';
 const PostLoad = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { request, loading } = useApi();
+  const { request } = useApi();
   const { t } = useLanguage();
-  const appContext = React.useContext(AppContext);
-  const addNotification = appContext?.addNotification || (() => {});
 
   useEffect(() => {
     if (shouldUseAdminShell(user)) {
@@ -60,10 +57,6 @@ const PostLoad = () => {
         throw new Error(t('pages.loads.postLoadFailed'));
       }
       notifySuccess(t('pages.loads.postLoadSuccess', { code }));
-      addNotification({
-        type: 'load',
-        message: t('pages.loads.postLoadNotify', { code })
-      });
       emitRealtimeRefresh('loads');
       setFormKey((k) => k + 1);
       navigate('/loads/manage', { replace: true });

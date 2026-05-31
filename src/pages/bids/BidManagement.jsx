@@ -36,6 +36,8 @@ const BidManagement = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
       emitRealtimeRefresh('bids');
+      emitRealtimeRefresh('shipments');
+      emitRealtimeRefresh('all');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptFailed') }));
@@ -47,6 +49,7 @@ const BidManagement = () => {
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject` });
       notifySuccess(t('pages.bids.bidRejected'));
       emitRealtimeRefresh('bids');
+      emitRealtimeRefresh('all');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectFailed') }));
@@ -58,6 +61,7 @@ const BidManagement = () => {
       await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
       notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
       emitRealtimeRefresh('bids');
+      emitRealtimeRefresh('all');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));

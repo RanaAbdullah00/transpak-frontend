@@ -36,7 +36,7 @@ const Disputes = () => {
   };
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-3">{t('pages.admin.disputesTitle')}</h5>
       {loading ? (
         <SkeletonCard rows={3} />

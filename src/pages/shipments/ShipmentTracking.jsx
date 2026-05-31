@@ -12,7 +12,6 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
-import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
 import { nextShipmentStatus, normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
@@ -51,6 +50,7 @@ const ShipmentTracking = () => {
       });
       notifySuccess(t('pages.tracking.statusUpdated'));
       emitRealtimeRefresh('shipments');
+      emitRealtimeRefresh('all');
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.tracking.loadFailed') }));
     } finally {
@@ -84,25 +84,18 @@ const ShipmentTracking = () => {
   }, [payload?.liveTrackingMap?.coordinates]);
 
   const currentLocation = useMemo(() => {
-    const direct = tracking?.currentLocation ?? tracking?.location;
     if (shareLive && livePos) return livePos;
+    const direct = tracking?.currentLocation ?? tracking?.location;
     if (
       Array.isArray(direct) &&
       direct.length >= 2 &&
-      isLocationFresh(tracking?.locationUpdatedAt, payload?.ts ?? tracking?.ts)
+      Number.isFinite(Number(direct[0])) &&
+      Number.isFinite(Number(direct[1]))
     ) {
       return [Number(direct[0]), Number(direct[1])];
     }
     return null;
-  }, [
-    tracking?.currentLocation,
-    tracking?.location,
-    tracking?.locationUpdatedAt,
-    tracking?.ts,
-    shareLive,
-    livePos,
-    payload?.ts
-  ]);
+  }, [tracking?.currentLocation, tracking?.location, shareLive, livePos]);
 
   const shipment = useMemo(
     () => ({
@@ -145,11 +138,11 @@ const ShipmentTracking = () => {
         status: tracking?.status,
         eta: tracking?.eta,
         currentLocation,
-        locationUnavailable: !currentLocation && !shareLive
+        locationUnavailable: !currentLocation && !loading
       },
       liveTrackingMap: payload?.liveTrackingMap || { coordinates: coords }
     }),
-    [tracking, currentLocation, payload, coords, originName, destinationName, shareLive]
+    [tracking, currentLocation, payload, coords, originName, destinationName, loading]
   );
 
   if (!id) {
@@ -212,7 +205,7 @@ const ShipmentTracking = () => {
           currentLocation={currentLocation}
           originName={originName}
           destinationName={destinationName}
-          liveDriver={shareLive}
+          liveDriver={false}
           geoError={geoError}
         />
       </div>

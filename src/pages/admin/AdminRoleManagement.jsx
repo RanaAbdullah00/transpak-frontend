@@ -98,7 +98,7 @@ const AdminRoleManagement = () => {
   );
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-2">{t('pages.admin.roleMgmt.title')}</h5>
       <p className="small text-muted mb-3">{t('pages.admin.roleMgmt.subtitle')}</p>
 
@@ -117,7 +117,7 @@ const AdminRoleManagement = () => {
         <Card className="p-0 overflow-hidden border-0 shadow-sm">
           <div className="table-responsive">
             <table className="table table-hover table-sm mb-0 align-middle">
-              <thead className="table-light">
+              <thead>
                 <tr>
                   <th className="ps-3 py-3">{t('auth.fullName')}</th>
                   <th className="py-3">{t('auth.email')}</th>

@@ -43,16 +43,18 @@ const TrackingMap = ({
   const pickup = coords.length >= 1 ? coords[0] : null;
   const delivery = coords.length >= 2 ? coords[coords.length - 1] : null;
   const rawCurrent = trackingData?.tracking?.currentLocation ?? currentLocation;
+  const driverCoords = toLatLngPair(rawCurrent);
+  const hasDriverCoords = Boolean(driverCoords);
   const fresh =
     liveDriver ||
     isLocationFresh(
       trackingData?.tracking?.locationUpdatedAt,
       trackingData?.ts ?? trackingData?.tracking?.ts
-    );
-  const driver = fresh ? toLatLngPair(rawCurrent) : null;
+    ) ||
+    hasDriverCoords;
+  const driver = hasDriverCoords ? driverCoords : null;
   const locationUnavailable =
-    (Boolean(trackingData?.tracking?.locationUnavailable) && !driver) ||
-    (!fresh && !liveDriver);
+    Boolean(trackingData?.tracking?.locationUnavailable) && !driver && !hasDriverCoords;
 
   return (
     <Card className={`tp-map-card h-100 ${isUrdu ? 'tp-rtl' : ''}`}>

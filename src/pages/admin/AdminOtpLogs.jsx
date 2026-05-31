@@ -34,7 +34,7 @@ const AdminOtpLogs = () => {
   }, [request, t]);
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-2">{t('pages.admin.otpLogsTitle')}</h5>
       <p className="small text-muted mb-3">{t('pages.admin.otpLogsLead')}</p>
       <form
@@ -66,7 +66,7 @@ const AdminOtpLogs = () => {
         <Card className="p-0 overflow-hidden border-0 shadow-sm">
           <div className="table-responsive">
             <table className="table table-sm table-hover mb-0">
-              <thead className="table-light">
+              <thead>
                 <tr>
                   <th className="ps-3">{t('auth.email')}</th>
                   <th>{t('pages.admin.otpPurpose')}</th>

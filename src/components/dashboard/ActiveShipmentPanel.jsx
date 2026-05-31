@@ -8,7 +8,6 @@ import StatusTimeline from '../shipment/StatusTimeline.jsx';
 import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
 
 /**
  * Single tracking UI for shipper + carrier dashboards (backend tracking only, progress above map).
@@ -49,14 +48,13 @@ const ActiveShipmentPanel = ({
   const lifecycle = trackingData.lifecycleStage;
   const ref = trackingData.refKey;
   const href = trackHref || (ref ? `/shipments/tracking/${encodeURIComponent(ref)}` : null);
-  const reportedLoc = trackingData?.tracking?.currentLocation;
+  const reportedLoc = trackingData?.tracking?.currentLocation ?? trackingData?.tracking?.location;
   const showDriver =
     liveDriver ||
     (Array.isArray(reportedLoc) &&
-      isLocationFresh(
-        trackingData?.tracking?.locationUpdatedAt,
-        trackingData?.ts ?? trackingData?.tracking?.ts
-      ));
+      reportedLoc.length >= 2 &&
+      Number.isFinite(Number(reportedLoc[0])) &&
+      Number.isFinite(Number(reportedLoc[1])));
   const mapLocation = showDriver ? liveLocation || reportedLoc : null;
 
   return (

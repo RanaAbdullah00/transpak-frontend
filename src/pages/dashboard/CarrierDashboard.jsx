@@ -10,6 +10,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useDashboardMetrics } from '../../hooks/useDashboardMetrics.js';
 import ActiveShipmentsList from '../../components/dashboard/ActiveShipmentsList.jsx';
+import SpaceRequestsPanel from '../../components/carrier/SpaceRequestsPanel.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
@@ -56,7 +57,7 @@ const CarrierDashboard = () => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments') return;
+      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments' && scope !== 'space') return;
       refreshBoard().catch(() => {});
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
@@ -173,6 +174,8 @@ const CarrierDashboard = () => {
           <ActivityFeed activities={activities} />
         </div>
       </div>
+
+      <SpaceRequestsPanel />
 
       <div className="mt-4">
         <h6 className="mb-3">{t('pages.dashboard.myAssignedShipments')}</h6>

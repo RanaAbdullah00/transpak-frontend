@@ -46,6 +46,7 @@ const ActiveShipmentCard = ({
       });
       notifySystem(SystemNotifyType.SUCCESS, t('pages.tracking.statusUpdated'));
       emitRealtimeRefresh('shipments');
+      emitRealtimeRefresh('all');
     } catch (err) {
       notifyApiError(err);
     } finally {

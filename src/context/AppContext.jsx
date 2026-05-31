@@ -13,11 +13,13 @@ import { workspaceQueryParams } from '../utils/workspaceApi.js';
 import { getWorkspace } from '../utils/workspace.js';
 import {
   shouldProcessRealtimeEvent,
+  acknowledgeSyncedEventIds,
   clearRealtimeDedupeCache,
-  getLastNotificationSyncAt
+  getLastEventSyncAt
 } from '../utils/realtimeDedupe.js';
-import { syncNotificationsSince, fetchUnreadCount } from '../utils/realtimeSync.js';
+import { syncEventsSince, syncNotificationsSince, fetchUnreadCount } from '../utils/realtimeSync.js';
 import { handleDispatchEvent } from '../utils/realtimeDispatch.js';
+import { emitRealtimeRefresh } from '../utils/realtimeRefresh.js';
 import { pruneWorkspaceQueryCaches } from '../utils/workspaceQueryCache.js';
 
 export const AppContext = createContext(null);
@@ -210,14 +212,37 @@ export const AppProvider = ({ children }) => {
   const syncReconnectNotifications = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const since = getLastNotificationSyncAt(user.id);
-      const out = await syncNotificationsSince(user, since ? { since } : {});
-      mergeNotificationsFromServer(ensureArray(out.items));
+      const since = getLastEventSyncAt(user.id);
+      const out = await syncEventsSince(user, since ? { since } : {});
+      mergeNotificationsFromServer(ensureArray(out.notifications));
       window.dispatchEvent(
         new CustomEvent('tp:unread-sync', { detail: { count: out.unreadCount } })
       );
+      const scopes = ensureArray(out.refreshScopes);
+      if (scopes.length) {
+        const unique = [...new Set(scopes)];
+        unique.forEach((scope) => emitRealtimeRefresh(scope));
+      } else {
+        emitRealtimeRefresh('all');
+      }
+      if (out.auditEvents?.length) {
+        window.dispatchEvent(
+          new CustomEvent('tp:admin-audit-sync', { detail: { events: out.auditEvents } })
+        );
+      }
     } catch (err) {
-      if (err?.response?.status !== 401) {
+      if (err?.response?.status === 401) return;
+      try {
+        const since = getLastEventSyncAt(user.id);
+        const fallback = await syncNotificationsSince(user, since ? { since } : {});
+        const synced = ensureArray(fallback.items);
+        acknowledgeSyncedEventIds(synced);
+        mergeNotificationsFromServer(synced);
+        window.dispatchEvent(
+          new CustomEvent('tp:unread-sync', { detail: { count: fallback.unreadCount } })
+        );
+        emitRealtimeRefresh('all');
+      } catch {
         /* optional — list refetch still runs */
       }
     }
@@ -268,8 +293,8 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      // Bell is updated via socket dispatch; refetch only on broad refresh (avoids N+1 with list scopes).
-      if (scope && scope !== 'all') return;
+      const notifyScopes = new Set(['all', 'loads', 'bids', 'shipments', 'space']);
+      if (scope && !notifyScopes.has(scope)) return;
       refetchNotifications();
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);

@@ -22,7 +22,7 @@ const AdminWidgetShell = ({
     <div className={className}>
       {title ? <h6 className="fw-semibold mb-3">{title}</h6> : null}
       {displayError ? (
-        <div className="alert alert-light border rounded-3 mb-2" role="status">
+        <div className="alert border rounded-3 mb-2 tp-bg-surface-soft" role="status">
           <p className="small text-muted mb-2">{displayError}</p>
           {onRetry ? (
             <button type="button" className="btn btn-outline-primary btn-sm rounded-lg" onClick={onRetry}>

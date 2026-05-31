@@ -1258,6 +1258,27 @@ body.dark-theme .tp-brand-mark__p {
 
 body.tp-role-admin .tp-main-shell {
   --tp-role-accent: #334155;
+  --tp-surface: var(--pak-card-bg);
+  --tp-surface-muted: color-mix(in srgb, var(--pak-card-bg) 72%, var(--pak-light-green-bg) 28%);
+  --tp-text: var(--text-primary);
+  --tp-text-muted: var(--muted-text);
+  --tp-border: var(--pak-border);
+}
+
+body.tp-role-admin:not(.dark-theme) .table-light,
+body.tp-role-admin:not(.dark-theme) thead.table-light th,
+.tp-dashboard--admin:not(.dark-theme) .table-light,
+.tp-dashboard--admin .table-light {
+  background-color: var(--tp-surface-muted, #f8fafc) !important;
+  color: var(--tp-text-muted, #64748b) !important;
+  border-color: var(--tp-border, var(--pak-border)) !important;
+}
+
+body.tp-role-admin:not(.dark-theme) .alert-light,
+.tp-dashboard--admin .alert-light {
+  background: var(--tp-surface-muted, #f8fafc);
+  color: var(--tp-text, var(--text-primary));
+  border-color: var(--tp-border, var(--pak-border));
 }
 
 /* Navbar notification dropdown */

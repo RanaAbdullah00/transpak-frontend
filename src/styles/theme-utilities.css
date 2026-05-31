@@ -156,6 +156,13 @@
   color: #047857;
 }
 
+.tp-dashboard--admin .card,
+.tp-dashboard--admin .card .card-body {
+  background-color: var(--tp-surface, var(--card-bg, #fff));
+  color: var(--tp-text, var(--text-primary, #0f172a));
+  border-color: var(--tp-border, var(--pak-border, rgba(15, 23, 42, 0.08)));
+}
+
 .tp-dashboard--admin .tp-admin-stat-card {
   border-left: 3px solid var(--tp-role-accent, #334155);
 }

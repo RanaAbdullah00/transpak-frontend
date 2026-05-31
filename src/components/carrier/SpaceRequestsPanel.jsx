@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import Card from '../ui/Card.jsx';
+import { AppContext } from '../../context/AppContext.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
@@ -11,6 +12,7 @@ import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 const SpaceRequestsPanel = () => {
   const { t } = useLanguage();
   const { request } = useApi();
+  const { getSocket } = useContext(AppContext) || {};
   const [rows, setRows] = useState([]);
 
   const refresh = useCallback(async () => {
@@ -25,6 +27,21 @@ const SpaceRequestsPanel = () => {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const socket = getSocket?.();
+    if (!socket || !rows.length) return undefined;
+    rows.forEach((r) => {
+      if (r?.id) socket.emit('space:join', { requestId: r.id });
+    });
+    const onConnect = () => {
+      rows.forEach((r) => {
+        if (r?.id) socket.emit('space:join', { requestId: r.id });
+      });
+    };
+    socket.on('connect', onConnect);
+    return () => socket.off('connect', onConnect);
+  }, [getSocket, rows]);
 
   useEffect(() => {
     const h = (e) => {

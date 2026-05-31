@@ -6,6 +6,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { invalidateRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 const StarRow = ({ value, onChange, disabled }) => (
   <div className="d-flex gap-1 flex-wrap tp-star-row" role="group">
@@ -53,6 +54,7 @@ const ReviewPromptModal = ({ prompt, onClose, onSubmitted }) => {
       await request({ method: 'POST', url: '/reviews', data: body });
       notifySuccess(t('reviews.submittedToast'));
       invalidateRatingSummary(prompt.toUserId);
+      emitRealtimeRefresh('all');
       onSubmitted?.(prompt);
       onClose();
     } catch (err) {

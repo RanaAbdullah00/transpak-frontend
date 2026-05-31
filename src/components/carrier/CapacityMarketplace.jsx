@@ -102,11 +102,16 @@ const CapacityMarketplace = () => {
 
   const submitRequest = async () => {
     if (!requestTarget?.id) return;
+    const tons = Number(requestTons);
+    if (!Number.isFinite(tons) || tons <= 0) {
+      notifyError(t('loadsHub.requestFailed'));
+      return;
+    }
     try {
       await request({
         method: 'POST',
         url: `/carrier-space/${requestTarget.id}/request`,
-        data: { requestedKg: tonsToKg(Number(requestTons)), message: '' }
+        data: { requestedKg: tonsToKg(tons), message: '' }
       });
       notifySuccess(t('loadsHub.requestSent'));
       setRequestTarget(null);

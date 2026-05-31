@@ -46,7 +46,7 @@ const AdminNotifications = () => {
   }, [refresh]);
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-2">{t('pages.admin.notificationsTitle')}</h5>
       <p className="small text-muted mb-3">{t('pages.admin.notificationsLead')}</p>
       {error && <div className="alert alert-warning rounded-3">{error}</div>}
@@ -56,7 +56,7 @@ const AdminNotifications = () => {
         <Card className="p-0 overflow-hidden border-0 shadow-sm">
           <div className="table-responsive">
             <table className="table table-sm table-hover mb-0">
-              <thead className="table-light">
+              <thead>
                 <tr>
                   <th className="ps-3">{t('pages.admin.notifReceiver')}</th>
                   <th>{t('pages.admin.notifMessage')}</th>

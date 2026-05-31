@@ -121,6 +121,7 @@ export const translations = {
       markInTransit: 'Mark in transit',
       markComplete: 'Confirm delivery',
       mySpaceRequests: 'My capacity requests',
+      noSpaceRequestsYet: 'No capacity requests yet.',
       spaceStatusUpdated: 'Contract status updated',
       spaceCompletedHint: 'Contract completed — leave a review from your profile.',
       maxCapacityKg: 'Max available (tons)',
@@ -1504,6 +1505,7 @@ export const translations = {
       markInTransit: 'ٹرانزٹ میں',
       markComplete: 'ڈیلیوری کی تصدیق',
       mySpaceRequests: 'میری گنجائش درخواستیں',
+      noSpaceRequestsYet: 'ابھی کوئی گنجائش درخواست نہیں۔',
       spaceStatusUpdated: 'معاہدے کی حیثیت اپ ڈیٹ',
       spaceCompletedHint: 'معاہدہ مکمل — جائزہ دیں۔'
     },

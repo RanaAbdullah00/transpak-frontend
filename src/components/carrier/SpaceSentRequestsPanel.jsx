@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import Card from '../ui/Card.jsx';
+import { AppContext } from '../../context/AppContext.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
@@ -11,7 +12,9 @@ import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 const SpaceSentRequestsPanel = () => {
   const { t } = useLanguage();
   const { request } = useApi();
+  const { getSocket } = useContext(AppContext) || {};
   const [rows, setRows] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -19,12 +22,29 @@ const SpaceSentRequestsPanel = () => {
       setRows(Array.isArray(data) ? data : []);
     } catch {
       setRows([]);
+    } finally {
+      setLoaded(true);
     }
   }, [request]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const socket = getSocket?.();
+    if (!socket || !rows.length) return undefined;
+    rows.forEach((r) => {
+      if (r?.id) socket.emit('space:join', { requestId: r.id });
+    });
+    const onConnect = () => {
+      rows.forEach((r) => {
+        if (r?.id) socket.emit('space:join', { requestId: r.id });
+      });
+    };
+    socket.on('connect', onConnect);
+    return () => socket.off('connect', onConnect);
+  }, [getSocket, rows]);
 
   useEffect(() => {
     const h = (e) => {
@@ -57,11 +77,14 @@ const SpaceSentRequestsPanel = () => {
     }
   };
 
-  if (!rows.length) return null;
+  if (!loaded) return null;
 
   return (
     <Card className="p-3 mb-3">
       <h6 className="mb-3">{t('loadsHub.mySpaceRequests')}</h6>
+      {!rows.length ? (
+        <p className="small text-muted mb-0">{t('loadsHub.noSpaceRequestsYet')}</p>
+      ) : (
       <div className="d-flex flex-column gap-3">
         {rows.map((r) => (
           <SpaceRequestLifecycle
@@ -73,6 +96,7 @@ const SpaceSentRequestsPanel = () => {
           />
         ))}
       </div>
+      )}
     </Card>
   );
 };

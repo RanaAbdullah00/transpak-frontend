@@ -55,7 +55,7 @@ const AdminFleetQueue = () => {
   };
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-1">{t('pages.admin.fleetQueueTitle')}</h5>
       <p className="small text-muted mb-3">{t('pages.admin.fleetQueueHint')}</p>
       {loading && trucks.length === 0 ? (

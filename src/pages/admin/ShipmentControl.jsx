@@ -40,7 +40,7 @@ const ShipmentControl = () => {
   };
 
   return (
-    <section className="container py-3">
+    <section className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-3">{t('nav.shipments')}</h5>
       {loading ? (
         <p className="d-flex justify-content-center py-5">

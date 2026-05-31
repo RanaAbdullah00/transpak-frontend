@@ -140,7 +140,7 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.LOAD_POSTED, msg);
     return;
   }
-  if (type.includes('SPACE_REQUEST') || type.includes('SPACE_ACCEPTED')) {
+  if (type.includes('SPACE_REQUEST') || type.includes('SPACE_ACCEPTED') || type.includes('SPACE_REQUEST_SENT')) {
     notifySystem(SystemNotifyType.BID_RECEIVED, msg);
     return;
   }
@@ -172,10 +172,6 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.WARNING, msg);
     return;
   }
-  if (type.includes('DELIVERY_COMPLETED')) {
-    notifySystem(SystemNotifyType.SUCCESS, msg);
-    return;
-  }
   if (type.includes('CONTRACT_STARTED')) {
     notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
     return;
@@ -184,7 +180,23 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.SUCCESS, msg);
     return;
   }
-  if (type.includes('DELIVERED') || type.includes('COMPLETED')) {
+  if (type.includes('SHIPMENT_PICKED_UP') || type.includes('PICKED_UP')) {
+    notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
+    return;
+  }
+  if (type.includes('SHIPMENT_IN_TRANSIT') || type.includes('IN_TRANSIT')) {
+    notifySystem(SystemNotifyType.LOCATION_UPDATED, msg);
+    return;
+  }
+  if (type.includes('DELIVERED') || type.includes('DELIVERY_COMPLETED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
+  if (type.includes('RATING') || type.includes('REVIEW_SUBMITTED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
+  if (type.includes('COMPLETED')) {
     notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
     return;
   }

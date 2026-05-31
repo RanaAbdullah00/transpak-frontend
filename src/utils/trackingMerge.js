@@ -75,10 +75,11 @@ export function mergeTrackingPayload(prev, incoming) {
 
   const incFresh =
     hasIncLoc &&
-    isLocationFresh(
+    (isLocationFresh(
       incoming?.tracking?.locationUpdatedAt,
       incoming?.ts ?? incoming?.tracking?.ts
-    );
+    ) ||
+      (Number(incoming?.ts) > 0 && Number(incoming?.ts) >= Number(prev?.ts || 0)));
 
   const prevLoc = prev?.tracking?.currentLocation ?? prev?.tracking?.location;
   const prevFresh =
@@ -103,9 +104,12 @@ export function mergeTrackingPayload(prev, incoming) {
   } else if (prevFresh && Array.isArray(prevLoc)) {
     mergedLocation = [Number(prevLoc[0]), Number(prevLoc[1])];
     locationUnavailable = false;
-  } else if (hasIncLoc && !prevFresh && !incFresh) {
-    mergedLocation = null;
-    locationUnavailable = true;
+  } else if (hasIncLoc) {
+    mergedLocation = [Number(incLoc[0]), Number(incLoc[1])];
+    locationUnavailable = false;
+  } else if (Array.isArray(prevLoc) && prevLoc.length >= 2) {
+    mergedLocation = [Number(prevLoc[0]), Number(prevLoc[1])];
+    locationUnavailable = false;
   } else {
     mergedLocation = prev?.tracking?.currentLocation ?? null;
     locationUnavailable = prev?.tracking?.locationUnavailable ?? true;

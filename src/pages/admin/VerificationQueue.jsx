@@ -34,7 +34,7 @@ const VerificationQueue = () => {
   };
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-3">{t('pages.admin.verificationTitle')}</h5>
       {loading ? (
         <div className="d-flex justify-content-center py-5">

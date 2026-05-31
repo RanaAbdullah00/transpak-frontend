@@ -58,7 +58,7 @@ const AdminBids = () => {
   }, [request, t]);
 
   return (
-    <div className="container py-3">
+    <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-3">{t('pages.admin.bidsTitle')}</h5>
       {error && <div className="alert alert-warning rounded-3">{error}</div>}
       {loading ? (
@@ -67,7 +67,7 @@ const AdminBids = () => {
         <Card className="p-0 overflow-hidden border-0 shadow-sm">
           <div className="table-responsive">
             <table className="table table-sm table-hover mb-0 align-middle">
-              <thead className="table-light">
+              <thead>
                 <tr>
                   <th className="ps-3">{t('pages.admin.tableCode')}</th>
                   <th>{t('pages.admin.tableRoute')}</th>
