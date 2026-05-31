@@ -31,19 +31,20 @@ export function resolveWorkspaceSwitchTarget(user) {
   return resolveCommercialSwitchTarget(user);
 }
 
-/** Navbar action: switch workspace or add missing commercial role when roles.length < 2. */
+/** Navbar action: switch workspace or add missing commercial role (single commercial role only). */
 export function resolveNavRoleAction(user) {
   if (!user) return { mode: 'none' };
-  const roles = getUserRoles(user);
-  if (roles.includes('admin') && !commercialRoles(user).length) {
+  const commercial = commercialRoles(user);
+  const allRoles = getUserRoles(user);
+  if (allRoles.includes('admin') && !commercial.length) {
     return { mode: 'none' };
   }
-  if (roles.length >= 2) {
+  if (commercial.length >= 2) {
     const target = resolveCommercialSwitchTarget(user);
     return target ? { mode: 'switch', target } : { mode: 'none' };
   }
-  const missing = COMMERCIAL.find((r) => !roles.includes(r));
-  if (missing && roles.length < 2) {
+  const missing = COMMERCIAL.find((r) => !commercial.includes(r));
+  if (missing && commercial.length < 2) {
     return { mode: 'add', target: missing };
   }
   return { mode: 'none' };

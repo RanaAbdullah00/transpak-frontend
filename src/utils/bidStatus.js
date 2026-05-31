@@ -19,6 +19,16 @@ export function isActiveBidStatus(raw) {
   return s === BID_STATUS.PENDING_SHIPPER || s === BID_STATUS.COUNTER;
 }
 
+export function isTerminalBidStatus(raw) {
+  const s = normalizeBidStatus(raw);
+  return (
+    s === BID_STATUS.ACCEPTED ||
+    s === BID_STATUS.REJECTED ||
+    s === BID_STATUS.CANCELLED ||
+    s === 'expired'
+  );
+}
+
 export function isCounterOffered(raw) {
   return normalizeBidStatus(raw) === BID_STATUS.COUNTER;
 }

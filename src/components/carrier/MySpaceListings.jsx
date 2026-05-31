@@ -7,6 +7,7 @@ import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
 import SpaceRequestsPanel from './SpaceRequestsPanel.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 const MySpaceListings = () => {
   const { t } = useLanguage();
@@ -27,10 +28,21 @@ const MySpaceListings = () => {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'space') return;
+      refresh();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refresh]);
+
   const closeListing = async (id) => {
     try {
       await request({ method: 'PATCH', url: `/carrier-space/${id}`, data: { status: 'closed' } });
       notifySuccess(t('loadsHub.spaceClosed'));
+      emitRealtimeRefresh('loads');
       refresh();
     } catch (err) {
       notifyError(formatUserError(err, t));

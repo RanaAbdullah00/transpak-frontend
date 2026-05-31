@@ -5,7 +5,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { ensureArray } from '../../utils/unwrapApi.js';
-import { normalizeBids } from '../../adapters/normalize.js';
+import { normalizeBids, normalizeLoads } from '../../adapters/normalize.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
@@ -16,6 +16,7 @@ import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 const BidManagement = () => {
   const { t, isUrdu } = useLanguage();
   const [bids, setBids] = useState([]);
+  const [loadMetaByLoad, setLoadMetaByLoad] = useState({});
   const { user } = useAuth();
   const profileComplete = user?.profileComplete === true;
   const { request, loading } = useApi();
@@ -69,6 +70,41 @@ const BidManagement = () => {
   }, [fetchBidsData]);
 
   useEffect(() => {
+    const ids = [...new Set(bids.map((b) => b.loadId).filter(Boolean))];
+    if (!ids.length) {
+      setLoadMetaByLoad({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const next = {};
+      await Promise.all(
+        ids.map(async (lid) => {
+          try {
+            const load = await request({ url: `/loads/${lid}` });
+            const normalized = normalizeLoads([load])[0];
+            next[lid] = {
+              distanceKm: normalized?.distanceKm ?? normalized?.distance ?? null
+            };
+          } catch {
+            /* load may be restricted */
+          }
+        })
+      );
+      if (!cancelled) setLoadMetaByLoad(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bids, request]);
+
+  const bidsWithDistance = bids.map((b) => {
+    const lid = b.loadId ? String(b.loadId) : null;
+    const distanceKm = lid ? loadMetaByLoad[lid]?.distanceKm : null;
+    return distanceKm != null && distanceKm > 0 ? { ...b, distanceKm } : b;
+  });
+
+  useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
       if (scope && scope !== 'all' && scope !== 'bids') return;
@@ -95,7 +131,7 @@ const BidManagement = () => {
           <Loader />
         </div>
       ) : (
-        <BidList bids={bids} mode="shipper" onAccept={handleAccept} onReject={handleReject} onSuggest={handleSuggest} actionsDisabled={!profileComplete} />
+        <BidList bids={bidsWithDistance} mode="shipper" onAccept={handleAccept} onReject={handleReject} onSuggest={handleSuggest} actionsDisabled={!profileComplete} />
       )}
     </div>
   );

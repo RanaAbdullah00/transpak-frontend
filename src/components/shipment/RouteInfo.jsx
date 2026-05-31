@@ -1,21 +1,29 @@
 import React from 'react';
 import Card from '../ui/Card.jsx';
+import { useLanguage } from '../../hooks/useLanguage.js';
+import { formatDistanceKm } from '../../utils/formatDistance.js';
 
-// Shows key route metrics for a shipment.
-const RouteInfo = ({ distance, duration, checkpoints }) => (
-  <Card>
-    <h6 className="mb-2">Route overview</h6>
-    <div className="d-flex justify-content-between small mb-2">
-      <span>Distance: {distance != null && distance !== '' ? `${distance} km` : '—'}</span>
-      <span>Duration: {duration != null && duration !== '' ? `${duration} hrs` : '—'}</span>
-    </div>
-    <ol className="small ps-3 mb-0">
-      {checkpoints.map((cp) => (
-        <li key={cp}>{cp}</li>
-      ))}
-    </ol>
-  </Card>
-);
+const RouteInfo = ({ distance, duration, checkpoints }) => {
+  const { t } = useLanguage();
+  const dist = formatDistanceKm(distance, t);
+
+  return (
+    <Card>
+      <h6 className="mb-2">Route overview</h6>
+      <div className="d-flex justify-content-between small mb-2 gap-2 flex-wrap">
+        <span>Distance: {dist.display}</span>
+        <span>
+          Duration:{' '}
+          {duration != null && duration !== '' ? `${duration} hrs` : t('common.emDash')}
+        </span>
+      </div>
+      <ol className="small ps-3 mb-0">
+        {(Array.isArray(checkpoints) ? checkpoints : []).map((cp) => (
+          <li key={cp}>{cp}</li>
+        ))}
+      </ol>
+    </Card>
+  );
+};
 
 export default RouteInfo;
-

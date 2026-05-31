@@ -5,7 +5,7 @@ import BidList from '../../components/loadboard/BidList.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { normalizeTrucksResponse } from '../../utils/fleetApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
-import { normalizeBids } from '../../adapters/normalize.js';
+import { normalizeBids, normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -94,7 +94,12 @@ const MyBids = () => {
           try {
             const load = await request({ url: `/loads/${lid}` });
             if (load?.shipperId) {
-              next[lid] = { shipperId: String(load.shipperId), code: load.code || '' };
+              const normalized = normalizeLoads([load])[0];
+              next[lid] = {
+                shipperId: String(load.shipperId),
+                code: load.code || '',
+                distanceKm: normalized?.distanceKm ?? normalized?.distance ?? null
+              };
             }
           } catch {
             /* e.g. not yet assigned — hide badge until load is visible */
@@ -114,6 +119,14 @@ const MyBids = () => {
   const counterpartyLabelByLoadId = Object.fromEntries(
     Object.entries(loadMetaByLoad).map(([k, v]) => [k, `${t('auth.shipper')} · ${v.code || k.slice(0, 8)}`])
   );
+  const distanceByLoadId = Object.fromEntries(
+    Object.entries(loadMetaByLoad).map(([k, v]) => [k, v.distanceKm ?? null])
+  );
+  const bidsWithDistance = bids.map((b) => {
+    const lid = b.loadId ? String(b.loadId) : null;
+    const distanceKm = lid ? distanceByLoadId[lid] : null;
+    return distanceKm != null && distanceKm > 0 ? { ...b, distanceKm } : b;
+  });
 
   const actionsDisabled = !profileComplete || !trucksComplete;
 
@@ -173,7 +186,7 @@ const MyBids = () => {
             </div>
           )}
           <BidList
-            bids={bids}
+            bids={bidsWithDistance}
             mode="carrier"
             onAcceptSuggestion={handleAcceptSuggestion}
             onRejectSuggestion={handleRejectSuggestion}

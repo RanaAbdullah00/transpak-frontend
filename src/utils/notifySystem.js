@@ -121,7 +121,14 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.BID_REJECTED, msg);
     return;
   }
-  if (type.includes('BID_RECEIVED') || type.includes('CONFIRMATION') || type.includes('COUNTER_OFFERED')) {
+  if (
+    type.includes('BID_CREATED') ||
+    type.includes('BID_RECEIVED') ||
+    type.includes('BID_COUNTER') ||
+    type.includes('BID_UPDATED') ||
+    type.includes('CONFIRMATION') ||
+    type.includes('COUNTER_OFFERED')
+  ) {
     notifySystem(SystemNotifyType.BID_RECEIVED, msg);
     return;
   }
@@ -131,6 +138,30 @@ export function routeRealtimeNotification(normalized) {
   }
   if (type.includes('LOAD_POSTED')) {
     notifySystem(SystemNotifyType.LOAD_POSTED, msg);
+    return;
+  }
+  if (type.includes('SPACE_REQUEST') || type.includes('SPACE_ACCEPTED')) {
+    notifySystem(SystemNotifyType.BID_RECEIVED, msg);
+    return;
+  }
+  if (type.includes('SPACE_REJECTED')) {
+    notifySystem(SystemNotifyType.BID_REJECTED, msg);
+    return;
+  }
+  if (type.includes('SPACE_IN_TRANSIT') || type.includes('SPACE_COMPLETED') || type.includes('SPACE_UPDATE')) {
+    notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
+    return;
+  }
+  if (type.includes('TRUCK_APPROVED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
+  if (type.includes('TRUCK_REJECTED') || type.includes('TRUCK_SUSPENDED')) {
+    notifySystem(SystemNotifyType.WARNING, msg);
+    return;
+  }
+  if (type.includes('DELIVERED') || type.includes('COMPLETED')) {
+    notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
     return;
   }
   if (type.includes('SPACE_LISTED') || type.includes('CAPACITY')) {

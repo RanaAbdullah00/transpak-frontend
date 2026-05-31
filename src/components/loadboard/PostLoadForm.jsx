@@ -8,6 +8,7 @@ import VehicleTypeSelect from './VehicleTypeSelect.jsx';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useFareEstimate } from '../../hooks/useFareEstimate.js';
+import { formatDistanceKm } from '../../utils/formatDistance.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
 import { localTodayISO, isOnOrAfterLocalToday } from '../../utils/localDate.js';
 
@@ -175,7 +176,7 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null, subm
                 <div className="text-muted text-uppercase tp-route-summary__label">
                   {t('pages.postLoadForm.summaryDistance')}
                 </div>
-                <div className="fw-semibold">{estimate.distanceKm} km</div>
+                <div className="fw-semibold">{formatDistanceKm(estimate.distanceKm, t).display}</div>
               </div>
               <div className="col-4">
                 <div className="text-muted text-uppercase tp-route-summary__label">

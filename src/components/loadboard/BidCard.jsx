@@ -8,6 +8,7 @@ import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { translateBidStatus } from '../../utils/i18nLabels.js';
 import { isAwaitingShipper, isCounterOffered, isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { formatDistanceKm } from '../../utils/formatDistance.js';
 
 function formatHHMMSS(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -99,10 +100,17 @@ const BidCard = ({
     : false;
 
   const canSuggest = isShipper
-    ? showActions && typeof onSuggest === 'function'
+    ? showActions &&
+      (isAwaitingShipper(bid.status) || suggestedByCarrier) &&
+      typeof onSuggest === 'function'
     : isCarrier
-    ? showActions && typeof onSuggest === 'function'
+    ? showActions &&
+      (isAwaitingShipper(bid.status) || suggestedByShipper) &&
+      typeof onSuggest === 'function'
     : false;
+
+  const distRaw = bid?.distanceKm ?? bid?.distance ?? bid?.loadDistanceKm;
+  const routeDistance = formatDistanceKm(distRaw, t);
 
   const acceptHandler = canAccept
     ? () => (isShipper ? onAccept?.(bid) : onAcceptSuggestion?.(bid))
@@ -142,7 +150,11 @@ const BidCard = ({
           </div>
           <small className="text-muted d-block text-break">
             {bid.vehicleType} · {bid.transitTime} {t('bidCard.daysSuffix')}
+            {routeDistance.available ? ` · ${routeDistance.display}` : ''}
           </small>
+          {!routeDistance.available && distRaw != null ? (
+            <small className="text-muted d-block">{routeDistance.display}</small>
+          ) : null}
         </div>
         <Badge
           variant={

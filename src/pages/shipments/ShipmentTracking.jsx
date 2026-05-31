@@ -8,6 +8,7 @@ import ShipmentProgressBox from '../../components/shipment/ShipmentProgressBox.j
 import LifecycleBadge from '../../components/shipment/LifecycleBadge.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
 import Loader from '../../components/ui/Loader.jsx';
@@ -30,6 +31,14 @@ const ShipmentTracking = () => {
   const tracking = payload?.tracking;
   const originName = payload?.origin || '';
   const destinationName = payload?.destination || '';
+
+  const routeDistanceKm = useMemo(() => {
+    const fromApi = payload?.distanceKm;
+    if (Number(fromApi) > 0) return Number(fromApi);
+    if (!originName || !destinationName) return null;
+    const est = estimateLocalFare(originName, destinationName);
+    return est?.distanceKm > 0 ? est.distanceKm : null;
+  }, [payload?.distanceKm, originName, destinationName]);
 
   const coords = useMemo(() => {
     const raw = payload?.liveTrackingMap?.coordinates || [];
@@ -178,7 +187,7 @@ const ShipmentTracking = () => {
         />
       </div>
       <StatusTimeline currentStatus={shipment.status} events={timelineEvents} />
-      <RouteInfo distance={null} duration={null} checkpoints={checkpoints} />
+      <RouteInfo distance={routeDistanceKm} duration={null} checkpoints={checkpoints} />
     </div>
   );
 };

@@ -27,7 +27,11 @@ const SpaceSentRequestsPanel = () => {
   }, [refresh]);
 
   useEffect(() => {
-    const h = () => refresh();
+    const h = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'space' && scope !== 'loads') return;
+      refresh();
+    };
     window.addEventListener('tp:realtime-refresh', h);
     return () => window.removeEventListener('tp:realtime-refresh', h);
   }, [refresh]);

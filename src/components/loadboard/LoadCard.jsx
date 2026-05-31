@@ -8,6 +8,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import CarrierLoadActions from './CarrierLoadActions.jsx';
 import { formatLoadDisplayId } from '../../utils/displayId.js';
+import { formatDistanceKm } from '../../utils/formatDistance.js';
 
 // Card representing a single load in the marketplace.
 const LoadCard = ({
@@ -21,9 +22,7 @@ const LoadCard = ({
 }) => {
   const { t } = useLanguage();
   const expectedPrice = Number(load?.expectedPrice ?? 0);
-  const distRaw = load?.distance ?? load?.distanceKm;
-  const distance =
-    distRaw != null && Number(distRaw) > 0 ? Math.round(Number(distRaw)) : '—';
+  const distance = formatDistanceKm(load?.distance ?? load?.distanceKm, t).display;
   const shipperId = load?.shipperId || null;
   const deadlineMs = load?.deadline ? new Date(load.deadline).getTime() : null;
   const isDeadlinePast = deadlineMs != null && !Number.isNaN(deadlineMs) && Date.now() > deadlineMs;

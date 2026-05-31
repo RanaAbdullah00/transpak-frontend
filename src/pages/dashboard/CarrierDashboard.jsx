@@ -14,7 +14,7 @@ import ActiveTripBanner from '../../components/dashboard/ActiveTripBanner.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
-import { acceptLoadAtListedFare, submitCounterOffer } from '../../services/carrierLoadOffer.js';
+import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { isActiveBidStatus, normalizeBidStatus } from '../../utils/bidStatus.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
@@ -114,6 +114,19 @@ const CarrierDashboard = () => {
     }
   };
 
+  const handleCarrierReject = async (load) => {
+    setOfferBusyId(load.id);
+    try {
+      await rejectLoadForCarrier(request, load);
+      notifySystem(SystemNotifyType.SUCCESS, t('pages.loads.carrierRejectSuccess'));
+      await refreshBoard();
+    } catch (err) {
+      notifyApiError(err);
+    } finally {
+      setOfferBusyId(null);
+    }
+  };
+
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--carrier">
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -129,6 +142,9 @@ const CarrierDashboard = () => {
               {t('pages.dashboard.incompleteProfileCta')}
             </Link>
           )}
+          <Link to="/loads/manage?tab=capacity" className="btn btn-outline-primary btn-sm rounded-lg">
+            {t('loadsHub.navCapacityHub')}
+          </Link>
           <Link to="/loads/manage?tab=freight" className="btn btn-outline-primary btn-sm rounded-lg">
             {t('pages.dashboard.statOpenMarketplace')}
           </Link>
@@ -161,6 +177,7 @@ const CarrierDashboard = () => {
               carrierMode
               onCarrierAccept={handleCarrierAccept}
               onCarrierCounter={handleCarrierCounter}
+              onCarrierReject={handleCarrierReject}
               carrierBusyLoadId={offerBusyId}
             />
           )}
