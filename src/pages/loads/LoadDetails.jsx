@@ -14,7 +14,6 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import {
   notifyError,
   notifySuccess,
-  notifyBidAccepted,
   notifyBidRejected,
   notifyCounterOffer
 } from '../../components/ui/ToastProvider.jsx';
@@ -84,7 +83,6 @@ const LoadDetails = () => {
   const handleAccept = async (bid) => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      notifyBidAccepted(t('pages.bids.bidAccepted'));
       emitRealtimeRefresh('bids');
       await fetchData();
     } catch (error) {

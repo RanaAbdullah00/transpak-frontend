@@ -266,7 +266,12 @@ export const AppProvider = ({ children }) => {
   }, [notificationsCursor, notificationsHasMore, notificationsLoadingMore, mergeNotificationsFromServer, user]);
 
   useEffect(() => {
-    const onRefresh = () => refetchNotifications();
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      // Bell is updated via socket dispatch; refetch only on broad refresh (avoids N+1 with list scopes).
+      if (scope && scope !== 'all') return;
+      refetchNotifications();
+    };
     window.addEventListener('tp:realtime-refresh', onRefresh);
     return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
   }, [refetchNotifications]);
@@ -392,7 +397,6 @@ export const AppProvider = ({ children }) => {
           const active = getWorkspace(u);
           if (String(d.scope.workspace).toLowerCase() !== active) return;
         }
-        if (d?.eventId && !shouldProcessRealtimeEvent(d.eventId)) return;
         handleDispatchEvent(d, { onNotification: ingestNotification });
       },
       onNotification: (n) => {

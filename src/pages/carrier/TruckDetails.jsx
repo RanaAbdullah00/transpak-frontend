@@ -94,6 +94,8 @@ const TruckDetails = () => {
   };
 
   const startEdit = (row) => {
+    const statusKey = String(row.statusLabel || row.status || '').toUpperCase();
+    if (statusKey === 'APPROVED') return;
     setForm({
       id: row.id,
       engineNumber: row.engineNumber || row.truckNumber || '',
@@ -348,6 +350,7 @@ const TruckDetails = () => {
                   const thumb = row.truckCardFrontImage || row.truckFrontImage || '';
                   const statusKey = String(row.statusLabel || row.status || '').toUpperCase();
                   const isSuspended = statusKey === 'SUSPENDED';
+                  const isApproved = statusKey === 'APPROVED';
                   return (
                     <div key={row.id} className="list-group-item px-0 border-0 border-bottom py-3">
                       <div className="d-flex flex-row align-items-start gap-3">
@@ -400,6 +403,7 @@ const TruckDetails = () => {
                           )}
                         </div>
                         <div className="d-flex flex-column gap-1 flex-shrink-0">
+                          {!isApproved ? (
                           <Button
                             variant="outline-primary"
                             size="sm"
@@ -408,6 +412,11 @@ const TruckDetails = () => {
                           >
                             {t('pages.truckDetailsPage.edit')}
                           </Button>
+                          ) : (
+                            <span className="small text-muted text-center px-1" title={t('pages.truckDetailsPage.verifiedNoEdit')}>
+                              {t('pages.truckDetailsPage.verifiedLocked')}
+                            </span>
+                          )}
                           {isTruckMatchingEligible(row) && !row.isDefault ? (
                             <Button
                               variant="outline-secondary"

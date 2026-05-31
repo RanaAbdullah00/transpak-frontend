@@ -10,8 +10,7 @@ import {
   FaCog,
   FaSignOutAlt,
   FaQuestionCircle,
-  FaClipboardCheck,
-  FaWarehouse
+  FaClipboardCheck
 } from 'react-icons/fa';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import SafeAvatar from '../ui/SafeAvatar.jsx';
@@ -68,10 +67,6 @@ const Sidebar = () => {
             <NavLink to="/loads/manage?tab=freight" className={navLinkClass}>
               <FaListUl />
               {t('pages.dashboard.statOpenMarketplace')}
-            </NavLink>
-            <NavLink to="/loads/manage?tab=capacity" className={navLinkClass}>
-              <FaWarehouse />
-              {t('loadsHub.navCapacityHub')}
             </NavLink>
             <NavLink to="/bids/mine" className={navLinkClass}>
               <FaGavel />

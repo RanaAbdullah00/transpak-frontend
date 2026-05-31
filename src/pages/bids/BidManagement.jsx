@@ -35,7 +35,6 @@ const BidManagement = () => {
   const handleAccept = async (bid) => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      notifySuccess(t('pages.bids.bidAccepted'));
       emitRealtimeRefresh('bids');
       fetchBidsData();
     } catch (err) {

@@ -156,6 +156,18 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.SUCCESS, msg);
     return;
   }
+  if (type.includes('TRUCK_PENDING') || type.includes('VERIFICATION_PENDING')) {
+    notifySystem(SystemNotifyType.WARNING, msg);
+    return;
+  }
+  if (type.includes('VERIFICATION_APPROVED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
+  if (type.includes('VERIFICATION_REJECTED')) {
+    notifySystem(SystemNotifyType.WARNING, msg);
+    return;
+  }
   if (type.includes('TRUCK_REJECTED') || type.includes('TRUCK_SUSPENDED')) {
     notifySystem(SystemNotifyType.WARNING, msg);
     return;

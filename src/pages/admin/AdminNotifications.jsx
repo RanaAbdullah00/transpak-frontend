@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FaBell } from 'react-icons/fa';
 import Card from '../../components/ui/Card.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
@@ -15,26 +15,35 @@ const AdminNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await request({ url: '/admin/notifications', expectList: true });
-        if (!cancelled) setRows(ensureArray(data));
-      } catch (e) {
-        if (!cancelled) {
-          setError(formatUserError(e, t, { fallback: t('pages.admin.notificationsLoadFailed') }));
-          setRows([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await request({ url: '/admin/notifications', expectList: true });
+      setRows(ensureArray(data));
+    } catch (e) {
+      setError(formatUserError(e, t, { fallback: t('pages.admin.notificationsLoadFailed') }));
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   }, [request, t]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments' && scope !== 'space') {
+        return;
+      }
+      refresh();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refresh]);
 
   return (
     <div className="container py-3">

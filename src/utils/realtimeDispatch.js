@@ -23,12 +23,16 @@ const SCOPE_REFRESH = {
   SPACE_IN_TRANSIT: 'space',
   SPACE_COMPLETED: 'space',
   SPACE_UPDATE: 'space',
-  CONTRACT_STARTED: 'bids',
+  CONTRACT_STARTED: 'space',
   DELIVERED: 'shipments',
   DELIVERY_COMPLETED: 'shipments',
   SHIPMENT_PICKED_UP: 'shipments',
   SHIPMENT_IN_TRANSIT: 'shipments',
-  LOGIN_SUCCESS: 'all'
+  LOGIN_SUCCESS: 'all',
+  VERIFICATION_PENDING: 'all',
+  VERIFICATION_APPROVED: 'all',
+  VERIFICATION_REJECTED: 'all',
+  TRUCK_PENDING: 'all'
 };
 
 /**

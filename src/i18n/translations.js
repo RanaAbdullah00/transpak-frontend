@@ -462,6 +462,13 @@ export const translations = {
         SPACE_LISTED: 'Capacity published',
         CONTRACT_STARTED: 'Contract started',
         TRUCK_UPDATED: 'Truck updated',
+        TRUCK_PENDING: 'Truck pending approval',
+        VERIFICATION_PENDING: 'Verification pending',
+        VERIFICATION_APPROVED: 'Verification approved',
+        VERIFICATION_REJECTED: 'Verification rejected',
+        BID_CREATED: 'New bid',
+        BID_COUNTER: 'Counter offer',
+        SPACE_REQUEST: 'Capacity request',
         DELIVERY_COMPLETED: 'Delivery completed',
         REVIEW_RECEIVED: 'New review',
         LOAD: 'Load',
@@ -996,7 +1003,9 @@ export const translations = {
         deleted: 'Truck removed',
         matchingEligible: 'Eligible for load matching',
         notMatchingEligible: 'Not eligible for matching until approved',
-        suspendedHint: 'This truck was suspended by admin and cannot be used for matching'
+        suspendedHint: 'This truck was suspended by admin and cannot be used for matching',
+        verifiedLocked: 'Verified',
+        verifiedNoEdit: 'Admin-verified trucks cannot be edited'
       },
       feedbackPage: {
         title: 'Feedback',
@@ -1804,6 +1813,13 @@ export const translations = {
         SPACE_LISTED: 'گنجائش شائع',
         CONTRACT_STARTED: 'معاہدہ شروع',
         TRUCK_UPDATED: 'ٹرک اپ ڈیٹ',
+        TRUCK_PENDING: 'ٹرک منظوری زیر التوا',
+        VERIFICATION_PENDING: 'تصدیق زیر التوا',
+        VERIFICATION_APPROVED: 'تصدیق منظور',
+        VERIFICATION_REJECTED: 'تصدیق مسترد',
+        BID_CREATED: 'نئی بڈ',
+        BID_COUNTER: 'کاؤنٹر آفر',
+        SPACE_REQUEST: 'گنجائش کی درخواست',
         DELIVERY_COMPLETED: 'ڈیلیوری مکمل',
         REVIEW_RECEIVED: 'نیا جائزہ',
         LOAD: 'لوڈ',
@@ -2259,7 +2275,9 @@ export const translations = {
         deleted: 'ٹرک ہٹا دیا گیا',
         matchingEligible: 'لوڈ میچنگ کے لیے اہل',
         notMatchingEligible: 'منظوری تک میچنگ کے لیے اہل نہیں',
-        suspendedHint: 'یہ ٹرک ایڈمن نے معطل کر دیا ہے اور میچنگ کے لیے استعمال نہیں ہو سکتا'
+        suspendedHint: 'یہ ٹرک ایڈمن نے معطل کر دیا ہے اور میچنگ کے لیے استعمال نہیں ہو سکتا',
+        verifiedLocked: 'تصدیق شدہ',
+        verifiedNoEdit: 'ایڈمن سے تصدیق شدہ ٹرک میں ترمیم نہیں ہو سکتی'
       },
       feedbackPage: {
         title: 'فیڈ بیک',

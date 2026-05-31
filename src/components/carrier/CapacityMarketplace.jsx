@@ -10,7 +10,6 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { getVehicleTypeLabel } from '../../data/vehicleTypes.js';
 import CitySelect from '../ui/CitySearchSelect.jsx';
-import SpaceSentRequestsPanel from './SpaceSentRequestsPanel.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
 import { kgToTons, tonsToKg } from '../../utils/weightUnits.js';
 
@@ -129,7 +128,6 @@ const CapacityMarketplace = () => {
 
   return (
     <div>
-      <SpaceSentRequestsPanel />
       <div className="tp-filter-card mb-2">
         <div className="row g-2">
           <div className="col-6 col-md-3">
