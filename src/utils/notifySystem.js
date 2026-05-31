@@ -160,6 +160,18 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.WARNING, msg);
     return;
   }
+  if (type.includes('DELIVERY_COMPLETED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
+  if (type.includes('CONTRACT_STARTED')) {
+    notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
+    return;
+  }
+  if (type.includes('REVIEW_RECEIVED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
   if (type.includes('DELIVERED') || type.includes('COMPLETED')) {
     notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
     return;

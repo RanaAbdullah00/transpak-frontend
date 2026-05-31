@@ -78,7 +78,11 @@ const AdminDashboardPage = () => {
 
   useEffect(() => {
     let timer = null;
-    const onRefresh = () => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments' && scope !== 'space') {
+        return;
+      }
       if (timer) window.clearTimeout(timer);
       timer = window.setTimeout(() => loadAll(), 1200);
     };

@@ -74,7 +74,7 @@ const LoadDetails = () => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'bids' && scope !== 'loads') return;
+      if (scope && scope !== 'all' && scope !== 'bids' && scope !== 'loads' && scope !== 'shipments') return;
       fetchData();
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);

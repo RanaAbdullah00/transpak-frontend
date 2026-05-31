@@ -30,7 +30,20 @@ export function useDashboardMetrics() {
   }, [refreshOps, activeRole]);
 
   useEffect(() => {
-    const onRefresh = () => refreshOps();
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (
+        scope &&
+        scope !== 'all' &&
+        scope !== 'loads' &&
+        scope !== 'bids' &&
+        scope !== 'shipments' &&
+        scope !== 'space'
+      ) {
+        return;
+      }
+      refreshOps();
+    };
     window.addEventListener('tp:realtime-refresh', onRefresh);
     return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
   }, [refreshOps]);
@@ -44,5 +57,5 @@ export function useDashboardMetrics() {
     }));
   }, [app?.notifications]);
 
-  return { ops, loadingOps, activities, activeRole };
+  return { ops, loadingOps, activities, activeRole, refreshOps };
 }

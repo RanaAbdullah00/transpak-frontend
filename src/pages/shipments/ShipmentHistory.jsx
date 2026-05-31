@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHistory } from 'react-icons/fa';
 import Card from '../../components/ui/Card.jsx';
@@ -42,23 +42,29 @@ const ShipmentHistory = () => {
   const [rows, setRows] = useState([]);
   const roles = Array.isArray(user?.roles) ? user.roles : [];
 
+  const refreshHistory = useCallback(async () => {
+    try {
+      const data = await fetchCompletedShipments(request, roles);
+      setRows(data);
+    } catch (err) {
+      setRows([]);
+      notifyError(formatUserError(err, t, { fallback: t('pages.shipments.historyLoadFailed') }));
+    }
+  }, [request, roles, t]);
+
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const data = await fetchCompletedShipments(request, roles);
-        if (alive) setRows(data);
-      } catch (err) {
-        if (alive) {
-          setRows([]);
-          notifyError(formatUserError(err, t, { fallback: t('pages.shipments.historyLoadFailed') }));
-        }
-      }
-    })();
-    return () => {
-      alive = false;
+    refreshHistory();
+  }, [refreshHistory]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'shipments') return;
+      refreshHistory();
     };
-  }, [request, roles.join(',')]);
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refreshHistory]);
 
   return (
     <div className="container py-3">

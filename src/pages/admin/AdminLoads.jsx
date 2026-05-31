@@ -30,6 +30,16 @@ const AdminLoads = () => {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments') return;
+      refresh();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refresh]);
+
   const del = async (id) => {
     try {
       await request({ method: 'DELETE', url: `/admin/loads/${id}` });

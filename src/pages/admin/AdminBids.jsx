@@ -37,6 +37,26 @@ const AdminBids = () => {
     };
   }, [request, t]);
 
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        setError(null);
+        const data = await request({ url: '/admin/bids', expectList: true });
+        setRows(ensureArray(data));
+      } catch (e) {
+        setError(formatUserError(e, t, { fallback: t('pages.admin.bidsLoadFailed') }));
+        setRows([]);
+      }
+    };
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments') return;
+      refresh();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [request, t]);
+
   return (
     <div className="container py-3">
       <h5 className="mb-3">{t('pages.admin.bidsTitle')}</h5>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
@@ -17,29 +17,42 @@ const ShipperDashboard = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const profileComplete = user?.profileComplete === true;
-  const { ops, loadingOps, activities } = useDashboardMetrics();
+  const { ops, loadingOps, activities, refreshOps } = useDashboardMetrics();
   const [mineLoads, setMineLoads] = useState([]);
   const [loadingLoads, setLoadingLoads] = useState(true);
   const { request } = useApi();
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshLoads = useCallback(async () => {
     setLoadingLoads(true);
-    setMineLoads([]);
-    (async () => {
-      try {
-        const data = await request({ url: '/loads/mine', skipGlobalErrorToast: true });
-        if (!cancelled) setMineLoads(normalizeLoads(Array.isArray(data) ? data : []));
-      } catch {
-        if (!cancelled) setMineLoads([]);
-      } finally {
-        if (!cancelled) setLoadingLoads(false);
+    try {
+      const data = await request({ url: '/loads/mine', skipGlobalErrorToast: true });
+      setMineLoads(normalizeLoads(Array.isArray(data) ? data : []));
+    } catch {
+      setMineLoads([]);
+    } finally {
+      setLoadingLoads(false);
+    }
+  }, [request]);
+
+  const refreshBids = refreshOps;
+
+  useEffect(() => {
+    refreshLoads();
+  }, [refreshLoads, user?.activeRole]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (!scope || scope === 'all' || scope === 'loads' || scope === 'shipments') {
+        refreshLoads();
       }
-    })();
-    return () => {
-      cancelled = true;
+      if (!scope || scope === 'all' || scope === 'bids') {
+        refreshBids();
+      }
     };
-  }, [request, user?.activeRole]);
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refreshLoads, refreshBids]);
 
   const earnings = useMemo(
     () =>

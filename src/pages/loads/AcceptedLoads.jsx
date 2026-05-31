@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card.jsx';
 import Badge from '../../components/ui/Badge.jsx';
@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
+import { normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 
 const AcceptedLoads = () => {
   const { request, loading } = useApi();
@@ -14,34 +15,42 @@ const AcceptedLoads = () => {
   const [loads, setLoads] = useState([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let alive = true;
-    const run = async () => {
-      try {
-        const mineBids = await request({ method: 'GET', url: '/bids/mine' });
-        if (!alive) return;
-        const bidList = Array.isArray(mineBids) ? mineBids : [];
-        const accepted = bidList.filter((b) => String(b.status) === 'accepted');
-        const loadIds = accepted.map((b) => b.loadId).filter(Boolean);
-        const details = await Promise.all(
-          loadIds.map(async (id) => {
-            try {
-              return await request({ method: 'GET', url: `/loads/${id}` });
-            } catch {
-              return null;
-            }
-          })
-        );
-        if (alive) setLoads(normalizeLoads(details.filter(Boolean)));
-      } catch {
-        if (alive) setLoads([]);
-      }
-    };
-    run();
-    return () => {
-      alive = false;
-    };
+  const refreshAcceptedLoads = useCallback(async () => {
+    try {
+      const mineBids = await request({ method: 'GET', url: '/bids/mine' });
+      const bidList = Array.isArray(mineBids) ? mineBids : [];
+      const accepted = bidList.filter(
+        (b) => normalizeBidStatus(b.status) === BID_STATUS.ACCEPTED
+      );
+      const loadIds = accepted.map((b) => b.loadId).filter(Boolean);
+      const details = await Promise.all(
+        loadIds.map(async (id) => {
+          try {
+            return await request({ method: 'GET', url: `/loads/${id}` });
+          } catch {
+            return null;
+          }
+        })
+      );
+      setLoads(normalizeLoads(details.filter(Boolean)));
+    } catch {
+      setLoads([]);
+    }
   }, [request]);
+
+  useEffect(() => {
+    refreshAcceptedLoads();
+  }, [refreshAcceptedLoads]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'bids' && scope !== 'loads' && scope !== 'shipments') return;
+      refreshAcceptedLoads();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refreshAcceptedLoads]);
 
   return (
     <div className="container py-3">

@@ -33,7 +33,7 @@ const CapacityMarketplace = () => {
   const [requestTons, setRequestTons] = useState('');
   const debounced = useDebouncedValue(filters, 400);
 
-  const refresh = useCallback(async () => {
+  const refreshMarketplace = useCallback(async () => {
     setListError(null);
     try {
       const minTons = Number(debounced.minCapacityTons);
@@ -70,8 +70,18 @@ const CapacityMarketplace = () => {
   }, [request, debounced, t]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    refreshMarketplace();
+  }, [refreshMarketplace]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'space' && scope !== 'loads') return;
+      refreshMarketplace();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refreshMarketplace]);
 
   const activeFilterBadges = useMemo(() => {
     const badges = [];
@@ -110,7 +120,7 @@ const CapacityMarketplace = () => {
       notifySuccess(t('loadsHub.requestSent'));
       setRequestTarget(null);
       setRequestTons('');
-      refresh();
+      refreshMarketplace();
       emitRealtimeRefresh('space');
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('loadsHub.requestFailed') }));
@@ -198,7 +208,7 @@ const CapacityMarketplace = () => {
       {listError ? (
         <Card className="p-4 text-center">
           <p className="text-danger small mb-3">{listError}</p>
-          <Button variant="outline-primary" size="sm" onClick={refresh}>
+          <Button variant="outline-primary" size="sm" onClick={refreshMarketplace}>
             {t('pages.admin.tryAgain')}
           </Button>
         </Card>

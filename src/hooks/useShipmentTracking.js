@@ -117,6 +117,17 @@ export function useShipmentTracking({ trackRef, shareLive = false, enabled = tru
     return registerTrackingHandler(applyUpdate);
   }, [registerTrackingHandler, applyUpdate, enabled, localRef]);
 
+  useEffect(() => {
+    if (!enabled || !localRef) return undefined;
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'shipments') return;
+      fetchTrack({ silent: true });
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [enabled, localRef, fetchTrack]);
+
   const socket = getSocket?.() || null;
   const { publishLocation } = useTrackingSocket({
     socket,
