@@ -51,4 +51,9 @@ export const SPACE_STEPS = [
   { id: 'completed', labelKey: 'flow.completed' }
 ];
 
+export const SPACE_STEPS_REJECTED = [
+  { id: 'request_sent', labelKey: 'flow.requestSent' },
+  { id: 'rejected', labelKey: 'flow.rejected' }
+];
+
 export default FlowTimeline;

@@ -56,18 +56,6 @@ const BidManagement = () => {
     }
   };
 
-  const handleSuggest = async (bid, amount) => {
-    try {
-      await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
-      notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      emitRealtimeRefresh('bids');
-      emitRealtimeRefresh('all');
-      fetchBidsData();
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
-    }
-  };
-
   useEffect(() => {
     fetchBidsData();
   }, [fetchBidsData]);
@@ -134,7 +122,7 @@ const BidManagement = () => {
           <Loader />
         </div>
       ) : (
-        <BidList bids={bidsWithDistance} mode="shipper" onAccept={handleAccept} onReject={handleReject} onSuggest={handleSuggest} actionsDisabled={!profileComplete} />
+        <BidList bids={bidsWithDistance} mode="shipper" onAccept={handleAccept} onReject={handleReject} actionsDisabled={!profileComplete} />
       )}
     </div>
   );

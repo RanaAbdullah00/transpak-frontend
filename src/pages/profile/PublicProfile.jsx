@@ -111,10 +111,18 @@ const PublicProfile = () => {
                 <div className="fw-semibold">{profile.completedDeliveries ?? 0}</div>
               </div>
               {profile.phone ? (
-                <div className="col-12 col-md-6">
-                  <div className="tp-stat-pill">{t('publicProfile.phone')}</div>
-                  <div className="fw-semibold">{profile.phone}</div>
-                </div>
+                <>
+                  <div className="col-12 col-md-6">
+                    <div className="tp-stat-pill">{t('publicProfile.phone')}</div>
+                    <div className="fw-semibold">{profile.phone}</div>
+                  </div>
+                  {profile.whatsapp && !profile.whatsappLocked ? (
+                    <div className="col-12 col-md-6">
+                      <div className="tp-stat-pill">{t('publicProfile.whatsapp')}</div>
+                      <div className="fw-semibold">{profile.whatsapp}</div>
+                    </div>
+                  ) : null}
+                </>
               ) : profile.phoneLocked ? (
                 <div className="col-12 col-md-6 text-muted small">{t('publicProfile.phoneLocked')}</div>
               ) : null}

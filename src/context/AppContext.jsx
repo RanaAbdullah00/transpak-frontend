@@ -71,6 +71,7 @@ export const AppProvider = ({ children }) => {
   const addNotificationRef = useRef(null);
   const welcomeToastShownRef = useRef(false);
   const lastReconnectSyncRef = useRef(0);
+  const reconnectSyncInFlightRef = useRef(false);
   const userRef = useRef(user);
   userRef.current = user;
 
@@ -210,7 +211,8 @@ export const AppProvider = ({ children }) => {
   }, [user?.id, user?.activeRole]);
 
   const syncReconnectNotifications = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id || reconnectSyncInFlightRef.current) return;
+    reconnectSyncInFlightRef.current = true;
     try {
       const since = getLastEventSyncAt(user.id);
       const out = await syncEventsSince(user, since ? { since } : {});
@@ -245,6 +247,8 @@ export const AppProvider = ({ children }) => {
       } catch {
         /* optional — list refetch still runs */
       }
+    } finally {
+      reconnectSyncInFlightRef.current = false;
     }
   }, [user, mergeNotificationsFromServer]);
 

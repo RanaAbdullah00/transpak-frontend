@@ -10,7 +10,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
-import { kgToTons, tonsToKg } from '../../utils/weightUnits.js';
+import { kgToTons, tonsToKg, ratePerKgToTon } from '../../utils/weightUnits.js';
 import { isKnownCity, resolveCityName } from '../../data/pakistanCities.js';
 
 const DEFAULT_FILTERS = {
@@ -33,7 +33,9 @@ const CapacityMarketplace = () => {
   const [listings, setListings] = useState([]);
   const [listError, setListError] = useState(null);
   const [requestTarget, setRequestTarget] = useState(null);
+  const [detailsTarget, setDetailsTarget] = useState(null);
   const [requestTons, setRequestTons] = useState('');
+  const [requestMessage, setRequestMessage] = useState('');
   const debounced = useDebouncedValue(filters, 400);
 
   const refreshMarketplace = useCallback(async () => {
@@ -111,11 +113,12 @@ const CapacityMarketplace = () => {
       await request({
         method: 'POST',
         url: `/carrier-space/${requestTarget.id}/request`,
-        data: { requestedKg: tonsToKg(tons), message: '' }
+        data: { requestedKg: tonsToKg(tons), message: String(requestMessage || '').trim().slice(0, 500) }
       });
       notifySuccess(t('loadsHub.requestSent'));
       setRequestTarget(null);
       setRequestTons('');
+      setRequestMessage('');
       refreshMarketplace();
       emitRealtimeRefresh('space');
     } catch (err) {
@@ -207,15 +210,64 @@ const CapacityMarketplace = () => {
             <div key={row.id} className="col-md-6 col-lg-4">
               <CarrierSpaceCard
                 listing={row}
+                onViewDetails={setDetailsTarget}
                 onRequest={(l) => {
+                  setDetailsTarget(null);
                   setRequestTarget(l);
                   setRequestTons('');
+                  setRequestMessage('');
                 }}
               />
             </div>
           ))}
         </div>
       )}
+
+      {detailsTarget ? (
+        <div className="tp-overlay-dim position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3">
+          <Card className="p-3 w-100 tp-max-w-modal-sm">
+            <h6 className="mb-2">{t('loadsHub.listingDetails')}</h6>
+            <p className="fw-semibold mb-2">
+              {detailsTarget.origin} → {detailsTarget.destination}
+            </p>
+            <ul className="small text-muted list-unstyled mb-3">
+              <li>
+                {t('loadsHub.remainingKgLabel')}: {kgToTons(detailsTarget.remainingSpaceKg)} t
+              </li>
+              {detailsTarget.availableFrom ? (
+                <li>
+                  {t('loadsHub.availableFrom')}: {String(detailsTarget.availableFrom).slice(0, 10)}
+                </li>
+              ) : null}
+              {detailsTarget.ratePerKg != null ? (
+                <li>
+                  {t('loadsHub.ratePerKg', {
+                    rate: Number(ratePerKgToTon(detailsTarget.ratePerKg)).toLocaleString()
+                  })}
+                </li>
+              ) : null}
+              {detailsTarget.notes ? <li className="text-break">{detailsTarget.notes}</li> : null}
+            </ul>
+            <p className="small text-body-secondary mb-3">{t('loadsHub.createFromCapacityHint')}</p>
+            <div className="d-flex gap-2 flex-wrap">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setRequestTarget(detailsTarget);
+                  setDetailsTarget(null);
+                  setRequestTons('');
+                  setRequestMessage('');
+                }}
+              >
+                {t('loadsHub.requestCapacity')}
+              </Button>
+              <Button variant="outline-secondary" onClick={() => setDetailsTarget(null)}>
+                {t('common.cancel')}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
 
       {requestTarget ? (
         <div className="tp-overlay-dim position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3">
@@ -224,9 +276,10 @@ const CapacityMarketplace = () => {
             <p className="small text-muted">
               {requestTarget.origin} → {requestTarget.destination}
             </p>
+            <p className="small text-body-secondary mb-2">{t('loadsHub.createFromCapacityHint')}</p>
             <input
               type="number"
-              className="form-control form-control-sm rounded-3 mb-3"
+              className="form-control form-control-sm rounded-3 mb-2"
               min="0.1"
               step="0.1"
               max={kgToTons(requestTarget.remainingSpaceKg)}
@@ -234,11 +287,25 @@ const CapacityMarketplace = () => {
               value={requestTons}
               onChange={(e) => setRequestTons(e.target.value)}
             />
+            <textarea
+              className="form-control form-control-sm rounded-3 mb-3"
+              rows={2}
+              maxLength={500}
+              placeholder={t('loadsHub.requestNotesPlaceholder')}
+              value={requestMessage}
+              onChange={(e) => setRequestMessage(e.target.value)}
+            />
             <div className="d-flex gap-2">
               <Button variant="primary" className="flex-grow-1" onClick={submitRequest}>
                 {t('loadsHub.sendRequest')}
               </Button>
-              <Button variant="outline-secondary" onClick={() => setRequestTarget(null)}>
+              <Button
+                variant="outline-secondary"
+                onClick={() => {
+                  setRequestTarget(null);
+                  setRequestMessage('');
+                }}
+              >
                 {t('common.cancel')}
               </Button>
             </div>

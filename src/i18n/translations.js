@@ -128,7 +128,14 @@ export const translations = {
       availableFrom: 'Need space by',
       sortCapacity: 'Most capacity',
       sortRate: 'Lowest rate/ton',
-      resetFilters: 'Reset filters'
+      resetFilters: 'Reset filters',
+      proposedPrice: 'Proposed price',
+      requestMessage: 'Message',
+      requestNotesPlaceholder: 'Notes for the carrier (optional)',
+      requestRejectedHint: 'The carrier declined this capacity request. You can send a new request on another listing.',
+      viewDetails: 'View details',
+      listingDetails: 'Capacity details',
+      createFromCapacityHint: 'Sending a request starts the contract flow. When the carrier accepts, a shipment is created automatically.'
     },
     realtime: {
       reconnecting: 'Reconnecting…',
@@ -145,6 +152,7 @@ export const translations = {
       completed: 'Completed',
       phone: 'Phone',
       phoneLocked: 'Contact details unlock after an active contract',
+      whatsapp: 'WhatsApp',
       truckGallery: 'Fleet gallery',
       reviewsTitle: 'Trust & reviews'
     },
@@ -158,7 +166,8 @@ export const translations = {
       delivered: 'Delivered',
       completed: 'Completed',
       spaceListed: 'Listed',
-      requestSent: 'Request sent'
+      requestSent: 'Request sent',
+      rejected: 'Declined'
     },
     bidTimeline: {
       title: 'Bid lifecycle',
@@ -1245,6 +1254,9 @@ export const translations = {
         yes: 'Yes',
         no: 'No',
         trackShipment: 'Open live tracking',
+        shipmentsReadOnlyLead:
+          'Monitor shipments and open live tracking. Status changes are made by carriers only.',
+        noShipments: 'No shipments to display.',
         forceDelivered: 'Force delivered',
         shipmentUpdated: 'Shipment status updated',
         shipmentUpdateFailed: 'Could not update shipment',
@@ -1506,6 +1518,13 @@ export const translations = {
       markComplete: 'ڈیلیوری کی تصدیق',
       mySpaceRequests: 'میری گنجائش درخواستیں',
       noSpaceRequestsYet: 'ابھی کوئی گنجائش درخواست نہیں۔',
+      proposedPrice: 'مجوزہ قیمت',
+      requestMessage: 'پیغام',
+      requestNotesPlaceholder: 'کیریئر کے لیے نوٹ (اختیاری)',
+      requestRejectedHint: 'کیریئر نے یہ گنجائش درخواست مسترد کر دی۔ آپ دوسری لسٹنگ پر نئی درخواست بھیج سکتے ہیں۔',
+      viewDetails: 'تفصیل دیکھیں',
+      listingDetails: 'گنجائش کی تفصیل',
+      createFromCapacityHint: 'درخواست بھیجنے سے معاہدے کا عمل شروع ہوتا ہے۔ کیریئر قبول کرنے پر شپمنٹ خود بخود بن جاتی ہے۔',
       spaceStatusUpdated: 'معاہدے کی حیثیت اپ ڈیٹ',
       spaceCompletedHint: 'معاہدہ مکمل — جائزہ دیں۔'
     },
@@ -1520,6 +1539,7 @@ export const translations = {
       completed: 'مکمل',
       phone: 'فون',
       phoneLocked: 'فعال معاہدے کے بعد رابطہ کھلے گا',
+      whatsapp: 'واٹس ایپ',
       truckGallery: 'فلیٹ گیلری',
       reviewsTitle: 'اعتماد اور جائزے'
     },
@@ -1533,7 +1553,8 @@ export const translations = {
       delivered: 'پہنچا دیا',
       completed: 'مکمل',
       spaceListed: 'لسٹ',
-      requestSent: 'درخواست بھیجی'
+      requestSent: 'درخواست بھیجی',
+      rejected: 'مسترد'
     },
       bidTimeline: {
       title: 'بولی کی زندگی',
@@ -1913,6 +1934,8 @@ export const translations = {
         acceptedLoadsTitle: 'قبول شدہ لوڈز',
         emptyAcceptedLoads: 'ابھی کوئی قبول شدہ لوڈ نہیں۔',
         trackShipment: 'ٹریک کریں',
+        shipmentsReadOnlyLead: 'شپمنٹس دیکھیں؛ اسٹیٹس کیریئر اپ ڈیٹ کرتا ہے۔',
+        noShipments: 'کوئی شپمنٹ نہیں۔',
         pickupLabel: 'اٹھانا',
         noLoadsTitle: 'ابھی کوئی لوڈ پوسٹ نہیں',
         noLoadsBody: 'پہلا لوڈ پوسٹ کریں تاکہ کیریئرز بڈ لگا سکیں۔',

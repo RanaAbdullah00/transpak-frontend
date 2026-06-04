@@ -140,6 +140,10 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.LOAD_POSTED, msg);
     return;
   }
+  if (type.includes('CONTRACT_STARTED')) {
+    notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
+    return;
+  }
   if (type.includes('SPACE_REQUEST') || type.includes('SPACE_ACCEPTED') || type.includes('SPACE_REQUEST_SENT')) {
     notifySystem(SystemNotifyType.BID_RECEIVED, msg);
     return;

@@ -8,6 +8,7 @@ import StatsCards from '../../components/dashboard/StatsCards.jsx';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
 import LoadList from '../../components/loadboard/LoadList.jsx';
 import ActiveShipmentsList from '../../components/dashboard/ActiveShipmentsList.jsx';
+import SpaceSentRequestsPanel from '../../components/carrier/SpaceSentRequestsPanel.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 import Loader from '../../components/ui/Loader.jsx';
@@ -125,6 +126,16 @@ const ShipperDashboard = () => {
         <div className="col-12 col-lg-5">
           <ActivityFeed activities={activities} />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h6 className="mb-0">{t('loadsHub.mySpaceRequests')}</h6>
+          <Link to="/loads/manage?tab=market" className="small text-decoration-none">
+            {t('loadsHub.capacityMarket')}
+          </Link>
+        </div>
+        <SpaceSentRequestsPanel />
       </div>
 
       <div className="mt-4">

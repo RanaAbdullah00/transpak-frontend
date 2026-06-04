@@ -104,8 +104,10 @@ export function createSocketClient({
       timeout: 20000
     });
 
+    let lastWorkspaceJoin = null;
     const emitWorkspaceJoin = () => {
-      if (ws && socket?.connected) {
+      if (ws && socket?.connected && lastWorkspaceJoin !== ws) {
+        lastWorkspaceJoin = ws;
         socket.emit('workspace:join', { workspace: ws });
       }
     };
@@ -172,12 +174,14 @@ export function createSocketClient({
     socket = null;
   }
 
+  let lastRejoinWorkspace = null;
   const rejoinWorkspace = (nextWorkspace) => {
     const w =
       nextWorkspace === 'shipper' || nextWorkspace === 'carrier' || nextWorkspace === 'admin'
         ? nextWorkspace
         : null;
-    if (w && socket?.connected) {
+    if (w && socket?.connected && lastRejoinWorkspace !== w) {
+      lastRejoinWorkspace = w;
       socket.emit('workspace:join', { workspace: w });
     }
   };

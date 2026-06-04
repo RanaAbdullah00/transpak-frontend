@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
-import FlowTimeline, { SPACE_STEPS } from '../ui/FlowTimeline.jsx';
+import FlowTimeline, { SPACE_STEPS, SPACE_STEPS_REJECTED } from '../ui/FlowTimeline.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { spaceStepId } from '../../utils/spaceFlow.js';
+import { spaceStepId, proposedSpacePrice } from '../../utils/spaceFlow.js';
 import { formatTons } from '../../utils/weightUnits.js';
 
 const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplete, showCarrierActions }) => {
@@ -13,6 +13,16 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
   const stepId = spaceStepId(status);
   const trackRef = row.loadCode || row.loadId;
   const usesShipmentEngine = Boolean(trackRef);
+  const proposed = proposedSpacePrice(row);
+  const steps = status === 'rejected' ? SPACE_STEPS_REJECTED : SPACE_STEPS;
+  const badgeClass =
+    status === 'rejected'
+      ? 'text-bg-danger'
+      : status === 'completed'
+        ? 'text-bg-success'
+        : status === 'active' || status === 'in_transit'
+          ? 'text-bg-primary'
+          : 'text-bg-secondary';
 
   return (
     <div className="border rounded-3 p-3 tp-space-request-row">
@@ -25,12 +35,31 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           )}{' '}
           · {formatTons(row.requestedKg)} t
         </div>
-        <span className="badge text-bg-secondary text-uppercase">{status.replace('_', ' ')}</span>
+        <span className={`badge text-uppercase ${badgeClass}`}>{status.replace(/_/g, ' ')}</span>
       </div>
       <div className="small text-muted mb-2">
         {row.origin} → {row.destination}
+        {row.availableFrom ? (
+          <span className="ms-2">
+            · {t('loadsHub.availableFrom')}: {String(row.availableFrom).slice(0, 10)}
+          </span>
+        ) : null}
       </div>
-      <FlowTimeline steps={SPACE_STEPS} currentId={stepId} className="my-2" />
+      {proposed != null ? (
+        <div className="small mb-2">
+          <span className="text-muted">{t('loadsHub.proposedPrice')}:</span>{' '}
+          <span className="fw-semibold">PKR {proposed.toLocaleString()}</span>
+        </div>
+      ) : null}
+      {row.message ? (
+        <p className="small text-body-secondary mb-2 text-break">
+          <span className="text-muted">{t('loadsHub.requestMessage')}:</span> {row.message}
+        </p>
+      ) : null}
+      {status === 'rejected' ? (
+        <p className="small text-danger mb-2">{t('loadsHub.requestRejectedHint')}</p>
+      ) : null}
+      <FlowTimeline steps={steps} currentId={stepId} className="my-2" />
       {status === 'request_sent' && showCarrierActions ? (
         <div className="d-flex gap-2 flex-wrap">
           <Button size="sm" variant="primary" onClick={() => onAccept?.(row.id)}>
@@ -41,10 +70,11 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           </Button>
         </div>
       ) : null}
-      {usesShipmentEngine && (status === 'active' || status === 'in_transit') ? (
+      {usesShipmentEngine &&
+      (status === 'active' || status === 'in_transit' || status === 'completed') ? (
         <Link
           to={`/shipments/tracking/${encodeURIComponent(trackRef)}`}
-          className="btn btn-sm btn-primary"
+          className="btn btn-sm btn-primary mt-2"
         >
           {t('pages.dashboard.viewLiveTracking')}
         </Link>
@@ -60,7 +90,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
         </Button>
       ) : null}
       {status === 'completed' ? (
-        <p className="small text-muted mb-0">{t('loadsHub.spaceCompletedHint')}</p>
+        <p className="small text-muted mb-0 mt-2">{t('loadsHub.spaceCompletedHint')}</p>
       ) : null}
     </div>
   );

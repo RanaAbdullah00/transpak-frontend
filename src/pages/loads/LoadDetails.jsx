@@ -101,17 +101,6 @@ const LoadDetails = () => {
     }
   };
 
-  const handleSuggest = async (bid, amount) => {
-    try {
-      await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
-      notifyCounterOffer(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      emitRealtimeRefresh('bids');
-      await fetchData();
-    } catch (error) {
-      notifyError(formatUserError(error, t, { fallback: t('pages.bids.suggestFailed') }));
-    }
-  };
-
   const handleDeleteLoad = async () => {
     try {
       await request({ method: 'DELETE', url: `/loads/${id}` });
@@ -186,7 +175,6 @@ const LoadDetails = () => {
             mode="shipper"
             onAccept={handleAccept}
             onReject={handleReject}
-            onSuggest={handleSuggest}
           />
           {approvedBid && (
             <div className="alert alert-success mt-3 rounded-lg border-0">
