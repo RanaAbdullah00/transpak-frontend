@@ -14,6 +14,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
  */
 const ActiveShipmentPanel = ({
   trackingData,
+  uiState = null,
   loadingTracking,
   emptyState,
   carrierAdvance = null,
@@ -44,25 +45,26 @@ const ActiveShipmentPanel = ({
     return emptyState;
   }
 
-  const st = trackingData.tracking?.status;
+  const ui = uiState;
   const lifecycle = trackingData.lifecycleStage;
   const ref = trackingData.refKey;
-  const href = trackHref || (ref ? `/shipments/tracking/${encodeURIComponent(ref)}` : null);
+  const href = ui?.canTrack && trackHref ? trackHref : null;
   const reportedLoc = trackingData?.tracking?.currentLocation ?? trackingData?.tracking?.location;
   const showDriver =
-    liveDriver ||
-    (Array.isArray(reportedLoc) &&
-      reportedLoc.length >= 2 &&
-      Number.isFinite(Number(reportedLoc[0])) &&
-      Number.isFinite(Number(reportedLoc[1])));
+    ui?.canTrack &&
+    (liveDriver ||
+      (Array.isArray(reportedLoc) &&
+        reportedLoc.length >= 2 &&
+        Number.isFinite(Number(reportedLoc[0])) &&
+        Number.isFinite(Number(reportedLoc[1]))));
   const mapLocation = showDriver ? liveLocation || reportedLoc : null;
 
   return (
     <div className="tp-active-shipment-panel">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
         <div className="d-flex flex-wrap gap-2 align-items-center">
-          <LifecycleBadge stage={lifecycle || st} />
-          <StatusBadge status={st || 'unknown'} />
+          <LifecycleBadge stage={lifecycle || ui?.status} />
+          {ui ? <StatusBadge uiState={ui} /> : null}
         </div>
         {href ? (
           <Link to={href} className="btn btn-sm btn-outline-primary">
@@ -70,18 +72,26 @@ const ActiveShipmentPanel = ({
           </Link>
         ) : null}
       </div>
-      <ShipmentProgressBox status={st} eta={trackingData.tracking?.eta} />
-      <div className="mt-3 tp-dashboard-map-preview">
-        <TrackingMap
-          trackingData={trackingData}
-          originName={trackingData?.origin}
-          destinationName={trackingData?.destination}
-          currentLocation={mapLocation}
-          liveDriver={liveDriver}
-          geoError={geoError}
-        />
-      </div>
-      {carrierAdvance && (
+      {ui?.showShipperAcceptedBanner ? (
+        <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
+      ) : null}
+      {!ui?.canTrack ? (
+        <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
+      ) : null}
+      <ShipmentProgressBox uiState={ui} eta={trackingData.tracking?.eta} />
+      {ui?.canTrack ? (
+        <div className="mt-3 tp-dashboard-map-preview">
+          <TrackingMap
+            trackingData={trackingData}
+            originName={trackingData?.origin}
+            destinationName={trackingData?.destination}
+            currentLocation={mapLocation}
+            liveDriver={liveDriver}
+            geoError={geoError}
+          />
+        </div>
+      ) : null}
+      {carrierAdvance ? (
         <div className="mt-3 pt-2 border-top">
           <h6 className="mb-2">{carrierAdvance.title}</h6>
           <div className="d-grid gap-2" style={{ maxWidth: 320 }}>
@@ -98,11 +108,11 @@ const ActiveShipmentPanel = ({
             {carrierAdvance.statusLine}
           </small>
         </div>
-      )}
+      ) : null}
       <div className="mt-3">
         {trackingData.history?.length > 0 ? (
           <StatusTimeline
-            currentStatus={st}
+            uiState={ui}
             events={trackingData.history.map((h) => ({
               label: h.event,
               time: h.time,

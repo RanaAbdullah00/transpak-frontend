@@ -427,6 +427,7 @@ export const translations = {
     },
     status: {
       posted: 'Posted',
+      accepted: 'Accepted — contract active',
       booked: 'Booked',
       pickedup: 'Picked up',
       intransit: 'In transit',
@@ -666,7 +667,9 @@ export const translations = {
         advancePickedup: 'Start transit',
         advanceIntransit: 'Mark delivered',
         advanceDelivered: 'Close shipment',
-        statusUpdated: 'Shipment status updated'
+        statusUpdated: 'Shipment status updated',
+        trackingNotActiveYet:
+          'Live tracking starts after the bid is accepted and the shipment is booked.'
       },
       shipments: {
         tracking: 'Shipment Tracking',
@@ -1818,6 +1821,7 @@ export const translations = {
     },
     status: {
       posted: 'پوسٹ شدہ',
+      accepted: 'قبول — معاہدہ فعال',
       booked: 'بک شدہ',
       pickedup: 'اٹھا لیا گیا',
       intransit: 'راستے میں',
@@ -2001,7 +2005,9 @@ export const translations = {
         advancePickedup: 'ترسیل شروع کریں',
         advanceIntransit: 'ڈیلیور نشان لگائیں',
         advanceDelivered: 'شپمنٹ بند کریں',
-        statusUpdated: 'شپمنٹ کی حیثیت اپ ڈیٹ ہو گئی'
+        statusUpdated: 'شپمنٹ کی حیثیت اپ ڈیٹ ہو گئی',
+        trackingNotActiveYet:
+          'لائیو ٹریکنگ اس وقت شروع ہوتی ہے جب بولی قبول ہو اور شپمنٹ بک ہو جائے۔'
       },
       supportPage: {
         title: 'مدد',

@@ -62,6 +62,37 @@ export function mergeTrackingHistory(prev, incoming) {
 }
 
 /** Socket partial updates merge over REST baseline; driver coords prefer newer timestamps. */
+function coordPair(loc) {
+  if (!Array.isArray(loc) || loc.length < 2) return null;
+  const lat = Number(loc[0]);
+  const lng = Number(loc[1]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return `${lat.toFixed(5)},${lng.toFixed(5)}`;
+}
+
+/** Skip React state updates when socket tick has no meaningful map change. */
+export function shouldApplyTrackingUpdate(prev, incoming) {
+  if (!incoming) return false;
+  if (!prev) return true;
+  if (isStaleTrackingUpdate(prev, incoming)) return false;
+
+  const prevStatus = String(prev?.tracking?.status || '');
+  const nextStatus = String(incoming?.tracking?.status || '');
+  if (prevStatus !== nextStatus) return true;
+
+  const prevCoord = coordPair(prev?.tracking?.currentLocation ?? prev?.tracking?.location);
+  const nextCoord = coordPair(
+    incoming?.tracking?.currentLocation ?? incoming?.tracking?.location
+  );
+  if (prevCoord !== nextCoord) return true;
+
+  const prevHist = Array.isArray(prev?.history) ? prev.history.length : 0;
+  const nextHist = Array.isArray(incoming?.history) ? incoming.history.length : 0;
+  if (prevHist !== nextHist) return true;
+
+  return false;
+}
+
 export function mergeTrackingPayload(prev, incoming) {
   if (!incoming) return prev;
   if (isStaleTrackingUpdate(prev, incoming)) return prev;

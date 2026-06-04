@@ -3,13 +3,17 @@ import ActiveShipmentCard from './ActiveShipmentCard.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { useAuth } from '../../hooks/useAuth.js';
+import { shipmentUIStateFromActiveRow } from '../../utils/shipmentUIState.js';
 
 /**
  * Lists all in-progress shipments for the current user (shipper or carrier).
  */
 const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { request } = useApi();
+  const workspaceRole = carrierMode ? 'carrier' : user?.activeRole === 'shipper' ? 'shipper' : null;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,20 +68,26 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
           {t('pages.dashboard.activeShipmentsCount', { count: rows.length })}
         </p>
       ) : null}
-      {rows.map((row, idx) => {
-        const ref = row.code || row.id;
-        const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
-        return (
-          <ActiveShipmentCard
-            key={ref}
-            trackRef={ref}
-            label={label || ref}
-            carrierMode={carrierMode}
-            shareLive={carrierMode}
-            defaultExpanded={idx === 0 && rows.length === 1}
-          />
-        );
-      })}
+      {rows
+        .filter((row) => {
+          const ui = shipmentUIStateFromActiveRow(row, workspaceRole);
+          return ui.isActive;
+        })
+        .map((row, idx, arr) => {
+          const ref = row.code || row.id;
+          const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
+          return (
+            <ActiveShipmentCard
+              key={ref}
+              trackRef={ref}
+              label={label || ref}
+              assignedCarrierId={row.assignedCarrierId}
+              carrierMode={carrierMode}
+              shareLive={carrierMode}
+              defaultExpanded={idx === 0 && arr.length === 1}
+            />
+          );
+        })}
     </div>
   );
 };

@@ -6,14 +6,15 @@ import ShipmentCard from '../../components/shipment/ShipmentCard.jsx';
 import StatusTimeline from '../../components/shipment/StatusTimeline.jsx';
 import ShipmentProgressBox from '../../components/shipment/ShipmentProgressBox.jsx';
 import LifecycleBadge from '../../components/shipment/LifecycleBadge.jsx';
+import StatusBadge from '../../components/shipment/StatusBadge.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
-import { nextShipmentStatus, normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
+import { shipmentUIStateFromTracking, withShipmentUILabels } from '../../utils/shipmentUIState.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
@@ -29,15 +30,18 @@ const ShipmentTracking = () => {
   const isCarrier =
     user?.activeRole === 'carrier' || (user?.roles || []).includes('carrier');
   const shareLive = isCarrier && Boolean(id);
+  const workspaceRole = isCarrier ? 'carrier' : 'shipper';
 
-  const { trackingData: payload, loading, error, livePos, geoError } = useShipmentTracking({
+  const { trackingData: payload, uiState, loading, error, livePos, geoError } = useShipmentTracking({
     trackRef: id,
     shareLive,
-    enabled: Boolean(id)
+    enabled: Boolean(id),
+    role: workspaceRole
   });
 
-  const canonStatus = normalizeShipmentStatus(payload?.tracking?.status || 'posted');
-  const upcomingStatus = nextShipmentStatus(canonStatus);
+  const resolvedUi = uiState || shipmentUIStateFromTracking(payload, workspaceRole);
+  const upcomingStatus = resolvedUi.upcomingStatus;
+  const canonStatus = resolvedUi.status;
 
   const handleAdvanceStatus = useCallback(async () => {
     if (!upcomingStatus || !id) return;
@@ -84,7 +88,8 @@ const ShipmentTracking = () => {
   }, [payload?.liveTrackingMap?.coordinates]);
 
   const currentLocation = useMemo(() => {
-    if (shareLive && livePos) return livePos;
+    if (!ui.canTrack) return null;
+    if (ui.canTrack && shareLive && livePos) return livePos;
     const direct = tracking?.currentLocation ?? tracking?.location;
     if (
       Array.isArray(direct) &&
@@ -95,7 +100,7 @@ const ShipmentTracking = () => {
       return [Number(direct[0]), Number(direct[1])];
     }
     return null;
-  }, [tracking?.currentLocation, tracking?.location, shareLive, livePos]);
+  }, [ui.canTrack, tracking?.currentLocation, tracking?.location, shareLive, livePos]);
 
   const shipment = useMemo(
     () => ({
@@ -192,25 +197,34 @@ const ShipmentTracking = () => {
     <div className="container-fluid px-2 px-md-3 py-3 tp-tracking-page tp-tracking-page--live">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h5 className="mb-0">{t('pages.tracking.title')}</h5>
-        <LifecycleBadge stage={payload?.lifecycleStage || shipment.status} size="lg" />
+        <LifecycleBadge stage={payload?.lifecycleStage || ui.status} size="lg" />
+        <StatusBadge uiState={ui} size="lg" />
       </div>
+      {ui.showShipperAcceptedBanner ? (
+        <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
+      ) : null}
+      {!ui.canTrack && !loading ? (
+        <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
+      ) : null}
       {error ? <p className="text-warning small mb-2">{error}</p> : null}
-      <ShipmentCard shipment={shipment} />
+      <ShipmentCard shipment={shipment} uiState={ui} />
       <div className="tp-tracking-progress mb-3">
-        <ShipmentProgressBox status={shipment.status} eta={shipment.eta} />
+        <ShipmentProgressBox uiState={ui} eta={shipment.eta} />
       </div>
-      <div className="tp-tracking-map tp-tracking-map--fullscreen mb-3 overflow-hidden rounded-3 border">
-        <TrackingMap
-          trackingData={trackingDataForMap}
-          currentLocation={currentLocation}
-          originName={originName}
-          destinationName={destinationName}
-          liveDriver={false}
-          geoError={geoError}
-        />
-      </div>
-      <StatusTimeline currentStatus={shipment.status} events={timelineEvents} />
-      {isCarrier && upcomingStatus && canonStatus !== 'closed' ? (
+      {ui.canTrack ? (
+        <div className="tp-tracking-map tp-tracking-map--fullscreen mb-3 overflow-hidden rounded-3 border">
+          <TrackingMap
+            trackingData={trackingDataForMap}
+            currentLocation={currentLocation}
+            originName={originName}
+            destinationName={destinationName}
+            liveDriver={Boolean(shareLive && livePos)}
+            geoError={geoError}
+          />
+        </div>
+      ) : null}
+      <StatusTimeline uiState={ui} events={timelineEvents} />
+      {ui.canUpdateStatus && upcomingStatus ? (
         <div className="mt-3 mb-3">
           <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>
           <Button

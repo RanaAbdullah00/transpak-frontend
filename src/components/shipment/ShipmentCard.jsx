@@ -3,12 +3,12 @@ import Card from '../ui/Card.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
 // Summary card for a shipment.
-const ShipmentCard = ({ shipment }) => {
+const ShipmentCard = ({ shipment, uiState = null }) => {
   return (
     <Card>
       <div className="d-flex justify-content-between align-items-center mb-1">
         <h6 className="mb-0">{shipment.code}</h6>
-        <StatusBadge status={shipment.status} />
+        <StatusBadge uiState={uiState} status={shipment.status} />
       </div>
       <div className="small text-muted mb-1">
         {shipment.origin} → {shipment.destination}

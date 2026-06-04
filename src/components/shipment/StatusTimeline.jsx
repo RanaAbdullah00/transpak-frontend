@@ -3,14 +3,14 @@ import Card from '../ui/Card.jsx';
 import StatusBadge from './StatusBadge.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
-const StatusTimeline = ({ currentStatus, events }) => {
+const StatusTimeline = ({ currentStatus, uiState = null, events }) => {
   const { t } = useLanguage();
 
   return (
     <Card>
       <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
         <h6 className="mb-0 text-body fw-semibold">{t('pages.tracking.statusTimelineTitle')}</h6>
-        <StatusBadge status={currentStatus} />
+        <StatusBadge uiState={uiState} status={currentStatus} />
       </div>
       <ul className="list-unstyled small mb-0 tp-timeline">
         {events.map((e, idx) => (

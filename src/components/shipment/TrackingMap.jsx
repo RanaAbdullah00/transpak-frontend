@@ -44,7 +44,9 @@ const TrackingMap = ({
   const delivery = coords.length >= 2 ? coords[coords.length - 1] : null;
   const rawCurrent = trackingData?.tracking?.currentLocation ?? currentLocation;
   const driverCoords = toLatLngPair(rawCurrent);
-  const hasDriverCoords = Boolean(driverCoords);
+  const driverLat = driverCoords?.[0];
+  const driverLng = driverCoords?.[1];
+  const hasDriverCoords = driverLat != null && driverLng != null;
   const fresh =
     liveDriver ||
     isLocationFresh(
@@ -52,7 +54,10 @@ const TrackingMap = ({
       trackingData?.ts ?? trackingData?.tracking?.ts
     ) ||
     hasDriverCoords;
-  const driver = hasDriverCoords ? driverCoords : null;
+  const driver = useMemo(() => {
+    if (!hasDriverCoords) return null;
+    return [driverLat, driverLng];
+  }, [hasDriverCoords, driverLat, driverLng]);
   const locationUnavailable =
     Boolean(trackingData?.tracking?.locationUnavailable) && !driver && !hasDriverCoords;
 

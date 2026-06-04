@@ -141,6 +141,7 @@ export const normalizeTracking = (raw) => {
     refKey: raw.refKey != null ? String(raw.refKey) : null,
     loadId: raw.loadId != null ? String(raw.loadId) : null,
     lifecycleStage: raw.lifecycleStage ?? null,
+    assignedCarrierId: raw.assignedCarrierId ?? raw.assigned_carrier_id ?? null,
     ts: raw.ts != null ? Number(raw.ts) : null
   };
 };

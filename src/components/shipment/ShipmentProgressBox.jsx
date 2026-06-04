@@ -4,9 +4,9 @@ import { SHIPMENT_ORDER, normalizeShipmentStatus } from '../../utils/shipmentSta
 import { useLanguage } from '../../hooks/useLanguage.js';
 
 /** Horizontal lifecycle line: labels on the rail; done / current / upcoming. */
-const ShipmentProgressBox = ({ status, eta }) => {
+const ShipmentProgressBox = ({ status, uiState = null, eta }) => {
   const { t } = useLanguage();
-  const cur = normalizeShipmentStatus(status) || 'posted';
+  const cur = uiState?.status || normalizeShipmentStatus(status) || 'posted';
   const idx = Math.max(0, SHIPMENT_ORDER.indexOf(cur));
   const n = SHIPMENT_ORDER.length;
   const fillPct = n <= 1 ? 0 : (idx / (n - 1)) * 100;
