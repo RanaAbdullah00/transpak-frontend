@@ -1,19 +1,30 @@
 import { normalizeShipmentStatus, nextShipmentStatus } from './shipmentStatus.js';
+import { normalizeContractFields } from './contractFieldNormalizer.js';
 
 /** Statuses where live GPS + socket tracking are allowed (matches backend contract). */
 export const TRACKING_ACTIVE_STATUSES = Object.freeze(['booked', 'pickedup', 'intransit']);
 
+function contractTrackFlags(input = {}) {
+  const fields = normalizeContractFields(input);
+  const status =
+    normalizeShipmentStatus(
+      input.status ?? input.shipmentStatus ?? input.tracking?.status ?? 'posted'
+    ) || 'posted';
+  const hasAssigned = Boolean(String(fields.assignedCarrierId ?? '').trim());
+  const hasValidRef = Boolean(String(fields.ref ?? '').trim());
+  return { status, hasAssigned, hasValidRef };
+}
+
+/**
+ * State-only: contract is trackable when status is in-progress, carrier assigned, and ref exists.
+ */
+export function canTrackShipment(input = {}) {
+  const { status, hasAssigned, hasValidRef } = contractTrackFlags(input);
+  return TRACKING_ACTIVE_STATUSES.includes(status) && hasAssigned && hasValidRef;
+}
+
 /**
  * Single UI authority for shipment presentation and permissions.
- * @param {{
- *   status?: string,
- *   shipmentStatus?: string,
- *   tracking?: { status?: string },
- *   assignedCarrierId?: string|null,
- *   assigned_carrier_id?: string|null,
- *   role?: 'shipper'|'carrier'|'admin'|null,
- *   lifecycleStage?: string|null
- * }} input
  */
 export function getShipmentUIState(input = {}) {
   const status =
@@ -22,27 +33,13 @@ export function getShipmentUIState(input = {}) {
     ) || 'posted';
 
   const assignedRaw = input.assignedCarrierId ?? input.assigned_carrier_id;
-  const lifecycleKey = String(input.lifecycleStage || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, '_');
-  const lifecycleImpliesAssigned = [
-    'bid_accepted',
-    'assigned',
-    'in_transit',
-    'delivered',
-    'closed'
-  ].includes(lifecycleKey);
-  const hasAssigned =
-    Boolean(String(assignedRaw ?? '').trim()) ||
-    (TRACKING_ACTIVE_STATUSES.includes(status) && lifecycleImpliesAssigned);
-
+  const hasAssigned = Boolean(String(assignedRaw ?? '').trim());
   const canTrack = TRACKING_ACTIVE_STATUSES.includes(status) && hasAssigned;
 
   const phase =
     status === 'delivered' || status === 'closed'
       ? 'completed'
-      : TRACKING_ACTIVE_STATUSES.includes(status)
+      : canTrack
         ? 'active'
         : 'incomplete';
 
@@ -59,7 +56,7 @@ export function getShipmentUIState(input = {}) {
   const upcoming = nextShipmentStatus(status);
   const canUpdateStatus = canTrack && isCarrier && status !== 'closed' && Boolean(upcoming);
 
-  const base = {
+  return {
     status,
     phase,
     labelKey,
@@ -67,7 +64,7 @@ export function getShipmentUIState(input = {}) {
     canTrack,
     trackingActive: canTrack,
     contractActive: canTrack || status === 'delivered',
-    isActive: phase === 'active',
+    isActive: canTrack,
     isCompleted: phase === 'completed',
     showRouteMap: Boolean(status),
     showLiveMap: canTrack,
@@ -80,11 +77,8 @@ export function getShipmentUIState(input = {}) {
     upcomingStatus: upcoming,
     lifecycleStage: input.lifecycleStage ?? null
   };
-
-  return base;
 }
 
-/** Attach translated label + canonical permission aliases for components. */
 export function withShipmentUILabels(uiState, t) {
   if (!uiState) return uiState;
   const label =
@@ -100,30 +94,39 @@ export function withShipmentUILabels(uiState, t) {
   };
 }
 
-/**
- * Build resolver input from a tracking API payload + workspace role.
- */
 export function shipmentUIStateFromTracking(payload, role, extras = {}) {
   if (!payload && !extras.status && !extras.shipmentStatus) {
-    return getShipmentUIState({ status: 'posted', role, ...extras });
+    return getShipmentUIState(normalizeContractFields({ status: 'posted', role, ...extras }));
   }
-  return getShipmentUIState({
-    status: extras.status ?? extras.shipmentStatus ?? payload?.tracking?.status,
-    assignedCarrierId:
-      extras.assignedCarrierId ??
-      extras.assigned_carrier_id ??
-      payload?.assignedCarrierId ??
-      payload?.assigned_carrier_id,
-    lifecycleStage: extras.lifecycleStage ?? payload?.lifecycleStage,
-    role
-  });
+  return getShipmentUIState(
+    normalizeContractFields({
+      status: extras.status ?? extras.shipmentStatus ?? payload?.tracking?.status,
+      assignedCarrierId:
+        extras.assignedCarrierId ??
+        extras.assigned_carrier_id ??
+        payload?.assignedCarrierId ??
+        payload?.assigned_carrier_id,
+      ref:
+        extras.ref ??
+        extras.code ??
+        extras.loadCode ??
+        payload?.ref ??
+        payload?.code ??
+        payload?.loadCode ??
+        payload?.refKey,
+      lifecycleStage: extras.lifecycleStage ?? payload?.lifecycleStage,
+      role
+    })
+  );
 }
 
-/** Dashboard list row → UI state (API filter fields only). */
 export function shipmentUIStateFromActiveRow(row, role) {
-  return getShipmentUIState({
-    status: row?.shipmentStatus ?? row?.status,
-    assignedCarrierId: row?.assignedCarrierId ?? row?.assigned_carrier_id,
-    role
-  });
+  return getShipmentUIState(
+    normalizeContractFields({
+      status: row?.shipmentStatus ?? row?.status,
+      assignedCarrierId: row?.assignedCarrierId ?? row?.assigned_carrier_id,
+      ref: row?.ref ?? row?.code ?? row?.loadCode ?? row?.refKey,
+      role
+    })
+  );
 }

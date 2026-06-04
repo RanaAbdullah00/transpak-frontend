@@ -18,3 +18,5 @@ export function proposedSpacePrice(row) {
 }
 
 export { emitRealtimeRefresh } from './realtimeRefresh.js';
+export { activateContractUI } from './contractActivation.js';
+// contractStateResolver / contractLatchStore are deprecated — use shipmentUIState + REST only.

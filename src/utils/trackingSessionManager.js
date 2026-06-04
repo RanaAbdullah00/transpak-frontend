@@ -148,7 +148,7 @@ export function bindTrackingReconnect(socket) {
 }
 
 export function emitTrackingJoin(socket, primaryRef, aliasRefs = []) {
-  if (!socket || !primaryRef) return;
+  if (!socket || !primaryRef || !socket.connected) return;
   const key = primaryKey(primaryRef);
   if (!shouldSocketJoin(key)) return;
 

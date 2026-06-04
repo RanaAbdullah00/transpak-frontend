@@ -9,13 +9,21 @@ import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
 const TrackingMap = ({
   route = [],
   currentLocation,
-  trackingData,
-  originName,
-  destinationName,
+  trackingData = null,
+  originName = '',
+  destinationName = '',
   liveDriver = false,
   geoError = null
 }) => {
   const { t, isUrdu } = useLanguage();
+
+  if (!trackingData && !originName && !destinationName && !route?.length) {
+    return (
+      <div className="tp-map-card tp-map-card--empty rounded-3 border p-3 text-muted small" role="status">
+        {t('pages.tracking.noCoords')}
+      </div>
+    );
+  }
 
   const hasLiveRoute =
     normalizeCoordList(trackingData?.liveTrackingMap?.coordinates).length > 0 ||

@@ -21,6 +21,7 @@ import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { activateContractUI } from '../../utils/contractActivation.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 const LoadDetails = () => {
@@ -73,7 +74,16 @@ const LoadDetails = () => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'bids' && scope !== 'loads' && scope !== 'shipments') return;
+      if (
+        scope &&
+        scope !== 'all' &&
+        scope !== 'bids' &&
+        scope !== 'loads' &&
+        scope !== 'shipments' &&
+        scope !== 'space'
+      ) {
+        return;
+      }
       fetchData();
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
@@ -83,7 +93,7 @@ const LoadDetails = () => {
   const handleAccept = async (bid) => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      emitRealtimeRefresh('bids');
+      activateContractUI();
       await fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.acceptFailed') }));

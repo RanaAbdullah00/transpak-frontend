@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ActiveShipmentPanel from './ActiveShipmentPanel.jsx';
 import StatusBadge from '../shipment/StatusBadge.jsx';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
-import { shipmentUIStateFromTracking, withShipmentUILabels } from '../../utils/shipmentUIState.js';
+import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
@@ -32,19 +32,16 @@ const ActiveShipmentCard = ({
   const { trackingData, uiState, loading, livePos, geoError } = useShipmentTracking({
     trackRef,
     assignedCarrierId,
-    shareLive: shareLive && expanded,
+    shareLive: shareLive && Boolean(assignedCarrierId),
     enabled: Boolean(trackRef),
     role: workspaceRole
   });
 
-  const ui = useMemo(
-    () =>
-      withShipmentUILabels(
-        uiState || shipmentUIStateFromTracking(trackingData, workspaceRole, { assignedCarrierId }),
-        t
-      ),
-    [uiState, trackingData, workspaceRole, assignedCarrierId, t]
-  );
+  const ui = useMemo(() => withShipmentUILabels(uiState, t), [uiState, t]);
+
+  useEffect(() => {
+    if (ui?.canTrack && (defaultExpanded || carrierMode)) setExpanded(true);
+  }, [ui?.canTrack, defaultExpanded, carrierMode]);
 
   const href = ui.canTrack && trackRef ? `/shipments/tracking/${encodeURIComponent(trackRef)}` : null;
 

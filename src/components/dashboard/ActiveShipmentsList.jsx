@@ -5,6 +5,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { shipmentUIStateFromActiveRow } from '../../utils/shipmentUIState.js';
+import { getTrackingRef } from '../../utils/trackingRefResolver.js';
 
 /**
  * Lists all in-progress shipments for the current user (shipper or carrier).
@@ -40,7 +41,14 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'shipments' && scope !== 'loads' && scope !== 'bids') {
+      if (
+        scope &&
+        scope !== 'all' &&
+        scope !== 'shipments' &&
+        scope !== 'loads' &&
+        scope !== 'bids' &&
+        scope !== 'space'
+      ) {
         return;
       }
       refresh();
@@ -69,12 +77,9 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
         </p>
       ) : null}
       {rows
-        .filter((row) => {
-          const ui = shipmentUIStateFromActiveRow(row, workspaceRole);
-          return ui.isActive;
-        })
+        .filter((row) => shipmentUIStateFromActiveRow(row, workspaceRole).canTrack)
         .map((row, idx, arr) => {
-          const ref = row.code || row.id;
+          const ref = getTrackingRef(row);
           const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
           return (
             <ActiveShipmentCard

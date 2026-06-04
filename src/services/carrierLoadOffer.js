@@ -16,6 +16,7 @@ export async function acceptLoadAtListedFare(request, load) {
     data: { loadId: load.id, amount }
   });
   emitRealtimeRefresh('bids');
+  emitRealtimeRefresh('loads');
   return bid;
 }
 

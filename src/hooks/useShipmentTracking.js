@@ -17,12 +17,14 @@ import {
 import { clearAllTrackingSequencers } from '../utils/trackingSequencer.js';
 import { clearAllTrackingSmoothing } from '../utils/trackingSmoothing.js';
 import { shipmentUIStateFromTracking } from '../utils/shipmentUIState.js';
-import { canEmitGps } from '../utils/trackingSessionManager.js';
+import { normalizeContractFields } from '../utils/contractFieldNormalizer.js';
+import { getTrackingRef } from '../utils/trackingRefResolver.js';
+import { canEmitGps, emitTrackingJoin } from '../utils/trackingSessionManager.js';
 
 const TRACK_POLL_MS = Number(import.meta.env.VITE_TRACK_POLL_MS || 8000);
 
 /**
- * Shared REST + socket tracking for dashboards and tracking page.
+ * Shared REST + socket tracking. canTrack and socket join are driven by API state only.
  */
 export function useShipmentTracking({
   trackRef,
@@ -31,9 +33,29 @@ export function useShipmentTracking({
   role = null,
   assignedCarrierId = null
 }) {
-  const localRef = String(trackRef || '').trim();
   const { t } = useLanguage();
   const { registerTrackingHandler, getSocket, socketStatus } = useContext(AppContext) || {};
+
+  const safeShipment = useMemo(
+    () =>
+      normalizeContractFields({
+        ref: trackRef,
+        code: trackRef,
+        trackRef,
+        loadCode: trackRef,
+        assignedCarrierId,
+        assigned_carrier_id: assignedCarrierId,
+        status: null,
+        shipmentStatus: null
+      }),
+    [trackRef, assignedCarrierId]
+  );
+
+  const localRef = useMemo(
+    () => getTrackingRef(safeShipment) || getTrackingRef({ trackRef, code: trackRef }),
+    [safeShipment, trackRef]
+  );
+
   const [payload, setPayload] = useState(() =>
     localRef ? getCachedTrackingPayload(localRef) : null
   );
@@ -42,13 +64,19 @@ export function useShipmentTracking({
   const fetchGenerationRef = useRef(0);
   const socketKey = payload?.refKey || localRef;
 
-  const uiState = useMemo(
-    () =>
-      shipmentUIStateFromTracking(payload, role, {
-        assignedCarrierId: assignedCarrierId ?? payload?.assignedCarrierId
-      }),
-    [payload, role, assignedCarrierId]
-  );
+  const uiState = useMemo(() => {
+    const merged = normalizeContractFields({
+      ...safeShipment,
+      status: payload?.tracking?.status ?? payload?.status,
+      shipmentStatus: payload?.shipmentStatus,
+      assignedCarrierId:
+        safeShipment.assignedCarrierId ??
+        payload?.assignedCarrierId ??
+        payload?.assigned_carrier_id,
+      ref: safeShipment.ref ?? payload?.ref ?? payload?.code ?? payload?.loadCode ?? payload?.refKey
+    });
+    return shipmentUIStateFromTracking(payload, role, merged);
+  }, [payload, role, safeShipment]);
 
   const canTrack = uiState.canTrack;
   const gpsAllowed = shareLive && uiState.allowGpsPublish && canTrack;
@@ -165,7 +193,16 @@ export function useShipmentTracking({
     if (!enabled || !localRef) return undefined;
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'shipments') return;
+      if (
+        scope &&
+        scope !== 'all' &&
+        scope !== 'shipments' &&
+        scope !== 'bids' &&
+        scope !== 'loads' &&
+        scope !== 'space'
+      ) {
+        return;
+      }
       fetchTrack({ silent: true });
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
@@ -176,20 +213,49 @@ export function useShipmentTracking({
     if (!enabled || !localRef) return undefined;
     const onReconnectSnapshot = (e) => {
       const ref = String(e.detail?.ref || '').trim();
-      if (ref !== localRef) return;
+      if (ref !== localRef && ref !== socketKey) return;
       fetchTrack({ silent: true, reconnectSnapshot: true });
     };
     window.addEventListener('tp:tracking-snapshot', onReconnectSnapshot);
     return () => window.removeEventListener('tp:tracking-snapshot', onReconnectSnapshot);
-  }, [enabled, localRef, fetchTrack]);
+  }, [enabled, localRef, socketKey, fetchTrack]);
 
   const socket = getSocket?.() || null;
+  const socketConnected = socketStatus === 'connected' || Boolean(socket?.connected);
   const { publishLocation } = useTrackingSocket({
     socket,
     sessionRef: localRef,
     aliasRefs: [socketKey],
     enabled: enabled && canTrack && Boolean(localRef)
   });
+
+  useEffect(() => {
+    if (!enabled || !uiState?.canTrack || !localRef) return undefined;
+
+    let retry = null;
+    const aliasRefs = [socketKey].filter(Boolean);
+
+    const tryJoin = () => {
+      const activeSocket = getSocket?.();
+      if (!activeSocket) return;
+      if (activeSocket.connected) {
+        emitTrackingJoin(activeSocket, localRef, aliasRefs);
+      } else {
+        retry = setTimeout(() => {
+          const lateSocket = getSocket?.();
+          if (lateSocket?.connected) {
+            emitTrackingJoin(lateSocket, localRef, aliasRefs);
+          }
+        }, 1000);
+      }
+    };
+
+    tryJoin();
+
+    return () => {
+      if (retry) clearTimeout(retry);
+    };
+  }, [uiState?.canTrack, localRef, socketKey, socketConnected, enabled, getSocket]);
 
   const liveLat = livePos?.[0];
   const liveLng = livePos?.[1];

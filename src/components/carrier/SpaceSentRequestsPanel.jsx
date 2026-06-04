@@ -49,7 +49,15 @@ const SpaceSentRequestsPanel = () => {
   useEffect(() => {
     const h = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'space' && scope !== 'loads') return;
+      if (
+        scope &&
+        scope !== 'all' &&
+        scope !== 'space' &&
+        scope !== 'loads' &&
+        scope !== 'shipments'
+      ) {
+        return;
+      }
       refresh();
     };
     window.addEventListener('tp:realtime-refresh', h);

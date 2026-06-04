@@ -1,3 +1,4 @@
+import { activateContractUI, isContractDispatchType } from './contractActivation.js';
 import { emitRealtimeRefresh } from './realtimeRefresh.js';
 
 const SCOPE_REFRESH = {
@@ -29,6 +30,8 @@ const SCOPE_REFRESH = {
   DELIVERY_COMPLETED: 'shipments',
   SHIPMENT_PICKED_UP: 'shipments',
   SHIPMENT_IN_TRANSIT: 'shipments',
+  SHIPMENT_CREATED: 'shipments',
+  CAPACITY_ACCEPTED: 'shipments',
   REVIEW_RECEIVED: 'all',
   USER_REGISTERED: 'all',
   SPACE_CLOSED: 'space',
@@ -39,15 +42,16 @@ const SCOPE_REFRESH = {
   TRUCK_PENDING: 'all'
 };
 
-/**
- * Apply dispatch:event side effects (lists refresh) without duplicate notification inserts.
- */
 export function handleDispatchEvent(dispatch, { onNotification } = {}) {
   if (!dispatch || typeof dispatch !== 'object') return;
 
   const type = String(dispatch.type || '').toUpperCase();
-  const scope = SCOPE_REFRESH[type] || 'all';
-  emitRealtimeRefresh(scope);
+  if (isContractDispatchType(type)) {
+    activateContractUI();
+  } else {
+    const scope = SCOPE_REFRESH[type] || 'all';
+    emitRealtimeRefresh(scope);
+  }
 
   if (dispatch.notification && onNotification) {
     onNotification(dispatch.notification);

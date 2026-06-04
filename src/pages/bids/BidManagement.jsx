@@ -10,6 +10,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
+import { activateContractUI } from '../../utils/contractActivation.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 // Screen summarising bids across loads.
@@ -35,9 +36,7 @@ const BidManagement = () => {
   const handleAccept = async (bid) => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      emitRealtimeRefresh('bids');
-      emitRealtimeRefresh('shipments');
-      emitRealtimeRefresh('all');
+      activateContractUI();
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptFailed') }));
@@ -98,7 +97,16 @@ const BidManagement = () => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'bids') return;
+      if (
+        scope &&
+        scope !== 'all' &&
+        scope !== 'bids' &&
+        scope !== 'loads' &&
+        scope !== 'shipments' &&
+        scope !== 'space'
+      ) {
+        return;
+      }
       fetchBidsData();
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
