@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import api from '../services/api.js';
 import { unwrapBody, ensureAdminList } from '../utils/unwrapApi.js';
-import { formatUserError } from '../utils/userErrors.js';
+import { mapError } from '../utils/mapError.js';
 import { notifyApiError } from '../utils/notifySystem.js';
 import { logApiFailure } from '../utils/apiDevLog.js';
 
@@ -25,8 +25,8 @@ export const useApi = () => {
         String(err?.message || '').toLowerCase() === 'canceled';
       if (canceled) throw err;
       logApiFailure(err, config);
-      const msg = formatUserError(err);
-      setError(msg);
+      const mapped = mapError(err);
+      setError(mapped.message);
       if (!skipToast) notifyApiError(err);
       throw err;
     } finally {

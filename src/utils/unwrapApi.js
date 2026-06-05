@@ -69,53 +69,66 @@ export function classifyTransportFailure(err, config) {
   const endpoint = resolveRequestUrl(config);
   const httpStatus = err?.response?.status ?? null;
 
+  const devDetail = import.meta.env.DEV || String(import.meta.env.VITE_API_DEBUG || '').toLowerCase() === 'true';
+
   if (err?.code === 'ECONNABORTED' || /timeout/i.test(String(err?.message || ''))) {
     return {
       type: 'TIMEOUT',
       code: 'TIMEOUT',
       httpStatus,
       endpoint,
-      displayMessage: `Timeout contacting ${endpoint || 'API'} — no response within limit`
+      displayMessage: devDetail
+        ? `Timeout contacting ${endpoint || 'API'} — no response within limit`
+        : 'Request timed out. Please try again.'
     };
   }
 
   if (err?.code === 'ERR_NETWORK' || (!err?.response && err?.request)) {
     return {
-      type: 'CORS',
+      type: 'NETWORK',
       code: 'ERR_NETWORK',
       httpStatus: null,
       endpoint,
-      displayMessage: `Network/CORS failure: ${endpoint || 'API'} — no HTTP response (verify VITE_API_URL and Render CORS allowlist)`
+      displayMessage: devDetail
+        ? `Network failure: ${endpoint || 'API'} — no HTTP response`
+        : 'We could not reach the server. Check your connection and try again.'
     };
   }
 
   if (httpStatus === 401) {
+    const bodyMsg =
+      typeof err?.response?.data?.message === 'string' ? err.response.data.message.trim() : '';
     return {
       type: 'AUTH',
-      code: 'UNAUTHORIZED',
+      code: err?.response?.data?.code || 'AUTH_INVALID',
       httpStatus: 401,
       endpoint,
-      displayMessage: `Auth required: ${endpoint || 'API'} (HTTP 401)`
+      displayMessage: bodyMsg || 'Please sign in to continue.'
     };
   }
 
   if (httpStatus === 403) {
+    const bodyMsg =
+      typeof err?.response?.data?.message === 'string' ? err.response.data.message.trim() : '';
     return {
       type: 'FORBIDDEN',
-      code: 'FORBIDDEN',
+      code: err?.response?.data?.code || 'FORBIDDEN',
       httpStatus: 403,
       endpoint,
-      displayMessage: `Forbidden: ${endpoint || 'API'} (HTTP 403)`
+      displayMessage: bodyMsg || 'You do not have permission for this action.'
     };
   }
 
   if (httpStatus != null && httpStatus >= 500) {
+    const bodyMsg =
+      typeof err?.response?.data?.message === 'string' ? err.response.data.message.trim() : '';
     return {
       type: 'SERVER',
       code: 'SERVER_ERROR',
       httpStatus,
       endpoint,
-      displayMessage: `Server error: ${endpoint || 'API'} (HTTP ${httpStatus})`
+      displayMessage:
+        bodyMsg || 'The service is temporarily unavailable. Please try again shortly.'
     };
   }
 
@@ -212,10 +225,13 @@ export function unwrapErrorDetail(err) {
 
   const endpoint = resolveRequestUrl(err?.config);
   const httpStatus = err?.response?.status ?? null;
-  if (endpoint && httpStatus && !displayMessage.includes(String(httpStatus))) {
-    displayMessage = `${displayMessage} — ${endpoint} (HTTP ${httpStatus})`;
-  } else if (endpoint && !displayMessage.includes(endpoint)) {
-    displayMessage = `${displayMessage} — ${endpoint}`;
+  const devDetail = import.meta.env.DEV || String(import.meta.env.VITE_API_DEBUG || '').toLowerCase() === 'true';
+  if (devDetail) {
+    if (endpoint && httpStatus && !displayMessage.includes(String(httpStatus))) {
+      displayMessage = `${displayMessage} — ${endpoint} (HTTP ${httpStatus})`;
+    } else if (endpoint && !displayMessage.includes(endpoint)) {
+      displayMessage = `${displayMessage} — ${endpoint}`;
+    }
   }
 
   const bodyEndpoint = typeof d?.endpoint === 'string' ? d.endpoint.trim() : '';
@@ -226,9 +242,7 @@ export function unwrapErrorDetail(err) {
     message,
     code,
     error: errorField || code,
-    displayMessage: bodyEndpoint && !displayMessage.includes(bodyEndpoint)
-      ? `${displayMessage} — ${bodyEndpoint}${bodyStatus ? ` (HTTP ${bodyStatus})` : ''}`
-      : displayMessage,
+    displayMessage,
     httpStatus: Number.isFinite(bodyStatus) ? bodyStatus : httpStatus,
     endpoint: bodyEndpoint || endpoint,
     type: bodyType || (httpStatus === 401 || httpStatus === 403 ? 'AUTH' : httpStatus >= 500 ? 'SERVER' : code || null),

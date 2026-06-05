@@ -1,4 +1,15 @@
 import React from 'react';
+import { sanitizeProductText } from '../../utils/userErrors.js';
+import { isDebugErrorsEnabled } from '../../utils/mapError.js';
+
+function adminBoundaryMessage(error) {
+  const raw = sanitizeProductText(error?.message) || '';
+  if (raw) return raw;
+  if (isDebugErrorsEnabled() && error?.message) {
+    return String(error.message).slice(0, 200);
+  }
+  return 'This admin section failed to load. Please try again.';
+}
 
 export default class AdminErrorBoundary extends React.Component {
   constructor(props) {
@@ -11,10 +22,8 @@ export default class AdminErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.error('[admin] render error', error, info);
-    }
+    // eslint-disable-next-line no-console
+    console.error('[admin] render crash', error, info);
   }
 
   render() {
@@ -22,10 +31,17 @@ export default class AdminErrorBoundary extends React.Component {
     if (error) {
       return (
         <div className="alert alert-danger rounded-3 m-3" role="alert">
-          <div className="fw-semibold mb-1">Admin panel error</div>
-          <p className="small mb-2">Something went wrong. Please reload and try again.</p>
-          <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => window.location.reload()}>
-            Reload
+          <div className="fw-semibold mb-1">Admin section unavailable</div>
+          <p className="small mb-2">{adminBoundaryMessage(error)}</p>
+          {isDebugErrorsEnabled() && error?.message ? (
+            <pre className="small mb-2">{String(error.message).slice(0, 400)}</pre>
+          ) : null}
+          <button
+            type="button"
+            className="btn btn-outline-danger btn-sm"
+            onClick={() => this.setState({ error: null })}
+          >
+            Try again
           </button>
         </div>
       );

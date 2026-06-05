@@ -1,4 +1,8 @@
-import { unwrapErrorCode, unwrapErrorDetail, formatStructuredApiError } from './unwrapApi.js';
+import {
+  unwrapErrorCode,
+  unwrapErrorDetail,
+  formatStructuredApiError
+} from './unwrapApi.js';
 import { translations } from '../i18n/translations.js';
 import { isInternalDispatchLabel } from './i18nLabels.js';
 
@@ -19,12 +23,12 @@ function walkLocale(key, locale) {
 }
 
 /** English fallback when `t` is not available (e.g. useApi). */
-export function defaultErrorMessage(key = 'errors.generic') {
-  return walkLocale(key, 'en') || 'Something went wrong';
+export function defaultErrorMessage(key = 'errors.unknown') {
+  return walkLocale(key, 'en') || 'We could not complete this action. Please try again.';
 }
 
 function genericMessage(t) {
-  return t ? t('errors.generic') : defaultErrorMessage('errors.generic');
+  return t ? t('errors.unknown') : defaultErrorMessage('errors.unknown');
 }
 
 function networkMessage(t) {
@@ -57,14 +61,28 @@ function resolveUserMessage(text, t, fallback) {
   return sanitized || fallback || genericMessage(t);
 }
 
+function messageFromStatusAndType(structured, t, fallback) {
+  const status = structured?.status;
+  const type = String(structured?.type || '').toUpperCase();
+  if (status === 401 || type === 'AUTH') {
+    return t ? t('errors.unauthorized') : walkLocale('errors.unauthorized', 'en') || 'Please sign in to continue.';
+  }
+  if (status === 403 || type === 'FORBIDDEN') {
+    return t ? t('errors.forbidden') : walkLocale('errors.forbidden', 'en') || 'You do not have permission for this action.';
+  }
+  if (status === 502 || status === 504 || status >= 500 || type === 'SERVER') {
+    return serverUnavailableMessage(t);
+  }
+  if (type === 'NETWORK' || type === 'TIMEOUT' || type === 'CORS') {
+    return networkMessage(t);
+  }
+  return fallback ?? genericMessage(t);
+}
+
 function messageFromStructured(structured, t, fallback) {
   const sanitized = sanitizeProductText(structured?.message);
   if (sanitized) return sanitized;
-  const status = structured?.status;
-  if (status === 502 || status === 504) return serverUnavailableMessage(t);
-  const type = String(structured?.type || '').toUpperCase();
-  if (type === 'NETWORK' || type === 'TIMEOUT' || type === 'CORS') return networkMessage(t);
-  return fallback ?? genericMessage(t);
+  return messageFromStatusAndType(structured, t, fallback);
 }
 
 /**
@@ -87,6 +105,22 @@ export function formatUserError(err, t, options = {}) {
   }
 
   const apiCode = unwrapErrorCode(err);
+  if (apiCode === 'AUTH_INVALID' || apiCode === 'UNAUTHORIZED') {
+    return t ? t('errors.unauthorized') : walkLocale('errors.unauthorized', 'en') || 'Please sign in to continue.';
+  }
+  if (
+    apiCode === 'FORBIDDEN' ||
+    apiCode === 'FORBIDDEN_ROLE' ||
+    apiCode === 'FORBIDDEN_RESOURCE'
+  ) {
+    return t ? t('errors.forbidden') : walkLocale('errors.forbidden', 'en') || 'You do not have permission for this action.';
+  }
+  if (apiCode === 'VALIDATION_ERROR' && t) {
+    return t('errors.validationFailed');
+  }
+  if (apiCode === 'SERVER_ERROR') {
+    return serverUnavailableMessage(t);
+  }
   if (apiCode === 'COUNTER_LIMIT_REACHED' && t) {
     return t('errors.counterLimitReached');
   }
@@ -108,6 +142,20 @@ export function formatUserError(err, t, options = {}) {
   if ((status === 502 || status === 504) && !message) {
     return serverUnavailableMessage(t);
   }
+  if (status === 401 && !sanitizeProductText(displayMessage || message)) {
+    return t ? t('errors.unauthorized') : walkLocale('errors.unauthorized', 'en') || 'Please sign in to continue.';
+  }
+  if (status === 403 && !sanitizeProductText(displayMessage || message)) {
+    return t ? t('errors.forbidden') : walkLocale('errors.forbidden', 'en') || 'You do not have permission for this action.';
+  }
+  if (status >= 500 && !sanitizeProductText(displayMessage || message)) {
+    return serverUnavailableMessage(t);
+  }
+  if (err?.code === 'ERR_NETWORK' && !sanitizeProductText(displayMessage || message)) {
+    return networkMessage(t);
+  }
 
-  return resolveUserMessage(displayMessage || message || err?.message, t, fallback);
+  const resolved = resolveUserMessage(displayMessage || message || err?.message, t, fallback);
+  if (resolved && resolved !== genericMessage(t)) return resolved;
+  return messageFromStatusAndType(formatStructuredApiError(err), t, fallback);
 }

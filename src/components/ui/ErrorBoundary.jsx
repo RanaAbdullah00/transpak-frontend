@@ -1,21 +1,24 @@
 import React from 'react';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { isDebugErrorsEnabled } from '../../utils/mapError.js';
+import { sanitizeProductText } from '../../utils/userErrors.js';
 
 function ErrorBoundaryFallback({ error, onReset }) {
   const { t } = useLanguage();
-  const showDetail = import.meta.env.DEV;
+  const showDetail = isDebugErrorsEnabled();
+  const friendly =
+    sanitizeProductText(error?.message) ||
+    t('common.errorBoundaryBody');
 
   return (
     <div className="container py-4">
       <div className="card border-0 shadow-sm rounded-xl tp-error-boundary">
         <div className="card-body">
           <h5 className="mb-2">{t('common.errorBoundaryTitle')}</h5>
-          <p className="small text-muted mb-2">
-            {showDetail ? t('common.errorBoundaryDevBody') : t('common.errorBoundaryBody')}
-          </p>
+          <p className="small text-muted mb-2">{friendly}</p>
           {showDetail ? (
             <pre className="small mb-0 tp-error-boundary__detail">
-              {String(error?.message || error || 'Unknown error')}
+              {String(error?.message || error || 'Unknown render error')}
             </pre>
           ) : null}
           <button type="button" className="btn btn-primary btn-sm mt-3 rounded-lg" onClick={onReset}>
@@ -38,10 +41,8 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.error('TransPak UI crashed:', error, info);
-    }
+    // eslint-disable-next-line no-console
+    console.error('[ui] render crash', error, info);
   }
 
   handleReset = () => {
