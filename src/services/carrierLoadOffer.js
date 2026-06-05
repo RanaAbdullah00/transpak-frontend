@@ -40,6 +40,7 @@ export async function submitCounterOffer(request, load, counterAmount) {
     data: { amount }
   });
   emitRealtimeRefresh('bids');
+  emitRealtimeRefresh('loads');
   return updated || bid;
 }
 

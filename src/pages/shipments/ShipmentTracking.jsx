@@ -14,8 +14,14 @@ import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
-import { shipmentUIStateFromTracking, withShipmentUILabels } from '../../utils/shipmentUIState.js';
+import {
+  getShipmentUIState,
+  shipmentUIStateFromTracking,
+  withShipmentUILabels
+} from '../../utils/shipmentUIState.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
+import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import Loader from '../../components/ui/Loader.jsx';
@@ -39,9 +45,12 @@ const ShipmentTracking = () => {
     role: workspaceRole
   });
 
-  const resolvedUi = uiState || shipmentUIStateFromTracking(payload, workspaceRole);
-  const upcomingStatus = resolvedUi.upcomingStatus;
-  const canonStatus = resolvedUi.status;
+  const resolvedUi =
+    uiState ||
+    shipmentUIStateFromTracking(payload, workspaceRole, { ref: id }) ||
+    getShipmentUIState({ status: 'posted', ref: id, role: workspaceRole });
+  const ui = useMemo(() => withShipmentUILabels(resolvedUi, t), [resolvedUi, t]);
+  const upcomingStatus = ui.upcomingStatus;
 
   const handleAdvanceStatus = useCallback(async () => {
     if (!upcomingStatus || !id) return;
@@ -53,6 +62,16 @@ const ShipmentTracking = () => {
         data: { status: upcomingStatus }
       });
       notifySuccess(t('pages.tracking.statusUpdated'));
+      ingestFlowNotification({
+        kind: NOTIFICATION_KIND.STATUS_UPDATE,
+        dispatchType: 'STATUS_UPDATED',
+        title: t('pages.tracking.statusUpdated'),
+        message: `${id}: ${upcomingStatus}`,
+        shipmentRef: id,
+        roleType: workspaceRole,
+        soundType: 'status',
+        priority: 'medium'
+      });
       emitRealtimeRefresh('shipments');
       emitRealtimeRefresh('all');
     } catch (err) {

@@ -7,7 +7,7 @@ import { useDashboardMetrics } from '../../hooks/useDashboardMetrics.js';
 import StatsCards from '../../components/dashboard/StatsCards.jsx';
 import ActivityFeed from '../../components/dashboard/ActivityFeed.jsx';
 import LoadList from '../../components/loadboard/LoadList.jsx';
-import ActiveShipmentsList from '../../components/dashboard/ActiveShipmentsList.jsx';
+import DashboardShipmentTabs from '../../components/dashboard/DashboardShipmentTabs.jsx';
 import SpaceSentRequestsPanel from '../../components/carrier/SpaceSentRequestsPanel.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
@@ -140,8 +140,8 @@ const ShipperDashboard = () => {
 
       <div className="mt-4">
         <h6 className="mb-3">{t('pages.dashboard.myActiveShipments')}</h6>
-        <ActiveShipmentsList
-          emptyState={
+        <DashboardShipmentTabs
+          activeEmptyState={
             <div className="text-muted text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed">
               <div className="fw-semibold mb-1">{t('pages.dashboard.emptyNoActiveShipments')}</div>
               <div className="small">{t('pages.dashboard.emptyNoActiveShipmentsBody')}</div>

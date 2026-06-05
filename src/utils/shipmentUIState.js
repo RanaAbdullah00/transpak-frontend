@@ -1,5 +1,14 @@
 import { normalizeShipmentStatus, nextShipmentStatus } from './shipmentStatus.js';
+import { translateShipmentOrLoadStatus } from './i18nLabels.js';
 import { normalizeContractFields } from './contractFieldNormalizer.js';
+import { getTrackingRef } from './trackingRefResolver.js';
+import {
+  deriveContractPhase,
+  getContractUIColor,
+  getContractUILabelKey,
+  CONTRACT_PHASE
+} from './contractStateEngine.js';
+import { resolveContractConsistency } from './contractConsistencyResolver.js';
 
 /** Statuses where live GPS + socket tracking are allowed (matches backend contract). */
 export const TRACKING_ACTIVE_STATUSES = Object.freeze(['booked', 'pickedup', 'intransit']);
@@ -15,43 +24,67 @@ function contractTrackFlags(input = {}) {
   return { status, hasAssigned, hasValidRef };
 }
 
+/** Per-status badge colors (safe Bootstrap variants only). */
+const STATUS_COLOR_VARIANT = Object.freeze({
+  booked: 'primary',
+  pickedup: 'info',
+  intransit: 'warning',
+  delivered: 'success',
+  closed: 'secondary',
+  posted: 'secondary',
+  open: 'success',
+  cancelled: 'danger'
+});
+
 /**
  * State-only: contract is trackable when status is in-progress, carrier assigned, and ref exists.
  */
 export function canTrackShipment(input = {}) {
-  const { status, hasAssigned, hasValidRef } = contractTrackFlags(input);
+  const { status, hasAssigned, hasValidRef } = contractTrackFlags(normalizeContractFields(input));
   return TRACKING_ACTIVE_STATUSES.includes(status) && hasAssigned && hasValidRef;
+}
+
+/** Alias for contract-active checks used across dashboards and tracking. */
+export function isContractActive(input = {}) {
+  return canTrackShipment(input);
 }
 
 /**
  * Single UI authority for shipment presentation and permissions.
  */
 export function getShipmentUIState(input = {}) {
-  const status =
-    normalizeShipmentStatus(
-      input.status ?? input.shipmentStatus ?? input.tracking?.status ?? 'posted'
-    ) || 'posted';
+  const normalized = normalizeContractFields(input);
+  const ref = normalized.ref || getTrackingRef(normalized);
+  const { status, hasAssigned, hasValidRef } = contractTrackFlags({ ...normalized, ref });
+  const canTrack = canTrackShipment({ ...normalized, ref, status: input.shipmentStatus ?? input.status });
 
-  const assignedRaw = input.assignedCarrierId ?? input.assigned_carrier_id;
-  const hasAssigned = Boolean(String(assignedRaw ?? '').trim());
-  const canTrack = TRACKING_ACTIVE_STATUSES.includes(status) && hasAssigned;
-
+  const contractPhase = deriveContractPhase({ ...normalized, ref, ...input });
   const phase =
-    status === 'delivered' || status === 'closed'
+    contractPhase === CONTRACT_PHASE.COMPLETED
       ? 'completed'
-      : canTrack
+      : contractPhase === CONTRACT_PHASE.ACTIVE
         ? 'active'
-        : 'incomplete';
+        : contractPhase === CONTRACT_PHASE.NEGOTIATED
+          ? 'negotiation'
+          : 'incomplete';
 
-  const role = input.role ? String(input.role).toLowerCase() : null;
+  const role = normalized.role ? String(normalized.role).toLowerCase() : null;
   const isShipper = role === 'shipper';
   const isCarrier = role === 'carrier';
 
   const colorVariant =
-    phase === 'completed' ? 'success' : phase === 'active' ? 'primary' : 'secondary';
+    getContractUIColor(contractPhase, status) ||
+    STATUS_COLOR_VARIANT[status] ||
+    'secondary';
 
   const labelKey =
-    status === 'booked' && isShipper ? 'status.accepted' : `status.${status}`;
+    contractPhase === CONTRACT_PHASE.NEGOTIATED
+      ? getContractUILabelKey(contractPhase, status)
+      : status === 'booked' && isShipper
+        ? 'status.accepted'
+        : status && STATUS_COLOR_VARIANT[status]
+          ? `status.${status}`
+          : getContractUILabelKey(contractPhase, status);
 
   const upcoming = nextShipmentStatus(status);
   const canUpdateStatus = canTrack && isCarrier && status !== 'closed' && Boolean(upcoming);
@@ -75,58 +108,48 @@ export function getShipmentUIState(input = {}) {
     canUpdateStatus,
     showShipperAcceptedBanner: status === 'booked' && isShipper,
     upcomingStatus: upcoming,
-    lifecycleStage: input.lifecycleStage ?? null
+    lifecycleStage: normalized.lifecycleStage ?? null,
+    hasValidRef,
+    contractPhase
   };
 }
 
 export function withShipmentUILabels(uiState, t) {
   if (!uiState) return uiState;
-  const label =
-    t && uiState.labelKey
-      ? t(uiState.labelKey) !== uiState.labelKey
-        ? t(uiState.labelKey)
-        : uiState.status
-      : uiState.status;
+  let label = uiState.status || '';
+  if (t && uiState.labelKey) {
+    const translated = t(uiState.labelKey);
+    label = translated !== uiState.labelKey ? translated : label;
+  }
+  if (t && (!label || label === uiState.labelKey)) {
+    label = translateShipmentOrLoadStatus(t, uiState.status) || t('status.unknown');
+  }
+  const colorVariant = uiState.colorVariant || 'secondary';
   return {
     ...uiState,
     label,
-    color: uiState.colorVariant
+    color: colorVariant
   };
 }
 
 export function shipmentUIStateFromTracking(payload, role, extras = {}) {
-  if (!payload && !extras.status && !extras.shipmentStatus) {
-    return getShipmentUIState(normalizeContractFields({ status: 'posted', role, ...extras }));
-  }
-  return getShipmentUIState(
-    normalizeContractFields({
-      status: extras.status ?? extras.shipmentStatus ?? payload?.tracking?.status,
-      assignedCarrierId:
-        extras.assignedCarrierId ??
-        extras.assigned_carrier_id ??
-        payload?.assignedCarrierId ??
-        payload?.assigned_carrier_id,
-      ref:
-        extras.ref ??
-        extras.code ??
-        extras.loadCode ??
-        payload?.ref ??
-        payload?.code ??
-        payload?.loadCode ??
-        payload?.refKey,
-      lifecycleStage: extras.lifecycleStage ?? payload?.lifecycleStage,
-      role
-    })
-  );
+  return resolveContractConsistency({
+    restShipment: extras,
+    trackingPayload: payload,
+    role
+  }).uiState;
 }
 
 export function shipmentUIStateFromActiveRow(row, role) {
-  return getShipmentUIState(
-    normalizeContractFields({
-      status: row?.shipmentStatus ?? row?.status,
-      assignedCarrierId: row?.assignedCarrierId ?? row?.assigned_carrier_id,
-      ref: row?.ref ?? row?.code ?? row?.loadCode ?? row?.refKey,
-      role
-    })
-  );
+  const fields = normalizeContractFields({
+    status: row?.shipmentStatus ?? row?.status,
+    assignedCarrierId: row?.assignedCarrierId ?? row?.assigned_carrier_id,
+    ref: row?.ref ?? row?.code ?? row?.loadCode ?? row?.refKey,
+    role,
+    ...row
+  });
+  return getShipmentUIState({
+    ...fields,
+    ref: fields.ref || getTrackingRef(row)
+  });
 }

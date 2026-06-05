@@ -14,6 +14,7 @@ import { LanguageProvider } from './context/LanguageContext.jsx';
 import { AppProvider } from './context/AppContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { ToastProvider } from './components/ui/ToastProvider.jsx';
+import NotificationToastHost from './components/notifications/NotificationToast.jsx';
 import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import { initTranspakBuildInfo } from './utils/buildInfo.js';
 import { verifyProductionDeploy } from './utils/verifyDeploy.js';
@@ -29,6 +30,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <LanguageProvider>
             <AppProvider>
               <ToastProvider>
+                <NotificationToastHost />
                 <ErrorBoundary>
                   <App />
                 </ErrorBoundary>

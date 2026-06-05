@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import Card from '../ui/Card.jsx';
 import Map from '../Map.jsx';
+import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeCoordList, routeFromCityNames, toLatLngPair } from '../../utils/mapCoords.js';
 import { useMapRoute } from '../../hooks/useMapRoute.js';
@@ -48,6 +49,7 @@ const TrackingMap = ({
     return routeFromCityNames(originName, destinationName);
   }, [trackingData?.liveTrackingMap?.coordinates, route, originName, destinationName, orsCoords]);
 
+  const hasRenderableCoords = coords.length >= 1;
   const pickup = coords.length >= 1 ? coords[0] : null;
   const delivery = coords.length >= 2 ? coords[coords.length - 1] : null;
   const rawCurrent = trackingData?.tracking?.currentLocation ?? currentLocation;
@@ -55,19 +57,31 @@ const TrackingMap = ({
   const driverLat = driverCoords?.[0];
   const driverLng = driverCoords?.[1];
   const hasDriverCoords = driverLat != null && driverLng != null;
-  const fresh =
-    liveDriver ||
-    isLocationFresh(
-      trackingData?.tracking?.locationUpdatedAt,
-      trackingData?.ts ?? trackingData?.tracking?.ts
-    ) ||
-    hasDriverCoords;
   const driver = useMemo(() => {
     if (!hasDriverCoords) return null;
     return [driverLat, driverLng];
   }, [hasDriverCoords, driverLat, driverLng]);
   const locationUnavailable =
     Boolean(trackingData?.tracking?.locationUnavailable) && !driver && !hasDriverCoords;
+
+  if (!hasRenderableCoords && !orsLoading) {
+    return (
+      <Card className={`tp-map-card h-100 ${isUrdu ? 'tp-rtl' : ''}`}>
+        <h6 className="mb-2">{t('pages.trackingMap.title')}</h6>
+        <div
+          className="tp-map-card tp-map-card--empty rounded-3 border p-4 text-center text-muted small"
+          role="status"
+          style={{ minHeight: 220 }}
+        >
+          <div className="placeholder-glow mb-3 mx-auto" style={{ maxWidth: 280 }}>
+            <span className="placeholder col-12 rounded d-block" style={{ height: 120 }} />
+          </div>
+          <Loader />
+          <p className="mb-0 mt-2">{t('pages.tracking.waitingForData')}</p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className={`tp-map-card h-100 ${isUrdu ? 'tp-rtl' : ''}`}>

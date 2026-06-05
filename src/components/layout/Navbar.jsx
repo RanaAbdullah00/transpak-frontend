@@ -4,7 +4,7 @@ import { FaBars } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth.js';
 import MobileDrawer from './MobileDrawer.jsx';
 import BrandLogo from './BrandLogo.jsx';
-import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
+import NotificationCenter from '../notifications/NotificationCenter.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { resolveNavRoleAction, getUserRoles } from '../../utils/roleSwitch.js';
@@ -108,7 +108,7 @@ const Navbar = () => {
             {!adminShell ? <LanguageToggle className="rounded-lg" /> : null}
             {user && (
               <>
-                <NotificationDropdown />
+                <NotificationCenter />
                 {roleActionBtnMobile}
               </>
             )}
@@ -130,7 +130,7 @@ const Navbar = () => {
             {!adminShell ? <LanguageToggle className="rounded-lg" /> : null}
             {user ? (
               <>
-                <NotificationDropdown />
+                <NotificationCenter />
                 {roleActionBtn}
               </>
             ) : (

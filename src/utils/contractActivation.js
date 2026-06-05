@@ -5,6 +5,7 @@ const CONTRACT_REFRESH_SCOPES = Object.freeze(['bids', 'loads', 'shipments', 'sp
 
 const REFRESH_DEBOUNCE_MS = 600;
 let lastActivationTs = 0;
+const lastActivationByRef = new Map();
 
 /** Socket dispatch types that should trigger a full list refresh (accelerator only). */
 export const CONTRACT_DISPATCH_TYPES = new Set([
@@ -20,9 +21,19 @@ export function isContractDispatchType(type) {
 /**
  * Refresh dashboards and lists only. Contract truth comes from REST (/shipments/active, /track).
  */
-export function activateContractUI() {
+/**
+ * Refresh dashboards/lists only (REST remains source of truth).
+ * @param {string} [shipmentRef] optional ref for per-shipment debounce
+ */
+export function activateContractUI(shipmentRef) {
   const now = Date.now();
+  const ref = String(shipmentRef || '').trim();
   if (now - lastActivationTs < REFRESH_DEBOUNCE_MS) return;
+  if (ref) {
+    const lastRef = lastActivationByRef.get(ref) || 0;
+    if (now - lastRef < REFRESH_DEBOUNCE_MS) return;
+    lastActivationByRef.set(ref, now);
+  }
   lastActivationTs = now;
 
   CONTRACT_REFRESH_SCOPES.forEach((scope) => emitRealtimeRefresh(scope));

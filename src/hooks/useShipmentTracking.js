@@ -16,10 +16,21 @@ import {
 } from '../utils/trackingCache.js';
 import { clearAllTrackingSequencers } from '../utils/trackingSequencer.js';
 import { clearAllTrackingSmoothing } from '../utils/trackingSmoothing.js';
-import { shipmentUIStateFromTracking } from '../utils/shipmentUIState.js';
+import { resolveContractConsistency } from '../utils/contractConsistencyResolver.js';
 import { normalizeContractFields } from '../utils/contractFieldNormalizer.js';
 import { getTrackingRef } from '../utils/trackingRefResolver.js';
 import { canEmitGps, emitTrackingJoin } from '../utils/trackingSessionManager.js';
+import {
+  requestTrackingJoin,
+  clearTrackingJoinRequest,
+  clearTrackingJoinQueue,
+  flushTrackingJoinQueue
+} from '../utils/trackingJoinQueue.js';
+import {
+  sanitizeTrackingPayload,
+  trackingPayloadEqual
+} from '../utils/trackingPayloadSanitizer.js';
+import { canTrackShipment } from '../utils/shipmentUIState.js';
 
 const TRACK_POLL_MS = Number(import.meta.env.VITE_TRACK_POLL_MS || 8000);
 
@@ -65,17 +76,12 @@ export function useShipmentTracking({
   const socketKey = payload?.refKey || localRef;
 
   const uiState = useMemo(() => {
-    const merged = normalizeContractFields({
-      ...safeShipment,
-      status: payload?.tracking?.status ?? payload?.status,
-      shipmentStatus: payload?.shipmentStatus,
-      assignedCarrierId:
-        safeShipment.assignedCarrierId ??
-        payload?.assignedCarrierId ??
-        payload?.assigned_carrier_id,
-      ref: safeShipment.ref ?? payload?.ref ?? payload?.code ?? payload?.loadCode ?? payload?.refKey
+    const resolved = resolveContractConsistency({
+      restShipment: safeShipment,
+      trackingPayload: payload,
+      role
     });
-    return shipmentUIStateFromTracking(payload, role, merged);
+    return resolved.uiState;
   }, [payload, role, safeShipment]);
 
   const canTrack = uiState.canTrack;
@@ -108,10 +114,11 @@ export function useShipmentTracking({
           skipGlobalErrorToast: true
         });
         if (generation !== fetchGenerationRef.current) return;
-        const normalized = normalizeTracking(res?.data) || null;
+        const normalized = sanitizeTrackingPayload(normalizeTracking(res?.data) || res?.data);
         setPayload((prev) => {
           const base = hydrateTrackingFromCache(localRef, prev);
-          return applyPipeline(base, normalized, 'rest', reconnectSnapshot);
+          const next = applyPipeline(base, normalized, 'rest', reconnectSnapshot);
+          return trackingPayloadEqual(prev, next) ? prev : next;
         });
       } catch (e) {
         if (generation !== fetchGenerationRef.current) return;
@@ -135,6 +142,7 @@ export function useShipmentTracking({
       clearAllTrackingCaches();
       clearAllTrackingSequencers();
       clearAllTrackingSmoothing();
+      clearTrackingJoinQueue();
     };
     window.addEventListener('tp:role-switched', reset);
     window.addEventListener('tp:session-cleared', reset);
@@ -178,7 +186,8 @@ export function useShipmentTracking({
         if (!matchesTrackingPayload(incoming, localRef, socketKey, prev?.refKey, prev?.loadId)) {
           return prev;
         }
-        return applyPipeline(prev, incoming, 'socket', false);
+        const next = applyPipeline(prev, incoming, 'socket', false);
+        return trackingPayloadEqual(prev, next) ? prev : next;
       });
     },
     [localRef, socketKey, applyPipeline]
@@ -226,36 +235,57 @@ export function useShipmentTracking({
     socket,
     sessionRef: localRef,
     aliasRefs: [socketKey],
-    enabled: enabled && canTrack && Boolean(localRef)
+    enabled: enabled && canTrack && Boolean(localRef) && uiState?.canTrack
   });
 
   useEffect(() => {
-    if (!enabled || !uiState?.canTrack || !localRef) return undefined;
+    if (!enabled || !uiState?.canTrack || !localRef) {
+      clearTrackingJoinRequest(localRef);
+      return undefined;
+    }
 
     let retry = null;
     const aliasRefs = [socketKey].filter(Boolean);
+    requestTrackingJoin(localRef, aliasRefs);
 
     const tryJoin = () => {
       const activeSocket = getSocket?.();
-      if (!activeSocket) return;
-      if (activeSocket.connected) {
-        emitTrackingJoin(activeSocket, localRef, aliasRefs);
-      } else {
-        retry = setTimeout(() => {
-          const lateSocket = getSocket?.();
-          if (lateSocket?.connected) {
-            emitTrackingJoin(lateSocket, localRef, aliasRefs);
-          }
-        }, 1000);
-      }
+      if (!activeSocket?.connected) return false;
+      emitTrackingJoin(activeSocket, localRef, aliasRefs);
+      flushTrackingJoinQueue(activeSocket, emitTrackingJoin);
+      return true;
     };
 
-    tryJoin();
+    if (!tryJoin()) {
+      retry = setTimeout(() => tryJoin(), 1000);
+    }
 
     return () => {
       if (retry) clearTimeout(retry);
     };
   }, [uiState?.canTrack, localRef, socketKey, socketConnected, enabled, getSocket]);
+
+  useEffect(() => {
+    if (!enabled || !uiState?.canTrack || !localRef) return undefined;
+    const activeSocket = getSocket?.();
+    if (!activeSocket || !socketConnected) return undefined;
+
+    const onConnected = () => {
+      const sock = getSocket?.();
+      if (!sock?.connected) return;
+      flushTrackingJoinQueue(sock, emitTrackingJoin, { delayRetryMs: 1000 });
+      emitTrackingJoin(sock, localRef, [socketKey].filter(Boolean));
+    };
+
+    activeSocket.on('connect', onConnected);
+    return () => {
+      try {
+        activeSocket.off('connect', onConnected);
+      } catch {
+        /* ignore */
+      }
+    };
+  }, [enabled, uiState?.canTrack, localRef, socketKey, socketConnected, getSocket]);
 
   const liveLat = livePos?.[0];
   const liveLng = livePos?.[1];

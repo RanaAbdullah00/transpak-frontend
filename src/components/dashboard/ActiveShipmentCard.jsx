@@ -10,6 +10,8 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
+import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 
 /**
  * One active shipment card — isolated tracking session per ref.
@@ -55,6 +57,16 @@ const ActiveShipmentCard = ({
         data: { status: next }
       });
       notifySystem(SystemNotifyType.SUCCESS, t('pages.tracking.statusUpdated'));
+      ingestFlowNotification({
+        kind: NOTIFICATION_KIND.STATUS_UPDATE,
+        dispatchType: 'STATUS_UPDATED',
+        title: t('pages.tracking.statusUpdated'),
+        message: `${trackRef}: ${next}`,
+        shipmentRef: trackRef,
+        roleType: carrierMode ? 'carrier' : 'shipper',
+        soundType: 'status',
+        priority: 'medium'
+      });
       emitRealtimeRefresh('shipments');
       emitRealtimeRefresh('all');
     } catch (err) {

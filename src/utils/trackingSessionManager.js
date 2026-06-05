@@ -1,10 +1,14 @@
+import {
+  flushTrackingJoinQueue,
+  clearTrackingJoinQueue
+} from './trackingJoinQueue.js';
+
 /**
  * In-memory tracking session registry (per browser tab).
  * Ensures one socket join + controlled GPS cadence per shipment ref.
  */
 
-const sessions = new Map();
-let reconnectHandler = null;
+const sessions = new Map();let reconnectHandler = null;
 let reconnectSocketId = null;
 const reconnectSnapshotAt = new Map();
 
@@ -124,6 +128,7 @@ export function bindTrackingReconnect(socket) {
 
   reconnectHandler = () => {
     resetAllSocketJoinFlags();
+    flushTrackingJoinQueue(socket, emitTrackingJoin, { delayRetryMs: 1000 });
     getActiveSessions().forEach(({ key, refs }) => {
       refs.forEach((ref) => {
         socket.emit('tracking:join', { refKey: ref });
@@ -141,15 +146,19 @@ export function bindTrackingReconnect(socket) {
       }
     });
   };
-
   socket.on('connect', reconnectHandler);
   socket.io?.on('reconnect', reconnectHandler);
   reconnectSocketId = socketId;
 }
 
+export function clearTrackingSessions() {
+  sessions.clear();
+  reconnectSnapshotAt.clear();
+  clearTrackingJoinQueue();
+}
+
 export function emitTrackingJoin(socket, primaryRef, aliasRefs = []) {
-  if (!socket || !primaryRef || !socket.connected) return;
-  const key = primaryKey(primaryRef);
+  if (!socket || !primaryRef || !socket.connected) return;  const key = primaryKey(primaryRef);
   if (!shouldSocketJoin(key)) return;
 
   const row = sessions.get(key);

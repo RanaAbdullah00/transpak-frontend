@@ -4,7 +4,8 @@ import Loader from '../ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
-import { shipmentUIStateFromActiveRow } from '../../utils/shipmentUIState.js';
+import { canTrackShipment } from '../../utils/shipmentUIState.js';
+import { normalizeContractFields } from '../../utils/contractFieldNormalizer.js';
 import { getTrackingRef } from '../../utils/trackingRefResolver.js';
 
 /**
@@ -77,7 +78,16 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
         </p>
       ) : null}
       {rows
-        .filter((row) => shipmentUIStateFromActiveRow(row, workspaceRole).canTrack)
+        .filter((row) =>
+          canTrackShipment(
+            normalizeContractFields({
+              status: row.shipmentStatus ?? row.status,
+              assignedCarrierId: row.assignedCarrierId,
+              ref: getTrackingRef(row),
+              role: workspaceRole
+            })
+          )
+        )
         .map((row, idx, arr) => {
           const ref = getTrackingRef(row);
           const label = `${row.origin || ''} → ${row.destination || ''}`.trim();

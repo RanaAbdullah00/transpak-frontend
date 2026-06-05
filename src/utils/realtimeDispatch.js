@@ -1,7 +1,11 @@
-import { activateContractUI, isContractDispatchType } from './contractActivation.js';
-import { emitRealtimeRefresh } from './realtimeRefresh.js';
+import { ingestRealtimeDispatch } from './notificationPipeline.js';
+import {
+  buildNotificationEventId,
+  hasNotificationEventId
+} from './notificationEventRegistry.js';
 
-const SCOPE_REFRESH = {
+/** @deprecated internal — scopes handled in notificationPipeline */
+export const SCOPE_REFRESH = {
   LOAD_POSTED: 'loads',
   BID_CREATED: 'bids',
   BID_UPDATED: 'bids',
@@ -42,18 +46,22 @@ const SCOPE_REFRESH = {
   TRUCK_PENDING: 'all'
 };
 
+/**
+ * Socket dispatch entry — refresh scopes, notification engine, store, toast, sound.
+ */
 export function handleDispatchEvent(dispatch, { onNotification } = {}) {
   if (!dispatch || typeof dispatch !== 'object') return;
-
   const type = String(dispatch.type || '').toUpperCase();
-  if (isContractDispatchType(type)) {
-    activateContractUI();
-  } else {
-    const scope = SCOPE_REFRESH[type] || 'all';
-    emitRealtimeRefresh(scope);
-  }
-
-  if (dispatch.notification && onNotification) {
-    onNotification(dispatch.notification);
-  }
+  const probeId = buildNotificationEventId({
+    dispatchType: type,
+    shipmentRef:
+      dispatch.notification?.shipmentRef ||
+      dispatch.notification?.refKey ||
+      dispatch.refKey ||
+      dispatch.notification?.code,
+    timestamp: dispatch.notification?.createdAt || dispatch.ts,
+    eventId: dispatch.eventId || dispatch.notification?.id
+  });
+  if (hasNotificationEventId(probeId)) return;
+  ingestRealtimeDispatch(dispatch, { onPersistedNotification: onNotification });
 }

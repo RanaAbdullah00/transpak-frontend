@@ -459,6 +459,10 @@ export const translations = {
       rejected: 'Rejected',
       cancelled: 'Cancelled'
     },
+    bidFlow: {
+      negotiationCounter: 'Counter offer — awaiting response',
+      negotiationAwaitingShipper: 'Awaiting shipper confirmation'
+    },
     notifications: {
       roleFallback: 'Role',
       rolePlatform: 'Platform',
@@ -627,6 +631,8 @@ export const translations = {
         statFleetSub: 'Registered',
         myActiveShipments: 'My active shipments',
         myAssignedShipments: 'My assigned shipments',
+        tabActiveShipments: 'Active',
+        tabHistory: 'History',
         emptyNoActiveShipments: 'No active shipments',
         emptyNoActiveShipmentsBody: 'Accept a carrier bid to start shipment tracking.',
         emptyNoAssignedShipments: 'No assigned shipments',
@@ -669,7 +675,8 @@ export const translations = {
         advanceDelivered: 'Close shipment',
         statusUpdated: 'Shipment status updated',
         trackingNotActiveYet:
-          'Live tracking starts after the bid is accepted and the shipment is booked.'
+          'Live tracking starts after the bid is accepted and the shipment is booked.',
+        waitingForData: 'Waiting for tracking data…'
       },
       shipments: {
         tracking: 'Shipment Tracking',
@@ -682,7 +689,11 @@ export const translations = {
         historyLead: 'Delivered loads you shipped or carried appear here.',
         historyView: 'View shipment',
         historyClosedLabel: 'Closed',
-        historyLoadFailed: 'Could not load shipment history.'
+        historyLoadFailed: 'Could not load shipment history.',
+        historyTabCompleted: 'Completed',
+        historyTabClosed: 'Closed',
+        historyTabCancelled: 'Cancelled',
+        historyBidRow: 'Rejected bid'
       },
       supportPage: {
         title: 'Support',
@@ -833,6 +844,18 @@ export const translations = {
       },
       notificationsPage: {
         title: 'Notifications'
+      },
+      notifications: {
+        filterAll: 'All',
+        filterContract: 'Contract',
+        filterBid: 'Bids',
+        filterStatus: 'Status',
+        viewLiveTracking: 'View live tracking',
+        viewShipment: 'View shipment',
+        viewBids: 'View bids',
+        historySearchPlaceholder: 'Search by load code or route…',
+        historyRoleShipper: 'Loads you posted',
+        historyRoleCarrier: 'Loads you carried'
       },
       truckForm: {
         truckType: 'Truck type',
@@ -1853,6 +1876,10 @@ export const translations = {
       rejected: 'مسترد',
       cancelled: 'منسوخ'
     },
+    bidFlow: {
+      negotiationCounter: 'کاؤنٹر آفر — جواب کا انتظار',
+      negotiationAwaitingShipper: 'شپپر کی تصدیق کا انتظار'
+    },
     notifications: {
       roleFallback: 'کردار',
       rolePlatform: 'پلیٹ فارم',
@@ -2007,7 +2034,8 @@ export const translations = {
         advanceDelivered: 'شپمنٹ بند کریں',
         statusUpdated: 'شپمنٹ کی حیثیت اپ ڈیٹ ہو گئی',
         trackingNotActiveYet:
-          'لائیو ٹریکنگ اس وقت شروع ہوتی ہے جب بولی قبول ہو اور شپمنٹ بک ہو جائے۔'
+          'لائیو ٹریکنگ اس وقت شروع ہوتی ہے جب بولی قبول ہو اور شپمنٹ بک ہو جائے۔',
+        waitingForData: 'ٹریکنگ ڈیٹا کا انتظار…'
       },
       supportPage: {
         title: 'مدد',
@@ -2158,6 +2186,18 @@ export const translations = {
       },
       notificationsPage: {
         title: 'نوٹیفکیشنز'
+      },
+      notifications: {
+        filterAll: 'سب',
+        filterContract: 'معاہدہ',
+        filterBid: 'بولیاں',
+        filterStatus: 'حیثیت',
+        viewLiveTracking: 'لائیو ٹریکنگ دیکھیں',
+        viewShipment: 'شپمنٹ دیکھیں',
+        viewBids: 'بولیاں دیکھیں',
+        historySearchPlaceholder: 'لوڈ کوڈ یا روٹ سے تلاش…',
+        historyRoleShipper: 'آپ کے پوسٹ کردہ لوڈز',
+        historyRoleCarrier: 'آپ کی گزارش کردہ لوڈز'
       },
       truckForm: {
         truckType: 'ٹرک کی قسم',
@@ -2464,7 +2504,11 @@ export const translations = {
         historyLead: 'وہ لوڈز جو ڈیلیور یا بند ہو چکے ہیں یہاں نظر آئیں گے۔',
         historyView: 'شپمنٹ دیکھیں',
         historyClosedLabel: 'بند',
-        historyLoadFailed: 'شپمنٹ ہسٹری لوڈ نہیں ہو سکی۔'
+        historyLoadFailed: 'شپمنٹ ہسٹری لوڈ نہیں ہو سکی۔',
+        historyTabCompleted: 'مکمل',
+        historyTabClosed: 'بند',
+        historyTabCancelled: 'منسوخ',
+        historyBidRow: 'مسترد بڈ'
       },
       // wallet removed: ادائیگی آف لائن
       dashboard: {
@@ -2499,6 +2543,8 @@ export const translations = {
         statFleetSub: 'رجسٹرڈ',
         myActiveShipments: 'میری فعال شپمنٹس',
         myAssignedShipments: 'میری تفویض شدہ شپمنٹس',
+        tabActiveShipments: 'فعال',
+        tabHistory: 'تاریخ',
         emptyNoActiveShipments: 'کوئی فعال شپمنٹ نہیں',
         emptyNoActiveShipmentsBody: 'ٹریکنگ کے لیے کیریئر بڈ قبول کریں۔',
         emptyNoAssignedShipments: 'کوئی تفویض نہیں',

@@ -12,13 +12,20 @@ import { getAuthToken } from '../utils/authTokenStorage.js';
 import { workspaceQueryParams } from '../utils/workspaceApi.js';
 import { getWorkspace } from '../utils/workspace.js';
 import {
-  shouldProcessRealtimeEvent,
   acknowledgeSyncedEventIds,
   clearRealtimeDedupeCache,
   getLastEventSyncAt
 } from '../utils/realtimeDedupe.js';
 import { syncEventsSince, syncNotificationsSince, fetchUnreadCount } from '../utils/realtimeSync.js';
 import { handleDispatchEvent } from '../utils/realtimeDispatch.js';
+import { normalizePersistedNotification } from '../utils/notificationEngine.js';
+import { pushNotification, clearNotificationStore } from '../utils/notificationStore.js';
+import {
+  buildNotificationEventId,
+  claimNotificationEvent,
+  clearNotificationEventRegistry,
+  registerNotificationEventIds
+} from '../utils/notificationEventRegistry.js';
 import { emitRealtimeRefresh } from '../utils/realtimeRefresh.js';
 import { pruneWorkspaceQueryCaches } from '../utils/workspaceQueryCache.js';
 
@@ -98,7 +105,13 @@ export const AppProvider = ({ children }) => {
       roleType: sanitizeNotificationRoleType(base.roleType)
     };
     const eid = normalized.eventId || normalized.id || normalized._id;
-    if (eid && !shouldProcessRealtimeEvent(eid)) return;
+    const globalEventId = buildNotificationEventId({
+      dispatchType: normalized.type || normalized.title,
+      shipmentRef: normalized.shipmentRef || normalized.refKey,
+      timestamp: normalized.createdAt,
+      eventId: eid
+    });
+    if (!claimNotificationEvent({ globalEventId, eventId: eid })) return;
     const nid = normalized.id ?? normalized._id;
     setNotifications((prev) => {
       if (eid && prev.some((p) => String(p.eventId || p.id || p._id) === String(eid))) {
@@ -119,10 +132,13 @@ export const AppProvider = ({ children }) => {
       if (dup) return prev;
       const next = [{ id: nid ?? `local-${Date.now()}`, read: Boolean(normalized.read), ...normalized }, ...prev];
       const scoped = user ? notificationsForWorkspace(next, user) : next;
+      const eng = normalizePersistedNotification(normalized);
+      pushNotification({ ...eng, read: Boolean(normalized.read), dedupeKey: `persist|${eng.id}` });
       if (showToast) {
         queueMicrotask(() => {
-          routeRealtimeNotification(normalized);
-          window.dispatchEvent(new CustomEvent('tp:notification-sound'));
+          window.dispatchEvent(
+            new CustomEvent('tp:notification-toast', { detail: eng })
+          );
           const unread = scoped.filter((n) => !(n.read || n.isRead)).length;
           window.dispatchEvent(new CustomEvent('tp:unread-sync', { detail: { count: unread } }));
         });
@@ -190,6 +206,7 @@ export const AppProvider = ({ children }) => {
 
   const mergeNotificationsFromServer = useCallback((rows) => {
     const list = ensureArray(rows);
+    registerNotificationEventIds(list);
     const mapped = list.map(mapNotificationRow);
     setNotifications((prev) => {
       const byId = new Map();
@@ -313,6 +330,8 @@ export const AppProvider = ({ children }) => {
       lastTrackingSig.current = { sig: '', t: 0 };
       lastTrackingTsByRef.current.clear();
       clearRealtimeDedupeCache();
+      clearNotificationStore();
+      clearNotificationEventRegistry();
     };
     window.addEventListener('tp:session-cleared', onSessionCleared);
     return () => window.removeEventListener('tp:session-cleared', onSessionCleared);
