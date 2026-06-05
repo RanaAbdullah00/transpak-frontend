@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ActiveShipmentCard from './ActiveShipmentCard.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
