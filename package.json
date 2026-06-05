@@ -10,6 +10,7 @@
     "check:react": "node scripts/verify-single-react.mjs",
     "prebuild": "node scripts/verify-pages-deploy-source.mjs && node scripts/verify-single-react.mjs && node scripts/verify-no-duplicate-imports.mjs",
     "build": "vite build",
+    "postbuild": "node scripts/verify-build-complete.mjs",
     "deploy:check": "node ../scripts/check-production-sync.mjs",
     "deploy:qa": "node ../scripts/final-production-qa.mjs",
     "preview": "vite preview",

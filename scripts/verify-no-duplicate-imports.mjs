@@ -79,6 +79,7 @@ if (issues.length) {
       `  ${i.file}: "${i.binding}" imported at lines ${i.firstLine} and ${i.duplicateLine}`
     );
   }
+  console.error('BUILD FAILED - FIX REQUIRED');
   process.exit(1);
 }
 

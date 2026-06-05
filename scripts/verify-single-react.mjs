@@ -57,6 +57,7 @@ versions.forEach((v) => console.log(`  - react@${v.version} → ${v.path}`));
 
 if (versions.length !== 1 || versions[0]?.version !== '18.3.1' || !treeOk) {
   console.error('[react-check] FAIL: require exactly one react@18.3.1');
+  console.error('BUILD FAILED - FIX REQUIRED');
   process.exit(1);
 }
 

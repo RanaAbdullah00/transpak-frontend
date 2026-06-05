@@ -6,8 +6,16 @@
  */
 import { execSync } from 'node:child_process';
 
-const BLOCKED_FULL = '2e9aeb5d8b48287ff72aa3ab81a7d255f31bebb4';
-const BLOCKED_SHORT = '2e9aeb5';
+const BLOCKED_SHAS = [
+  '2e9aeb5d8b48287ff72aa3ab81a7d255f31bebb4',
+  '2e9aeb5'
+];
+
+function fail(msg) {
+  console.error(`[pages-deploy] ${msg}`);
+  console.error('BUILD FAILED - FIX REQUIRED');
+  process.exit(1);
+}
 
 function normalizeSha(value) {
   return String(value || '').trim().toLowerCase();
@@ -30,22 +38,15 @@ console.log('[pages-deploy] CF_PAGES_COMMIT_SHA:', platformSha || '(not set — 
 console.log('[pages-deploy] BUILD_SHA:', buildSha || '(unknown)');
 
 if (!buildSha) {
-  console.error('[pages-deploy] FAIL — cannot resolve build commit SHA');
-  process.exit(1);
+  fail('cannot resolve build commit SHA');
 }
 
-if (buildSha === BLOCKED_FULL || buildSha.startsWith(BLOCKED_SHORT)) {
-  console.error(
-    `[pages-deploy] FAIL — blocked stale commit ${buildSha}. Deploy main HEAD only; do not retry 2e9aeb5.`
-  );
-  process.exit(1);
+if (BLOCKED_SHAS.some((b) => buildSha === b || buildSha.startsWith(b))) {
+  fail(`blocked stale commit ${buildSha} — deploy main HEAD only; never retry 2e9aeb5`);
 }
 
 if (platformSha && checkoutSha && platformSha !== checkoutSha) {
-  console.error(
-    `[pages-deploy] FAIL — SHA mismatch: platform=${platformSha} checkout=${checkoutSha}`
-  );
-  process.exit(1);
+  fail(`SHA mismatch: CF_PAGES_COMMIT_SHA=${platformSha} git_HEAD=${checkoutSha}`);
 }
 
 console.log('[pages-deploy] OK — building from allowed commit', buildSha.slice(0, 12));
