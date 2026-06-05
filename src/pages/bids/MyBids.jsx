@@ -11,7 +11,12 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
-import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
+import {
+  commitOptimisticBidAccept,
+  commitOptimisticBidReject,
+  commitOptimisticBidSuggest
+} from '../../utils/contractActivationLayer.js';
 
 import { isTruckMatchingEligible } from '../../utils/fleetApi.js';
 import { isActiveBidStatus } from '../../utils/bidStatus.js';
@@ -58,13 +63,21 @@ const MyBids = () => {
   }, [fetchBidsData]);
 
   useEffect(() => {
-    const onRefresh = (e) => {
-      const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'bids') return;
-      fetchBidsData();
+    const reconcile = () => {
+      void fetchBidsData();
     };
-    window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    const onBidsRefresh = () => reconcile();
+    const onLegacyRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (!scope || scope === 'all') return;
+      if (scope === 'bids') reconcile();
+    };
+    window.addEventListener('tp:bids-refresh', onBidsRefresh);
+    window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
+    return () => {
+      window.removeEventListener('tp:bids-refresh', onBidsRefresh);
+      window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
+    };
   }, [fetchBidsData]);
 
   useEffect(() => {
@@ -137,10 +150,21 @@ const MyBids = () => {
 
   const handleAcceptSuggestion = async (bid) => {
     try {
-      await request({ method: 'PUT', url: `/bids/${bid.id}/accept-suggestion` });
+      const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept-suggestion` });
+      const loadCode = res?.loadCode || bid.loadCode || loadMetaByLoad[String(bid.loadId)]?.code || null;
+      const payload = { ...res, loadCode };
+      commitOptimisticBidAccept(bid.id, payload, {
+        loadCode,
+        carrierId: user?.id,
+        userId: user?.id,
+        role: 'carrier'
+      });
+      await triggerAcceptActivationSync(payload, {
+        userId: user?.id,
+        role: 'carrier'
+      });
       notifySuccess(t('pages.bids.suggestionAccepted'));
-      emitRealtimeRefresh('bids');
-      fetchBidsData();
+      void fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptSuggestionFailed') }));
     }
@@ -159,10 +183,13 @@ const MyBids = () => {
 
   const handleSuggest = async (bid, amount) => {
     try {
+      commitOptimisticBidSuggest(bid.id, amount, {
+        suggestedBy: 'carrier',
+        loadCode: bid.loadCode
+      });
       await request({ method: 'PUT', url: `/bids/${bid.id}/suggest-carrier`, data: { amount } });
       notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      emitRealtimeRefresh('bids');
-      fetchBidsData();
+      void fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
     }

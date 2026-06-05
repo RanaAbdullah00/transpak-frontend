@@ -1,15 +1,19 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FaGavel } from 'react-icons/fa';
 import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import { deriveBidType } from '../../utils/flowSession.js';
-import { mergeOptimisticBid } from '../../utils/contractActivationLayer.js';
+import {
+  assertIsSnapshotConsumer,
+  collectSnapshotBids,
+  getUnifiedShipmentSnapshot
+} from '../../utils/shipmentUIState.js';
 
 // List of bids. mode: 'shipper' | 'carrier' controls which actions are shown.
 const BidList = memo(({
-  bids,
+  bids = [],
   onAccept,
   onReject,
   onSuggest,
@@ -27,11 +31,17 @@ const BidList = memo(({
   const defaultEmpty =
     mode === 'carrier' ? t('pages.bids.emptyCarrier') : t('pages.bids.emptyShipper');
   const resolvedEmpty = emptyMessage ?? defaultEmpty;
-  const [, bumpBidUi] = useState(0);
+  const [bidUiTick, bumpBidUi] = useState(0);
+  const lastEventKeyRef = useRef('');
 
   useEffect(() => {
     let pending = false;
-    const onBidUpdated = () => {
+    const onBidUpdated = (e) => {
+      const bidId = String(e?.detail?.bidId || e?.detail?.spaceRequestId || '').trim();
+      const status = String(e?.detail?.status || e?.type || '').trim();
+      const eventKey = `${bidId}:${status}`;
+      if (bidId && lastEventKeyRef.current === eventKey) return;
+      if (bidId) lastEventKeyRef.current = eventKey;
       if (pending) return;
       pending = true;
       requestAnimationFrame(() => {
@@ -41,16 +51,32 @@ const BidList = memo(({
     };
     window.addEventListener('tp:bid-updated', onBidUpdated);
     window.addEventListener('tp:contract-activated', onBidUpdated);
+    window.addEventListener('tp:bids-refresh', onBidUpdated);
     return () => {
       window.removeEventListener('tp:bid-updated', onBidUpdated);
       window.removeEventListener('tp:contract-activated', onBidUpdated);
+      window.removeEventListener('tp:bids-refresh', onBidUpdated);
     };
   }, []);
 
-  const normalizedBids = useMemo(
-    () => (Array.isArray(bids) ? bids : []).map((b) => mergeOptimisticBid(b)),
-    [bids]
+  const bidSnapshot = useMemo(
+    () =>
+      assertIsSnapshotConsumer(
+        getUnifiedShipmentSnapshot({ bids: Array.isArray(bids) ? bids : [] }),
+        'BidList'
+      ),
+    [bids, bidUiTick]
   );
+
+  const normalizedBids = useMemo(() => {
+    const seen = new Set();
+    return collectSnapshotBids(bidSnapshot).filter((b) => {
+      const bidId = String(b?.id || '').trim();
+      if (!bidId || seen.has(bidId)) return false;
+      seen.add(bidId);
+      return true;
+    });
+  }, [bidSnapshot]);
 
   const { standardBids, suggestedBids, acceptedBids, rejectedBids, closedBids } = useMemo(() => {
     const standard = [];
@@ -59,6 +85,7 @@ const BidList = memo(({
     const rejected = [];
     const closed = [];
     for (const bid of normalizedBids) {
+      if (!bid || typeof bid !== 'object') continue;
       const status = normalizeBidStatus(bid.status);
       if (status === BID_STATUS.ACCEPTED) {
         accepted.push(bid);
@@ -67,7 +94,8 @@ const BidList = memo(({
       } else if (status === 'expired') {
         closed.push(bid);
       } else if (!bid.status || isActiveBidStatus(bid.status)) {
-        if (deriveBidType(bid) === 'suggested') suggested.push(bid);
+        const isSuggested = deriveBidType(bid) === 'suggested' || normalizeBidStatus(bid.status) === BID_STATUS.COUNTER;
+        if (isSuggested) suggested.push(bid);
         else standard.push(bid);
       } else {
         closed.push(bid);
@@ -77,9 +105,16 @@ const BidList = memo(({
       standardBids: standard,
       suggestedBids: suggested,
       acceptedBids: accepted,
+      rejectedBids: rejected,
       closedBids: closed
     };
   }, [normalizedBids]);
+
+  const safeStandardBids = standardBids || [];
+  const safeSuggestedBids = suggestedBids || [];
+  const safeAcceptedBids = acceptedBids || [];
+  const safeRejectedBids = rejectedBids || [];
+  const safeClosedBids = closedBids || [];
   const isShipper = mode === 'shipper';
   const isCarrier = mode === 'carrier';
 
@@ -91,14 +126,14 @@ const BidList = memo(({
 
   return (
     <div className="mt-2">
-      {standardBids.length === 0 && suggestedBids.length === 0 && normalizedBids.length === 0 ? (
+      {safeStandardBids.length === 0 && safeSuggestedBids.length === 0 && normalizedBids.length === 0 ? (
         <EmptyState icon={FaGavel} title={resolvedEmpty} body={t('empty.bidsBody')} />
       ) : (
         <>
-          {standardBids.length > 0 ? (
+          {safeStandardBids.length > 0 ? (
             <>
               <h6 className="text-muted small text-uppercase mb-2">{t('pages.bids.standardBidsHeading')}</h6>
-              {standardBids.map((bid) => (
+              {safeStandardBids.map((bid) => (
                 <BidCard
                   key={bid.id}
                   bid={bid}
@@ -116,11 +151,11 @@ const BidList = memo(({
               ))}
             </>
           ) : null}
-          {suggestedBids.length > 0 ? (
+          {safeSuggestedBids.length > 0 ? (
             <>
               <hr className="my-3" />
               <h6 className="text-info small text-uppercase mb-2">{t('pages.bids.suggestedBidsHeading')}</h6>
-              {suggestedBids.map((bid) => (
+              {safeSuggestedBids.map((bid) => (
                 <BidCard
                   key={`suggested-${bid.id}`}
                   bid={bid}
@@ -138,11 +173,11 @@ const BidList = memo(({
               ))}
             </>
           ) : null}
-          {rejectedBids.length > 0 && (
+          {safeRejectedBids.length > 0 && (
             <>
               <hr className="my-4" />
               <h6 className="text-danger mb-3">{t('pages.bids.rejectedBidsHeading')}</h6>
-              {rejectedBids.map((bid) => (
+              {safeRejectedBids.map((bid) => (
                 <BidCard
                   key={`rejected-${bid.id}`}
                   bid={bid}
@@ -154,11 +189,11 @@ const BidList = memo(({
               ))}
             </>
           )}
-          {acceptedBids.length > 0 && (
+          {safeAcceptedBids.length > 0 && (
             <>
               <hr className="my-4" />
               <h6 className="text-success mb-3">{t('pages.bids.acceptedBidsHeading')}</h6>
-              {acceptedBids.map((bid) => (
+              {safeAcceptedBids.map((bid) => (
                 <BidCard
                   key={`accepted-${bid.id}`}
                   bid={bid}
@@ -170,11 +205,11 @@ const BidList = memo(({
               ))}
             </>
           )}
-          {closedBids.length > 0 && (
+          {safeClosedBids.length > 0 && (
             <>
               <hr className="my-4" />
               <h6 className="text-muted mb-3">{t('pages.bids.closedBidsHeading')}</h6>
-              {closedBids.map((bid) => (
+              {safeClosedBids.map((bid) => (
                 <BidCard
                   key={`closed-${bid.id}`}
                   bid={bid}

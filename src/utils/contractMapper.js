@@ -2,6 +2,7 @@ import { normalizeBidStatus, BID_STATUS, isCounterOffered, isAwaitingShipper } f
 import { normalizeShipmentStatus } from './shipmentStatus.js';
 import { normalizeContractFields } from './contractFieldNormalizer.js';
 import { getTrackingRef } from './trackingRefResolver.js';
+import { isStaleRestShipmentStatus } from './contractActivationLayer.js';
 
 /** Unified contract model — maps legacy bid/load/space rows without changing APIs. */
 export const CONTRACT_TYPE = Object.freeze({
@@ -106,6 +107,7 @@ export function mapLegacyToContract(input = {}) {
       const ship = mapShipmentToContractStatus(shipmentStatus);
       if (ship === CONTRACT_STATUS.IN_TRANSIT || ship === CONTRACT_STATUS.COMPLETED) status = ship;
       else if (ship === CONTRACT_STATUS.ACCEPTED) status = CONTRACT_STATUS.ACCEPTED;
+      else if (isStaleRestShipmentStatus(shipmentStatus)) status = CONTRACT_STATUS.ACCEPTED;
     }
   } else if (shipmentStatus != null) {
     type = input.flowType === 'CAPACITY' ? CONTRACT_TYPE.SPACE : CONTRACT_TYPE.LOAD;

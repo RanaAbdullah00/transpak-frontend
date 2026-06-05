@@ -11,7 +11,11 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
 import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
-import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import {
+  commitOptimisticBidAccept,
+  commitOptimisticBidReject,
+  commitOptimisticBidSuggest
+} from '../../utils/contractActivationLayer.js';
 
 // Screen summarising bids across loads.
 const BidManagement = () => {
@@ -36,10 +40,20 @@ const BidManagement = () => {
   const handleAccept = async (bid) => {
     try {
       const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      await triggerAcceptActivationSync(res);
-      emitRealtimeRefresh('all');
+      const loadCode = res?.loadCode || bid.loadCode || null;
+      const payload = { ...res, loadCode };
+      commitOptimisticBidAccept(bid.id, payload, {
+        loadCode,
+        carrierId: bid.carrierId,
+        userId: user?.id,
+        role: user?.activeRole
+      });
+      await triggerAcceptActivationSync(payload, {
+        userId: user?.id,
+        role: user?.activeRole
+      });
       notifySuccess(t('flowSession.bidFlowStarted'));
-      fetchBidsData();
+      void fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptFailed') }));
     }
@@ -47,10 +61,13 @@ const BidManagement = () => {
 
   const handleSuggest = async (bid, amount) => {
     try {
+      commitOptimisticBidSuggest(bid.id, amount, {
+        suggestedBy: 'shipper',
+        loadCode: bid.loadCode
+      });
       await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
       notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      emitRealtimeRefresh('bids');
-      fetchBidsData();
+      void fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
     }
@@ -58,10 +75,10 @@ const BidManagement = () => {
 
   const handleReject = async (bid) => {
     try {
+      commitOptimisticBidReject(bid.id, { loadCode: bid.loadCode });
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject` });
       notifySuccess(t('pages.bids.bidRejected'));
-      emitRealtimeRefresh('bids');
-      fetchBidsData();
+      void fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectFailed') }));
     }
@@ -107,22 +124,21 @@ const BidManagement = () => {
   });
 
   useEffect(() => {
-    const onRefresh = (e) => {
-      const scope = e?.detail?.scope;
-      if (
-        scope &&
-        scope !== 'all' &&
-        scope !== 'bids' &&
-        scope !== 'loads' &&
-        scope !== 'shipments' &&
-        scope !== 'space'
-      ) {
-        return;
-      }
-      fetchBidsData();
+    const reconcile = () => {
+      void fetchBidsData();
     };
-    window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    const onBidsRefresh = () => reconcile();
+    const onLegacyRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (!scope || scope === 'all') return;
+      if (scope === 'bids') reconcile();
+    };
+    window.addEventListener('tp:bids-refresh', onBidsRefresh);
+    window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
+    return () => {
+      window.removeEventListener('tp:bids-refresh', onBidsRefresh);
+      window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
+    };
   }, [fetchBidsData]);
 
   useEffect(() => {

@@ -15,7 +15,12 @@ import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
-import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
+import {
+  assertIsSnapshotConsumer,
+  EMPTY_UNIFIED_SNAPSHOT,
+  getUnifiedShipmentSnapshot,
+  withShipmentUILabels
+} from '../../utils/shipmentUIState.js';
 import { fetchActiveShipmentRow, findActiveShipmentRow } from '../../utils/activeShipmentModel.js';
 import {
   getActiveShipmentList,
@@ -23,11 +28,11 @@ import {
 } from '../../utils/activeShipmentStore.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
+import { FLOW_TYPE } from '../../utils/flowSession.js';
 import {
   buildOptimisticTrackingRow,
   hasOptimisticActivation,
-  subscribeOptimisticActivation,
-  shouldSuppressStaleRestRow
+  subscribeOptimisticActivation
 } from '../../utils/contractActivationLayer.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
@@ -69,31 +74,56 @@ const ShipmentTracking = () => {
     else if (!optimisticNow) setActiveLoading(true);
     try {
       const row = await fetchActiveShipmentRow(request, id);
-      if (row) setActiveRow(row);
+      if (row) {
+        setActiveRow((prev) => {
+          const snapshot =
+            getUnifiedShipmentSnapshot({
+              restRow: row,
+              ref: id,
+              userId: user?.id ?? null,
+              role: workspaceRole
+            }) ?? EMPTY_UNIFIED_SNAPSHOT;
+          return snapshot.activeRow ?? prev;
+        });
+      }
     } catch {
       if (!hasOptimisticActivation(id)) setActiveRow(null);
     } finally {
       if (silent) setBackgroundHydrating(false);
       else setActiveLoading(false);
     }
-  }, [id, request]);
+  }, [id, request, user?.id, workspaceRole]);
 
   useEffect(() => {
     refreshActiveRow();
   }, [refreshActiveRow]);
 
   useEffect(() => {
-    const onRefresh = (e) => {
+    const onShipmentsRefresh = () => refreshActiveRow({ silent: true });
+    const onTrackingRefresh = () => refreshActiveRow({ silent: true });
+    const onLegacyRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (!scope || scope === 'all' || scope === 'shipments') refreshActiveRow({ silent: true });
+      if (scope === 'all' || !scope) return;
+      if (scope === 'shipments' || scope === 'tracking') refreshActiveRow({ silent: true });
     };
     const onHydrate = (e) => {
       const tick = ++hydrateTickRef.current;
       const rows = e?.detail?.rows;
       if (Array.isArray(rows) && rows.length && id) {
         const matched = findActiveShipmentRow(rows, id);
-        if (matched && !shouldSuppressStaleRestRow(matched, id)) {
-          setActiveRow((prev) => prev ?? matched);
+        if (matched) {
+          setActiveRow((prev) => {
+            const snapshot = assertIsSnapshotConsumer(
+              getUnifiedShipmentSnapshot({
+                restRow: matched,
+                ref: id,
+                userId: user?.id ?? null,
+                role: workspaceRole
+              }),
+              'ShipmentTracking.onHydrate'
+            );
+            return snapshot.activeRow ?? prev;
+          });
         }
       }
       requestAnimationFrame(() => {
@@ -105,25 +135,40 @@ const ShipmentTracking = () => {
       const ref = String(e?.detail?.ref || '').trim();
       if (ref && ref === id) refreshActiveRow({ silent: true });
     };
-    window.addEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    window.addEventListener('tp:tracking-refresh', onTrackingRefresh);
+    window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:contract-sync', onContractSync);
     return () => {
-      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
+      window.removeEventListener('tp:tracking-refresh', onTrackingRefresh);
+      window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
       window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
       window.removeEventListener('tp:contract-sync', onContractSync);
     };
-  }, [refreshActiveRow, id]);
+  }, [refreshActiveRow, id, user?.id, workspaceRole]);
 
   useEffect(() => {
     if (!id) return undefined;
     return subscribeActiveShipmentStore((rows) => {
       const matched = findActiveShipmentRow(rows, id);
-      if (matched && !shouldSuppressStaleRestRow(matched, id)) {
-        setActiveRow((prev) => prev ?? matched);
+      if (matched) {
+        setActiveRow((prev) => {
+          const snapshot = assertIsSnapshotConsumer(
+            getUnifiedShipmentSnapshot({
+              restRow: matched,
+              ref: id,
+              userId: user?.id ?? null,
+              role: workspaceRole
+            }),
+            'ShipmentTracking.storeSubscribe'
+          );
+          return snapshot.activeRow ?? prev;
+        });
       }
     });
-  }, [id]);
+  }, [id, user?.id, workspaceRole]);
 
   useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
 
@@ -139,53 +184,57 @@ const ShipmentTracking = () => {
   const hasOptimistic = hasOptimisticActivation(id);
   const isHydrating = (activeLoading || backgroundHydrating) && !hasOptimistic;
 
-  const rowForTracking = useMemo(() => {
-    if (!id || !isValidShipmentTrackRef(id)) return null;
-    const optimistic = buildOptimisticTrackingRow(id, {
-      userId: user?.id ?? null,
-      role: workspaceRole
-    });
+  const pageSnapshot = useMemo(() => {
+    if (!id || !isValidShipmentTrackRef(id)) return EMPTY_UNIFIED_SNAPSHOT;
     const fromStore = findActiveShipmentRow(getActiveShipmentList(), id);
     const candidate = activeRow || fromStore;
-    if (optimistic) {
-      if (!candidate) return optimistic;
-      const stale =
-        !candidate.trackingEnabled ||
-        !candidate.shipmentStatus ||
-        String(candidate.shipmentStatus || candidate.status || '').toLowerCase() === 'posted';
-      if (stale || candidate.contractActivated !== true) {
-        return {
-          ...candidate,
-          ...optimistic,
-          shipmentStatus: optimistic.shipmentStatus,
-          status: optimistic.status,
-          trackingEnabled: true,
-          contractActivated: true,
-          assignedCarrierId:
-            candidate.assignedCarrierId ?? optimistic.assignedCarrierId ?? null
-        };
-      }
-    }
-    return candidate || optimistic;
+    return assertIsSnapshotConsumer(
+      getUnifiedShipmentSnapshot({
+        restRow: candidate,
+        storeRow: fromStore,
+        ref: id,
+        userId: user?.id ?? null,
+        role: workspaceRole
+      }),
+      'ShipmentTracking.pageSnapshot'
+    );
   }, [activeRow, id, workspaceRole, user?.id, hasOptimistic]);
 
-  const trackingEnabled = Boolean(rowForTracking?.trackingEnabled) || hasOptimistic;
+  const rowForTracking = useMemo(() => {
+    if (!id || !isValidShipmentTrackRef(id)) return null;
+    return (
+      pageSnapshot.activeRow ||
+      buildOptimisticTrackingRow(id, { userId: user?.id ?? null, role: workspaceRole }) ||
+      null
+    );
+  }, [pageSnapshot, id, workspaceRole, user?.id, hasOptimistic]);
+
+  const trackingEnabled = Boolean(pageSnapshot.tracking?.enabled) || hasOptimistic;
 
   const { trackingData: payload, uiState, loading, error, livePos, geoError } = useShipmentTracking({
     trackRef: id,
-    shipmentStatus: rowForTracking?.shipmentStatus ?? null,
+    shipmentStatus: pageSnapshot.shipmentStatus ?? rowForTracking?.shipmentStatus ?? null,
     trackingEnabled,
-    assignedCarrierId: rowForTracking?.assignedCarrierId ?? null,
+    assignedCarrierId:
+      pageSnapshot.activeRow?.assignedCarrierId ??
+      pageSnapshot.contractFields?.assignedCarrierId ??
+      null,
     shareLive,
     enabled: Boolean(id && (rowForTracking || hasOptimistic)),
     role: workspaceRole,
-    flowType: rowForTracking?.flowType ?? null
+    flowType:
+      pageSnapshot.activeRow?.flowType ?? pageSnapshot.contractFields?.flowType ?? FLOW_TYPE.BID
   });
 
-  const ui = useMemo(() => withShipmentUILabels(uiState || {}, t), [uiState, t]);
+  const ui = useMemo(
+    () => withShipmentUILabels(pageSnapshot.uiState ?? uiState ?? {}, t),
+    [pageSnapshot.uiState, uiState, t]
+  );
   const upcomingStatus = ui.upcomingStatus;
   const canRenderAdvanceButton =
-    workspaceRole === 'carrier' && isValidShipmentTrackRef(id) && ui.canUpdateStatus;
+    workspaceRole === 'carrier' &&
+    isValidShipmentTrackRef(id) &&
+    Boolean(pageSnapshot.permissions?.canUpdateStatus ?? ui.canUpdateStatus);
   const canEnableButton = canRenderAdvanceButton && upcomingStatus != null;
 
   const handleAdvanceStatus = useCallback(async () => {
@@ -278,7 +327,7 @@ const ShipmentTracking = () => {
   );
 
   const timelineEvents = useMemo(() => {
-    const h = payload?.history || [];
+    const h = Array.isArray(payload?.history) ? payload.history : [];
     return h.map((ev) => ({
       label: ev.event || ev.label || t('pages.tracking.timelineUpdate'),
       time: ev.time || '',
@@ -325,7 +374,13 @@ const ShipmentTracking = () => {
     );
   }
 
-  if (activeLoading && !hasOptimistic && !rowForTracking) {
+  const shellReady =
+    hasOptimistic ||
+    Boolean(pageSnapshot.contractActivated) ||
+    Boolean(pageSnapshot.tracking?.showShell) ||
+    Boolean(rowForTracking);
+
+  if (activeLoading && !shellReady) {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
@@ -336,8 +391,8 @@ const ShipmentTracking = () => {
     );
   }
 
-  if (!rowForTracking) {
-    if (isHydrating && !hasOptimistic) {
+  if (!shellReady) {
+    if (isHydrating) {
       return (
         <div className="container py-4 tp-tracking-page">
           <h5 className="mb-3 text-body">{t('pages.tracking.title')}</h5>
@@ -361,8 +416,9 @@ const ShipmentTracking = () => {
     );
   }
 
-  const shellReady = hasOptimistic || ui.contractActivated || Boolean(rowForTracking);
-  const showTrackingSkeleton = loading && !payload && !shellReady;
+  const renderShellReady =
+    shellReady || Boolean(ui?.contractActivated) || Boolean(rowForTracking);
+  const showTrackingSkeleton = loading && !payload && !renderShellReady;
 
   if (showTrackingSkeleton) {
     return (

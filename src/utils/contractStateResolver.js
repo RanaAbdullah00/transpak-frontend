@@ -1,5 +1,10 @@
 import { normalizeShipmentStatus } from './shipmentStatus.js';
-import { getShipmentUIState, TRACKING_ACTIVE_STATUSES } from './shipmentUIState.js';
+import {
+  assertIsSnapshotConsumer,
+  getUnifiedShipmentSnapshot,
+  SAFE_UI_STATE,
+  TRACKING_ACTIVE_STATUSES
+} from './shipmentUIState.js';
 import {
   findContractLatchForRefs,
   isLatchTrackingActive,
@@ -23,12 +28,19 @@ export function resolveContractState(input = {}, opts = {}) {
       input.lastKnownShipmentStatus
   );
 
-  const ui = getShipmentUIState({
-    status,
-    assignedCarrierId,
-    lifecycleStage: input.lifecycleStage,
-    role: opts.role ?? input.role
-  });
+  const snapshot = assertIsSnapshotConsumer(
+    getUnifiedShipmentSnapshot({
+      ...input,
+      restRow: input.restRow ?? input,
+      ref: trackingRef,
+      status,
+      assignedCarrierId,
+      lifecycleStage: input.lifecycleStage,
+      role: opts.role ?? input.role
+    }),
+    'resolveContractState'
+  );
+  const ui = snapshot.uiState ?? SAFE_UI_STATE;
 
   const refs = collectTrackingRefs({ ...input, trackRef: trackingRef });
   const latch = findContractLatchForRefs(refs);
@@ -131,6 +143,8 @@ export function contractUIStateFromTracking(payload, role, extras = {}) {
 export function contractStateFromActiveRow(row, role) {
   return resolveContractState(
     {
+      restRow: row,
+      ref: getTrackingRef(row),
       shipmentStatus: row?.shipmentStatus ?? row?.status,
       assignedCarrierId: row?.assignedCarrierId ?? row?.assigned_carrier_id,
       code: row?.code,

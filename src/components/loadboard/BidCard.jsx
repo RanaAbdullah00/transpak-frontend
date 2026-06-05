@@ -11,7 +11,12 @@ import { translateBidStatus } from '../../utils/i18nLabels.js';
 import { isAwaitingShipper, isCounterOffered, isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import { deriveBidType } from '../../utils/flowSession.js';
 import { formatDistanceKm } from '../../utils/formatDistance.js';
-import { getTrackingRef, mergeOptimisticBid } from '../../utils/contractActivationLayer.js';
+import { getTrackingRef } from '../../utils/contractActivationLayer.js';
+import {
+  assertIsSnapshotConsumer,
+  getUnifiedShipmentSnapshot,
+  resolveBidFromSnapshot
+} from '../../utils/shipmentUIState.js';
 
 function formatHHMMSS(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -23,7 +28,7 @@ function formatHHMMSS(totalSeconds) {
 
 // Card representing a bid placed by a carrier.
 const BidCard = ({
-  bid,
+  bid = {},
   onAccept,
   onReject,
   onSuggest,
@@ -40,7 +45,7 @@ const BidCard = ({
   counterpartyLabel = null
 }) => {
   const { t } = useLanguage();
-  const [, bumpBidUi] = useState(0);
+  const [bidUiTick, bumpBidUi] = useState(0);
 
   useEffect(() => {
     const refresh = (e) => {
@@ -64,7 +69,13 @@ const BidCard = ({
     };
   }, [bid.id, bid.loadCode, bid.load_code]);
 
-  const resolvedBid = useMemo(() => mergeOptimisticBid(bid), [bid, bumpBidUi]);
+  const resolvedBid = useMemo(() => {
+    const snapshot = assertIsSnapshotConsumer(
+      getUnifiedShipmentSnapshot({ bid: bid && typeof bid === 'object' ? bid : {} }),
+      'BidCard'
+    );
+    return resolveBidFromSnapshot(snapshot, bid?.id, 'BidCard');
+  }, [bid, bidUiTick]);
 
   const createdAtMs = useMemo(() => {
     const v = resolvedBid?.createdAt;
@@ -87,8 +98,8 @@ const BidCard = ({
   }, []);
 
   const remainingSeconds = Math.max(0, Math.floor((expiresAtMs - nowMs) / 1000));
-  const isExpired = remainingSeconds <= 0 || resolvedBid.status === 'expired';
-  const canonStatus = normalizeBidStatus(resolvedBid.status);
+  const isExpired = remainingSeconds <= 0 || resolvedBid?.status === 'expired';
+  const canonStatus = normalizeBidStatus(resolvedBid?.status);
   const statusBadgeLabel = isExpired
     ? t('bidCard.expired')
     : translateBidStatus(t, canonStatus);
@@ -118,14 +129,16 @@ const BidCard = ({
   const showActions = isActiveBidStatus(resolvedBid.status) && !isExpired;
 
   const canAccept = isShipper
-    ? showActions && (isAwaitingShipper(bid.status) || suggestedByCarrier) && typeof onAccept === 'function'
+    ? showActions &&
+      (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
+      typeof onAccept === 'function'
     : isCarrier
     ? showActions && suggestedByShipper && typeof onAcceptSuggestion === 'function'
     : false;
 
   const canReject = isShipper
     ? showActions &&
-      (isAwaitingShipper(bid.status) || suggestedByCarrier) &&
+      (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
       typeof onReject === 'function'
     : isCarrier
     ? showActions && suggestedByShipper && typeof onRejectSuggestion === 'function'
@@ -133,11 +146,11 @@ const BidCard = ({
 
   const canSuggest = isShipper
     ? showActions &&
-      (isAwaitingShipper(bid.status) || suggestedByCarrier) &&
+      (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
       typeof onSuggest === 'function'
     : isCarrier
     ? showActions &&
-      (isAwaitingShipper(bid.status) || suggestedByShipper) &&
+      (isAwaitingShipper(resolvedBid.status) || suggestedByShipper) &&
       typeof onSuggest === 'function'
     : false;
 
@@ -167,7 +180,7 @@ const BidCard = ({
   };
 
   const isAccepted = canonStatus === BID_STATUS.ACCEPTED;
-  const trackRef = getTrackingRef(resolvedBid) || null;
+  const trackingRef = getTrackingRef(resolvedBid) || null;
 
   return (
     <Card className={`tp-bid-card ${isSuggested ? 'tp-bid-card--suggested border-info' : ''} ${isExpired ? 'opacity-50' : ''}`}>
@@ -325,10 +338,10 @@ const BidCard = ({
           {t('bidCard.bidExpiredHint')}
         </small>
       )}
-      {isAccepted && trackRef ? (
+      {isAccepted && trackingRef ? (
         <div className="mt-2 text-end">
           <Link
-            to={`/shipments/tracking/${encodeURIComponent(trackRef)}`}
+            to={`/shipments/tracking/${encodeURIComponent(trackingRef)}`}
             className="btn btn-sm btn-primary"
           >
             {t('pages.dashboard.viewLiveTracking')}

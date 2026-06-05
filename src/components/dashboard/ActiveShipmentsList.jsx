@@ -10,6 +10,7 @@ import {
   upsertActiveShipmentRows
 } from '../../utils/activeShipmentStore.js';
 import { useActiveShipmentStore } from '../../hooks/useActiveShipmentStore.js';
+import { assertIsSnapshotConsumer, getUnifiedShipmentSnapshot } from '../../utils/shipmentUIState.js';
 
 /**
  * Active shipments — read model: ActiveShipmentStore.
@@ -71,6 +72,21 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
     };
   }, [bootstrap]);
 
+  const rowSnapshots = useMemo(
+    () =>
+      rows.map((row) =>
+        assertIsSnapshotConsumer(
+          getUnifiedShipmentSnapshot({
+            restRow: row,
+            ref: row?.trackRef,
+            role: carrierMode ? 'carrier' : 'shipper'
+          }),
+          'ActiveShipmentsList'
+        )
+      ),
+    [rows, carrierMode]
+  );
+
   const loading = bootLoading && !hasLoadedRef.current;
 
   if (loading && !rows.length) {
@@ -94,17 +110,19 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
           {t('pages.dashboard.activeShipmentsCount', { count: rows.length })}
         </p>
       ) : null}
-      {rows.map((row, idx, arr) => {
+      {rowSnapshots.map((snapshot, idx, arr) => {
+        const row = snapshot.activeRow ?? {};
         const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
         return (
           <ActiveShipmentCard
-            key={row.trackRef || row.id}
-            trackRef={row.trackRef}
-            label={label || row.trackRef}
-            assignedCarrierId={row.assignedCarrierId}
-            shipmentStatus={row.shipmentStatus}
-            flowType={row.flowType}
-            trackingEnabled={row.trackingEnabled}
+            key={snapshot.ref || row.trackRef || row.id}
+            snapshot={snapshot}
+            trackRef={snapshot.ref || row.trackRef}
+            label={label || snapshot.ref || row.trackRef}
+            assignedCarrierId={row.assignedCarrierId ?? snapshot.contractFields?.assignedCarrierId}
+            shipmentStatus={snapshot.shipmentStatus ?? row.shipmentStatus}
+            flowType={row.flowType ?? snapshot.contractFields?.flowType}
+            trackingEnabled={snapshot.tracking?.enabled ?? row.trackingEnabled}
             carrierMode={carrierMode}
             shareLive={carrierMode}
             defaultExpanded={idx === 0 && arr.length === 1}

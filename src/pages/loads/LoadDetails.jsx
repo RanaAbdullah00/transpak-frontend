@@ -21,8 +21,13 @@ import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
-import { commitOptimisticBidAccept } from '../../utils/contractActivationLayer.js';
-import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import {
+  commitOptimisticBidAccept,
+  commitOptimisticBidReject,
+  commitOptimisticBidSuggest,
+  emitScopedRefresh
+} from '../../utils/contractActivationLayer.js';
+import { ensureArray } from '../../utils/unwrapApi.js';
 
 const LoadDetails = () => {
   const { id } = useParams();
@@ -54,7 +59,7 @@ const LoadDetails = () => {
       const ownsLoad = loadRow && uid && String(loadRow.shipperId) === String(uid);
       if (ownsLoad) {
         const bidRows = await request({ url: '/bids', params: { loadId: id, ...mergeWorkspaceParams(user) } });
-        setBids(normalizeBids(bidRows));
+        setBids(normalizeBids(ensureArray(bidRows)));
       } else {
         setBids([]);
       }
@@ -73,37 +78,42 @@ const LoadDetails = () => {
   }, [id, user?.id, fetchData]);
 
   useEffect(() => {
-    const onRefresh = (e) => {
-      const scope = e?.detail?.scope;
-      if (
-        scope &&
-        scope !== 'all' &&
-        scope !== 'bids' &&
-        scope !== 'loads' &&
-        scope !== 'shipments' &&
-        scope !== 'space'
-      ) {
-        return;
-      }
-      fetchData();
+    const reconcile = () => {
+      void fetchData();
     };
-    window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    const onBidsRefresh = () => reconcile();
+    const onLegacyRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (!scope || scope === 'all') return;
+      if (scope === 'bids' || scope === 'loads' || scope === 'shipments' || scope === 'space') {
+        reconcile();
+      }
+    };
+    window.addEventListener('tp:bids-refresh', onBidsRefresh);
+    window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
+    return () => {
+      window.removeEventListener('tp:bids-refresh', onBidsRefresh);
+      window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
+    };
   }, [fetchData]);
 
   const handleAccept = async (bid) => {
     try {
       const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      commitOptimisticBidAccept(bid.id, res, {
-        loadCode: res?.loadCode || bid.loadCode,
+      const loadCode = res?.loadCode || bid.loadCode || load?.code || null;
+      const payload = { ...res, loadCode };
+      commitOptimisticBidAccept(bid.id, payload, {
+        loadCode,
         carrierId: bid.carrierId,
         userId: user?.id,
         role: user?.activeRole
       });
-      await triggerAcceptActivationSync(res);
-      emitRealtimeRefresh('all');
+      await triggerAcceptActivationSync(payload, {
+        userId: user?.id,
+        role: user?.activeRole
+      });
       notifySuccess(t('flowSession.bidFlowStarted'));
-      await fetchData();
+      void fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.acceptFailed') }));
     }
@@ -111,10 +121,10 @@ const LoadDetails = () => {
 
   const handleReject = async (bid) => {
     try {
+      commitOptimisticBidReject(bid.id, { loadCode: bid.loadCode || load?.code });
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject` });
       notifyBidRejected(t('pages.bids.bidRejected'));
-      emitRealtimeRefresh('bids');
-      await fetchData();
+      void fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.rejectFailed') }));
     }
@@ -122,10 +132,13 @@ const LoadDetails = () => {
 
   const handleSuggest = async (bid, amount) => {
     try {
+      commitOptimisticBidSuggest(bid.id, amount, {
+        suggestedBy: 'shipper',
+        loadCode: bid.loadCode || load?.code
+      });
       await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
       notifyCounterOffer(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      emitRealtimeRefresh('bids');
-      await fetchData();
+      void fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.suggestFailed') }));
     }
@@ -197,10 +210,10 @@ const LoadDetails = () => {
       {isOwner && (
         <>
           <h6 className="mt-4 mb-2">
-            {t('pages.bids.bidManagementTitle')} ({bids.length})
+            {t('pages.bids.bidManagementTitle')} ({(bids || []).length})
           </h6>
           <BidList
-            bids={bids}
+            bids={bids || []}
             mode="shipper"
             onAccept={handleAccept}
             onReject={handleReject}

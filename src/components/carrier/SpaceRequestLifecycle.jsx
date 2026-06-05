@@ -11,23 +11,31 @@ import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { getTrackingRef, hasOptimisticActivation } from '../../utils/contractActivationLayer.js';
 import { formatTons } from '../../utils/weightUnits.js';
 
-const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplete, showCarrierActions, priority = false }) => {
+const SpaceRequestLifecycle = ({
+  row = {},
+  onAccept,
+  onReject,
+  onInTransit,
+  onComplete,
+  showCarrierActions,
+  priority = false
+}) => {
   const { t } = useLanguage();
   const [eventAccepted, setEventAccepted] = useState(false);
 
-  const rawStatus = String(row.status || '').toLowerCase();
+  const rawStatus = String(row?.status || '').toLowerCase();
   const trackingRef = useMemo(
     () => getTrackingRef(row) || null,
     [
-      row.loadCode,
-      row.bridgeRef,
-      row.bridge_ref,
-      row.shipmentRef,
-      row.code,
-      row.ref,
-      row.trackRef,
-      row.booking_reference,
-      row.bookingReference
+      row?.loadCode,
+      row?.bridgeRef,
+      row?.bridge_ref,
+      row?.shipmentRef,
+      row?.code,
+      row?.ref,
+      row?.trackRef,
+      row?.booking_reference,
+      row?.bookingReference
     ]
   );
   const optimisticActive = trackingRef ? hasOptimisticActivation(trackingRef) : false;
@@ -36,7 +44,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
     const onActivated = (e) => {
       const ref = String(e?.detail?.ref || '').trim();
       const spaceRequestId = String(e?.detail?.spaceRequestId || '').trim();
-      if (spaceRequestId && String(row.id) === spaceRequestId) setEventAccepted(true);
+      if (spaceRequestId && String(row?.id) === spaceRequestId) setEventAccepted(true);
       if (ref && trackingRef && ref === trackingRef) setEventAccepted(true);
     };
     window.addEventListener('tp:contract-activated', onActivated);
@@ -45,7 +53,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
       window.removeEventListener('tp:contract-activated', onActivated);
       window.removeEventListener('tp:bid-updated', onActivated);
     };
-  }, [row.id, trackingRef]);
+  }, [row?.id, trackingRef]);
 
   const status = useMemo(() => {
     if (rawStatus === 'rejected') return 'rejected';
@@ -58,7 +66,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
   }, [rawStatus, eventAccepted, optimisticActive]);
 
   const stepId = spaceStepId(status);
-  const usesShipmentEngine = Boolean(trackRef) || optimisticActive || eventAccepted;
+  const usesShipmentEngine = Boolean(trackingRef) || optimisticActive || eventAccepted;
   const proposed = proposedSpacePrice(row);
   const steps = status === 'rejected' ? SPACE_STEPS_REJECTED : SPACE_STEPS;
   const badgeClass =
@@ -75,11 +83,11 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
       <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">
         <div className="fw-semibold">
           {showCarrierActions ? (
-            <ProfileLink userId={row.shipperId} name={row.shipperName} showBadge role={t('auth.shipper')} />
+            <ProfileLink userId={row?.shipperId} name={row?.shipperName} showBadge role={t('auth.shipper')} />
           ) : (
-            <ProfileLink userId={row.carrierId} name={row.carrierName} showBadge role={t('auth.carrier')} />
+            <ProfileLink userId={row?.carrierId} name={row?.carrierName} showBadge role={t('auth.carrier')} />
           )}{' '}
-          · {formatTons(row.requestedKg)} t
+          · {formatTons(row?.requestedKg)} t
         </div>
         <span className={`badge ${badgeClass}`}>{translateSpaceRequestStatus(t, status)}</span>
       </div>
@@ -97,7 +105,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           <span className="fw-semibold">PKR {proposed.toLocaleString()}</span>
         </div>
       ) : null}
-      {row.message ? (
+      {row?.message ? (
         <p className="small text-body-secondary mb-2 text-break">
           <span className="text-muted">{t('loadsHub.requestMessage')}:</span>{' '}
           <TranslatedText text={row.message} as="span" />
@@ -109,7 +117,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
       <FlowTimeline steps={steps} currentId={stepId} className="my-2" />
       {status === 'request_sent' && showCarrierActions ? (
         <div className="d-flex gap-2 flex-wrap">
-          <Button size="sm" variant="primary" onClick={() => onAccept?.(row.id)}>
+          <Button size="sm" variant="primary" onClick={() => onAccept?.(row?.id)}>
             {t('loadsHub.acceptRequest')}
           </Button>
           <Button size="sm" variant="outline-secondary" onClick={() => onReject?.(row.id)}>
@@ -128,12 +136,12 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
         </Link>
       ) : null}
       {!usesShipmentEngine && (status === 'active' || status === 'accepted') ? (
-        <Button size="sm" variant="primary" onClick={() => onInTransit?.(row.id)}>
+        <Button size="sm" variant="primary" onClick={() => onInTransit?.(row?.id)}>
           {t('loadsHub.markInTransit')}
         </Button>
       ) : null}
       {!usesShipmentEngine && status === 'in_transit' ? (
-        <Button size="sm" variant="success" onClick={() => onComplete?.(row.id)}>
+        <Button size="sm" variant="success" onClick={() => onComplete?.(row?.id)}>
           {t('loadsHub.markComplete')}
         </Button>
       ) : null}

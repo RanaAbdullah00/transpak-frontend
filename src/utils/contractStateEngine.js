@@ -2,6 +2,7 @@ import { normalizeContractFields } from './contractFieldNormalizer.js';
 import { getTrackingRef } from './trackingRefResolver.js';
 import { canTrackShipment } from './shipmentUIState.js';
 import { normalizeShipmentStatus } from './shipmentStatus.js';
+import { isStaleRestShipmentStatus } from './contractActivationLayer.js';
 import {
   normalizeBidStatus,
   isAwaitingShipper,
@@ -88,6 +89,15 @@ export function deriveContractPhase(input = {}) {
   const status = normalizeShipmentStatus(
     input.shipmentStatus ?? input.status ?? input.tracking?.status
   );
+
+  if (isStaleRestShipmentStatus(status)) {
+    const sr = String(input.spaceRequestStatus || '').toLowerCase();
+    if (sr === 'accepted' || sr === 'active' || sr === 'in_transit' || sr === 'intransit') {
+      return CONTRACT_PHASE.ACCEPTED;
+    }
+    const bidSt = normalizeBidStatus(input.bidStatus ?? input.bid?.status);
+    if (bidSt === BID_STATUS.ACCEPTED) return CONTRACT_PHASE.ACCEPTED;
+  }
 
   if (canTrackShipment({ ...fields, ref, status: input.shipmentStatus ?? input.status })) {
     return CONTRACT_PHASE.ACTIVE;

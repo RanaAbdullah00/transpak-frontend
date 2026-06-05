@@ -6,6 +6,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { triggerAcceptActivationSync, emitRealtimeRefresh } from '../../utils/spaceFlow.js';
+import { commitOptimisticSpaceAccept } from '../../utils/contractActivationLayer.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 import { isCapacityFlowPending } from '../../utils/flowSession.js';
@@ -59,6 +60,7 @@ const SpaceRequestsPanel = () => {
       const res = await request({ method: 'PUT', url: `/carrier-space/requests/${id}/${action}` });
       notifySuccess(action === 'accept' ? t('loadsHub.requestAccepted') : t('loadsHub.requestRejected'));
       if (action === 'accept') {
+        commitOptimisticSpaceAccept(id, res);
         await triggerAcceptActivationSync(res);
       } else {
         emitRealtimeRefresh('space');
