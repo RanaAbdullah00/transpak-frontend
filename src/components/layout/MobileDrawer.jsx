@@ -63,6 +63,19 @@ const MobileDrawer = ({ open, onClose }) => {
                 </NavLink>
               </>
             )}
+            {(activeRole === 'shipper' || activeRole === 'carrier') && (
+              <>
+                <NavLink to="/shipments/active" className={linkClass} onClick={onClose}>
+                  {t('nav.shipmentsActive')}
+                </NavLink>
+                <NavLink to="/shipments/history" className={linkClass} onClick={onClose}>
+                  {t('nav.shipmentsHistory')}
+                </NavLink>
+                <NavLink to="/shipments/tracking" className={linkClass} onClick={onClose}>
+                  {t('nav.shipmentsTracking')}
+                </NavLink>
+              </>
+            )}
             {activeRole === 'carrier' && (
               <>
                 <NavLink to="/loads/manage?tab=freight" className={linkClass} onClick={onClose}>

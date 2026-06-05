@@ -12,7 +12,7 @@ const LifecycleBadge = ({ stage, size }) => {
   const cls = size === 'lg' ? 'fs-6 px-3 py-2' : '';
   return (
     <Badge variant={variant} className={cls}>
-      {label !== key ? label : canon.replace(/_/g, ' ')}
+      {label !== key ? label : t('status.unknown')}
     </Badge>
   );
 };

@@ -14,6 +14,10 @@ import {
   canCarrierUpdateContractStatus,
   CONTRACT_STATUS
 } from './contractMapper.js';
+import {
+  getOptimisticActivation,
+  mergeOptimisticContractInput
+} from './contractActivationLayer.js';
 
 /** Statuses where live GPS + socket tracking are allowed (matches backend contract). */
 export const TRACKING_ACTIVE_STATUSES = Object.freeze(['booked', 'pickedup', 'intransit']);
@@ -58,31 +62,42 @@ export function isContractActive(input = {}) {
  * Single UI authority for shipment presentation and permissions.
  */
 export function getShipmentUIState(input = {}) {
-  const normalized = normalizeContractFields(input);
+  const merged = mergeOptimisticContractInput(input);
+  const normalized = normalizeContractFields(merged);
   const ref = normalized.ref || getTrackingRef(normalized);
+  const optimistic = ref ? getOptimisticActivation(ref) : null;
   const { status, hasAssigned, hasValidRef } = contractTrackFlags({ ...normalized, ref });
   const unifiedContract = mapLegacyToContract({
     ...normalized,
     ref,
-    ...input,
-    shipmentStatus: input.shipmentStatus ?? input.status
+    ...merged,
+    shipmentStatus: merged.shipmentStatus ?? merged.status
   });
+  const contractActivatedFlag =
+    Boolean(optimistic?.contractActivated) || Boolean(merged.contractActivated);
   const legacyCanTrack = canTrackShipment({
     ...normalized,
     ref,
-    status: input.shipmentStatus ?? input.status
+    status: merged.shipmentStatus ?? merged.status
   });
+  const contractAccepted =
+    contractActivatedFlag ||
+    unifiedContract.status === CONTRACT_STATUS.ACCEPTED ||
+    unifiedContract.status === CONTRACT_STATUS.IN_TRANSIT;
+  const contractRefResolved = unifiedContract.ref || ref;
+  const shipmentActive = contractAccepted;
+  const statusEngineUnlocked = contractAccepted;
+  const contractTrackingEnabled =
+    contractAccepted && Boolean(String(contractRefResolved || '').trim());
   const contractCanTrack =
-    (unifiedContract.status === CONTRACT_STATUS.ACCEPTED ||
-      unifiedContract.status === CONTRACT_STATUS.IN_TRANSIT) &&
-    Boolean(unifiedContract.trackingEnabled);
+    contractTrackingEnabled && Boolean(unifiedContract.trackingEnabled ?? true);
   const canTrack = legacyCanTrack || contractCanTrack;
 
-  const contractPhase = deriveContractPhase({ ...normalized, ref, ...input });
+  const contractPhase = deriveContractPhase({ ...normalized, ref, ...merged });
   const phase =
     contractPhase === CONTRACT_PHASE.COMPLETED
       ? 'completed'
-      : contractPhase === CONTRACT_PHASE.ACTIVE
+      : contractPhase === CONTRACT_PHASE.ACTIVE || contractPhase === CONTRACT_PHASE.ACCEPTED
         ? 'active'
         : contractPhase === CONTRACT_PHASE.NEGOTIATED
           ? 'negotiation'
@@ -98,13 +113,15 @@ export function getShipmentUIState(input = {}) {
     'secondary';
 
   const labelKey =
-    contractPhase === CONTRACT_PHASE.NEGOTIATED
-      ? getContractUILabelKey(contractPhase, status)
-      : status === 'booked' && isShipper
-        ? 'status.accepted'
-        : status && STATUS_COLOR_VARIANT[status]
-          ? `status.${status}`
-          : getContractUILabelKey(contractPhase, status);
+    contractPhase === CONTRACT_PHASE.ACCEPTED
+      ? 'status.accepted'
+      : contractPhase === CONTRACT_PHASE.NEGOTIATED
+        ? getContractUILabelKey(contractPhase, status)
+        : status === 'booked' && isShipper
+          ? 'status.accepted'
+          : status && STATUS_COLOR_VARIANT[status]
+            ? `status.${status}`
+            : getContractUILabelKey(contractPhase, status);
 
   const contractRef = unifiedContract.ref || ref;
   const advanceFromStatus =
@@ -117,7 +134,12 @@ export function getShipmentUIState(input = {}) {
   const canUpdateStatus =
     isCarrier &&
     Boolean(String(contractRef || '').trim()) &&
-    canCarrierUpdateContractStatus(unifiedContract);
+    (canCarrierUpdateContractStatus(unifiedContract) ||
+      (contractActivatedFlag &&
+        (unifiedContract.status === CONTRACT_STATUS.ACCEPTED ||
+          unifiedContract.status === CONTRACT_STATUS.IN_TRANSIT ||
+          contractPhase === CONTRACT_PHASE.ACCEPTED ||
+          contractPhase === CONTRACT_PHASE.ACTIVE)));
 
   return {
     status,
@@ -127,8 +149,8 @@ export function getShipmentUIState(input = {}) {
     colorVariant,
     canTrack,
     trackingActive: canTrack,
-    contractActive: canTrack || status === 'delivered',
-    isActive: canTrack,
+    contractActive: canTrack || shipmentActive || status === 'delivered',
+    isActive: canTrack || shipmentActive,
     isCompleted: phase === 'completed',
     showRouteMap: Boolean(status),
     showLiveMap: canTrack,
@@ -137,11 +159,15 @@ export function getShipmentUIState(input = {}) {
     allowGpsPublish: canTrack && isCarrier,
     showCarrierAdvance: canUpdateStatus,
     canUpdateStatus,
-    showShipperAcceptedBanner: status === 'booked' && isShipper,
+    showShipperAcceptedBanner: (status === 'booked' || contractPhase === CONTRACT_PHASE.ACCEPTED) && isShipper,
     upcomingStatus: upcoming,
     lifecycleStage: normalized.lifecycleStage ?? null,
     hasValidRef,
-    contractPhase
+    contractPhase,
+    shipmentActive,
+    statusEngineUnlocked,
+    trackingEnabled: contractTrackingEnabled,
+    contractActivated: contractActivatedFlag || shipmentActive
   };
 }
 

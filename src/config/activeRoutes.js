@@ -39,6 +39,7 @@ export const ACTIVE_ROUTE_MAP = new Set([
   '/bids/approve',
   '/fleet',
   '/fleet/add',
+  '/shipments/active',
   '/shipments/tracking',
   '/shipments/history',
   '/profile',

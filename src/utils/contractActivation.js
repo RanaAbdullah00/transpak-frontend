@@ -15,6 +15,10 @@ import {
   normalizeActiveShipmentList
 } from './activeShipmentModel.js';
 import { upsertActiveShipmentRows as upsertStoreRows } from './activeShipmentStore.js';
+import {
+  commitOptimisticActivation,
+  reconcileOptimisticActivation
+} from './contractActivationLayer.js';
 
 const SYNC_BURST_MS = 400;
 const RETRY_DELAYS_MS = [1200, 2800];
@@ -205,9 +209,15 @@ export async function handleShipmentActivationSync(loadCode, { force = false, fa
 }
 
 /** Post-accept activation — call ONLY after accept API returns 200 with loadCode/shipmentId. */
-export function triggerAcceptActivationSync(response) {
+export function triggerAcceptActivationSync(response, extras = {}) {
   const ref = resolveAcceptActivationRef(response);
   if (!ref) return Promise.resolve({ rows: [], matched: null, hasValid: false });
+  commitOptimisticActivation(response, extras);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('tp:contract-sync', { detail: { ref, optimistic: true } })
+    );
+  }
   return handleShipmentActivationSync(ref, { force: true });
 }
 

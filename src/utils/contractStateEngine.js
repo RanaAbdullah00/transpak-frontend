@@ -13,6 +13,7 @@ import {
 export const CONTRACT_PHASE = Object.freeze({
   PENDING: 'pending',
   NEGOTIATED: 'negotiated',
+  ACCEPTED: 'accepted',
   ACTIVE: 'active',
   COMPLETED: 'completed',
   CLOSED: 'closed'
@@ -22,6 +23,7 @@ export const CONTRACT_PHASE = Object.freeze({
 export function getContractUIColor(phase, status = null) {
   const s = normalizeShipmentStatus(status);
   if (phase === CONTRACT_PHASE.NEGOTIATED) return 'warning';
+  if (phase === CONTRACT_PHASE.ACCEPTED) return 'success';
   if (phase === CONTRACT_PHASE.ACTIVE) {
     if (s === 'intransit') return 'warning';
     if (s === 'pickedup') return 'info';
@@ -37,8 +39,26 @@ export function getContractUIColor(phase, status = null) {
  * Derive unified contract phase for Flow A (bids) and Flow B (capacity rows).
  */
 export function deriveContractPhase(input = {}) {
+  if (input.contractActivated) {
+    const fields = normalizeContractFields(input);
+    const ref = fields.ref || getTrackingRef(input);
+    const status = normalizeShipmentStatus(
+      input.shipmentStatus ?? input.status ?? 'booked'
+    );
+    if (
+      canTrackShipment({
+        ...fields,
+        ref,
+        status: input.shipmentStatus ?? input.status ?? 'booked'
+      })
+    ) {
+      return CONTRACT_PHASE.ACTIVE;
+    }
+    return CONTRACT_PHASE.ACCEPTED;
+  }
+
   const bidStatus = input.bidStatus ?? input.bid?.status;
-  if (bidStatus != null) {
+  if (bidStatus != null && !input.contractActivated) {
     const st = normalizeBidStatus(bidStatus);
     if (st === BID_STATUS.ACCEPTED) {
       const fields = normalizeContractFields(input);
@@ -52,7 +72,7 @@ export function deriveContractPhase(input = {}) {
       ) {
         return CONTRACT_PHASE.ACTIVE;
       }
-      return CONTRACT_PHASE.PENDING;
+      return CONTRACT_PHASE.ACCEPTED;
     }
     if (isAwaitingShipper(bidStatus) || isCounterOffered(bidStatus)) {
       return CONTRACT_PHASE.NEGOTIATED;
@@ -77,12 +97,13 @@ export function deriveContractPhase(input = {}) {
 
   if (input.spaceRequestStatus) {
     const sr = String(input.spaceRequestStatus).toLowerCase();
-    if (sr === 'accepted' || sr === 'in_transit' || sr === 'intransit') {
+    if (sr === 'accepted' || sr === 'active' || sr === 'in_transit' || sr === 'intransit') {
       if (
         canTrackShipment({ ...fields, ref, status: input.shipmentStatus ?? 'booked' })
       ) {
         return CONTRACT_PHASE.ACTIVE;
       }
+      return CONTRACT_PHASE.ACCEPTED;
     }
     if (sr === 'pending' || sr === 'requested') return CONTRACT_PHASE.NEGOTIATED;
     if (sr === 'completed' || sr === 'closed') return CONTRACT_PHASE.COMPLETED;
@@ -103,6 +124,7 @@ export function shouldActivateContractOnCarrierAccept() {
 
 export function getContractUILabelKey(phase, status = null) {
   if (phase === CONTRACT_PHASE.NEGOTIATED) return 'bidFlow.negotiationAwaitingShipper';
+  if (phase === CONTRACT_PHASE.ACCEPTED) return 'status.accepted';
   if (phase === CONTRACT_PHASE.ACTIVE) {
     const s = normalizeShipmentStatus(status);
     return s ? `status.${s}` : 'status.booked';

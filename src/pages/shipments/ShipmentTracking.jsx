@@ -14,11 +14,21 @@ import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
-import { getAuthoritativeTrackRef, isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
+import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
-import { fetchActiveShipmentRow } from '../../utils/activeShipmentModel.js';
+import { fetchActiveShipmentRow, findActiveShipmentRow } from '../../utils/activeShipmentModel.js';
+import {
+  getActiveShipmentList,
+  subscribeActiveShipmentStore
+} from '../../utils/activeShipmentStore.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
+import {
+  buildOptimisticTrackingRow,
+  hasOptimisticActivation,
+  subscribeOptimisticActivation,
+  shouldSuppressStaleRestRow
+} from '../../utils/contractActivationLayer.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
@@ -36,6 +46,8 @@ const ShipmentTracking = () => {
   const [activeRow, setActiveRow] = useState(null);
   const [activeLoading, setActiveLoading] = useState(true);
   const [backgroundHydrating, setBackgroundHydrating] = useState(false);
+  const [, bumpOptimistic] = useState(0);
+  const hydrateTickRef = useRef(0);
   const isCarrier =
     user?.activeRole === 'carrier' || (user?.roles || []).includes('carrier');
   const stableRoleRef = useRef(null);
@@ -52,13 +64,14 @@ const ShipmentTracking = () => {
       setBackgroundHydrating(false);
       return;
     }
+    const optimisticNow = hasOptimisticActivation(id);
     if (silent) setBackgroundHydrating(true);
-    else setActiveLoading(true);
+    else if (!optimisticNow) setActiveLoading(true);
     try {
       const row = await fetchActiveShipmentRow(request, id);
-      setActiveRow(row);
+      if (row) setActiveRow(row);
     } catch {
-      setActiveRow(null);
+      if (!hasOptimisticActivation(id)) setActiveRow(null);
     } finally {
       if (silent) setBackgroundHydrating(false);
       else setActiveLoading(false);
@@ -74,7 +87,20 @@ const ShipmentTracking = () => {
       const scope = e?.detail?.scope;
       if (!scope || scope === 'all' || scope === 'shipments') refreshActiveRow({ silent: true });
     };
-    const onHydrate = () => refreshActiveRow({ silent: true });
+    const onHydrate = (e) => {
+      const tick = ++hydrateTickRef.current;
+      const rows = e?.detail?.rows;
+      if (Array.isArray(rows) && rows.length && id) {
+        const matched = findActiveShipmentRow(rows, id);
+        if (matched && !shouldSuppressStaleRestRow(matched, id)) {
+          setActiveRow((prev) => prev ?? matched);
+        }
+      }
+      requestAnimationFrame(() => {
+        if (hydrateTickRef.current !== tick) return;
+        if (!hasOptimisticActivation(id)) refreshActiveRow({ silent: true });
+      });
+    };
     const onContractSync = (e) => {
       const ref = String(e?.detail?.ref || '').trim();
       if (ref && ref === id) refreshActiveRow({ silent: true });
@@ -89,27 +115,61 @@ const ShipmentTracking = () => {
     };
   }, [refreshActiveRow, id]);
 
-  const isHydrating = activeLoading || backgroundHydrating;
-  const hasAuthoritativeRow = Boolean(getAuthoritativeTrackRef(activeRow));
-  const awaitingAuthoritativeRow =
-    workspaceRole === 'carrier' && Boolean(id) && !isHydrating && !hasAuthoritativeRow;
+  useEffect(() => {
+    if (!id) return undefined;
+    return subscribeActiveShipmentStore((rows) => {
+      const matched = findActiveShipmentRow(rows, id);
+      if (matched && !shouldSuppressStaleRestRow(matched, id)) {
+        setActiveRow((prev) => prev ?? matched);
+      }
+    });
+  }, [id]);
+
+  useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
+
+  useEffect(() => {
+    const onActivated = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      if (ref && ref === id) bumpOptimistic((n) => n + 1);
+    };
+    window.addEventListener('tp:contract-activated', onActivated);
+    return () => window.removeEventListener('tp:contract-activated', onActivated);
+  }, [id]);
+
+  const hasOptimistic = hasOptimisticActivation(id);
+  const isHydrating = (activeLoading || backgroundHydrating) && !hasOptimistic;
 
   const rowForTracking = useMemo(() => {
-    if (activeRow) return activeRow;
-    if (!id || isHydrating || !isValidShipmentTrackRef(id)) return null;
-    if (workspaceRole !== 'carrier') return null;
-    return {
-      trackRef: id,
-      code: id,
-      loadCode: id,
-      shipmentStatus: 'booked',
-      trackingEnabled: true,
-      flowType: 'CAPACITY',
-      assignedCarrierId: user?.id ?? null
-    };
-  }, [activeRow, id, isHydrating, workspaceRole, user?.id]);
+    if (!id || !isValidShipmentTrackRef(id)) return null;
+    const optimistic = buildOptimisticTrackingRow(id, {
+      userId: user?.id ?? null,
+      role: workspaceRole
+    });
+    const fromStore = findActiveShipmentRow(getActiveShipmentList(), id);
+    const candidate = activeRow || fromStore;
+    if (optimistic) {
+      if (!candidate) return optimistic;
+      const stale =
+        !candidate.trackingEnabled ||
+        !candidate.shipmentStatus ||
+        String(candidate.shipmentStatus || candidate.status || '').toLowerCase() === 'posted';
+      if (stale || candidate.contractActivated !== true) {
+        return {
+          ...candidate,
+          ...optimistic,
+          shipmentStatus: optimistic.shipmentStatus,
+          status: optimistic.status,
+          trackingEnabled: true,
+          contractActivated: true,
+          assignedCarrierId:
+            candidate.assignedCarrierId ?? optimistic.assignedCarrierId ?? null
+        };
+      }
+    }
+    return candidate || optimistic;
+  }, [activeRow, id, workspaceRole, user?.id, hasOptimistic]);
 
-  const trackingEnabled = Boolean(rowForTracking?.trackingEnabled);
+  const trackingEnabled = Boolean(rowForTracking?.trackingEnabled) || hasOptimistic;
 
   const { trackingData: payload, uiState, loading, error, livePos, geoError } = useShipmentTracking({
     trackRef: id,
@@ -117,14 +177,15 @@ const ShipmentTracking = () => {
     trackingEnabled,
     assignedCarrierId: rowForTracking?.assignedCarrierId ?? null,
     shareLive,
-    enabled: Boolean(id && rowForTracking),
+    enabled: Boolean(id && (rowForTracking || hasOptimistic)),
     role: workspaceRole,
     flowType: rowForTracking?.flowType ?? null
   });
 
   const ui = useMemo(() => withShipmentUILabels(uiState || {}, t), [uiState, t]);
   const upcomingStatus = ui.upcomingStatus;
-  const canRenderAdvanceButton = hasAuthoritativeRow && ui.canUpdateStatus;
+  const canRenderAdvanceButton =
+    workspaceRole === 'carrier' && isValidShipmentTrackRef(id) && ui.canUpdateStatus;
   const canEnableButton = canRenderAdvanceButton && upcomingStatus != null;
 
   const handleAdvanceStatus = useCallback(async () => {
@@ -180,7 +241,12 @@ const ShipmentTracking = () => {
       .map((c) => [Number(c[0]), Number(c[1])]);
   }, [payload?.liveTrackingMap?.coordinates]);
 
-  const showTracking = Boolean(ui.unifiedContract?.trackingEnabled ?? trackingEnabled);
+  const showTracking = Boolean(
+    ui.contractActivated ||
+      ui.trackingEnabled ||
+      ui.unifiedContract?.trackingEnabled ||
+      trackingEnabled
+  );
 
   const currentLocation = useMemo(() => {
     if (!showTracking) return null;
@@ -202,7 +268,7 @@ const ShipmentTracking = () => {
       code: payload?.refKey ? `#${payload.refKey}` : `#${id}`,
       origin: originName || t('common.emDash'),
       destination: destinationName || t('common.emDash'),
-      status: tracking?.status || 'posted',
+      status: tracking?.status || rowForTracking?.shipmentStatus || 'booked',
       driverName: t('common.emDash'),
       vehicleReg: t('common.emDash'),
       eta: tracking?.eta || t('common.emDash'),
@@ -238,11 +304,11 @@ const ShipmentTracking = () => {
         status: tracking?.status,
         eta: tracking?.eta,
         currentLocation,
-        locationUnavailable: !currentLocation && !loading
+        locationUnavailable: !currentLocation && !loading && !ui.contractActivated
       },
       liveTrackingMap: payload?.liveTrackingMap || { coordinates: coords }
     }),
-    [tracking, currentLocation, payload, coords, originName, destinationName, loading]
+    [tracking, currentLocation, payload, coords, originName, destinationName, loading, ui.contractActivated]
   );
 
   if (!id || !isValidShipmentTrackRef(id)) {
@@ -259,7 +325,7 @@ const ShipmentTracking = () => {
     );
   }
 
-  if (activeLoading) {
+  if (activeLoading && !hasOptimistic && !rowForTracking) {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
@@ -271,7 +337,7 @@ const ShipmentTracking = () => {
   }
 
   if (!rowForTracking) {
-    if (isHydrating) {
+    if (isHydrating && !hasOptimistic) {
       return (
         <div className="container py-4 tp-tracking-page">
           <h5 className="mb-3 text-body">{t('pages.tracking.title')}</h5>
@@ -295,7 +361,10 @@ const ShipmentTracking = () => {
     );
   }
 
-  if (loading && !payload) {
+  const shellReady = hasOptimistic || ui.contractActivated || Boolean(rowForTracking);
+  const showTrackingSkeleton = loading && !payload && !shellReady;
+
+  if (showTrackingSkeleton) {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
@@ -314,7 +383,7 @@ const ShipmentTracking = () => {
 
   const userError = error ? formatUserError({ message: error }, t, { fallback: t('pages.tracking.loadFailed') }) : '';
 
-  if (error && !payload) {
+  if (error && !payload && !shellReady) {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
@@ -366,7 +435,7 @@ const ShipmentTracking = () => {
       {workspaceRole === 'carrier' && rowForTracking ? (
         <div className="mt-3 mb-3">
           <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>
-          {awaitingAuthoritativeRow || !canRenderAdvanceButton ? (
+          {!canRenderAdvanceButton ? (
             <p className="small text-muted mb-2">{t('pages.tracking.waitingForData')}</p>
           ) : null}
           <Button

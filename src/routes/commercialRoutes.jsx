@@ -22,6 +22,7 @@ import FleetMonitoring from '../pages/fleet/FleetMonitoring.jsx';
 import AddTruck from '../pages/fleet/AddTruck.jsx';
 import CarrierVerification from '../pages/auth/CarrierVerification.jsx';
 import ShipmentHistory from '../pages/shipments/ShipmentHistory.jsx';
+import ShipmentsActive from '../pages/shipments/ShipmentsActive.jsx';
 import Profile from '../pages/profile/Profile.jsx';
 import Settings from '../pages/settings/Settings.jsx';
 import Support from '../pages/support/Support.jsx';
@@ -60,6 +61,7 @@ export const commercialRoutes = [
   <Route key="carrier-truck-details" path="/carrier/truck-details" element={protectedCommercial('carrier-truck-details', <TruckDetails />, ['carrier'])} />,
   <Route key="carrier-verification" path="/carrier/verification" element={protectedCommercial('carrier-verification', <CarrierVerification />, ['carrier'])} />,
   <Route key="fleet-add" path="/fleet/add" element={protectedCommercial('fleet-add', <AddTruck />, ['carrier'])} />,
+  <Route key="shipments-active" path="/shipments/active" element={protectedCommercial('shipments-active', <ShipmentsActive />, ['shipper', 'carrier'])} />,
   <Route key="shipments-tracking" path="/shipments/tracking/:trackId?" element={protectedCommercial('shipments-tracking', <ShipmentTracking />, ['shipper', 'carrier'])} />,
   <Route key="shipments-history" path="/shipments/history" element={protectedCommercial('shipments-history', <ShipmentHistory />, ['shipper', 'carrier'])} />,
   <Route key="profile" path="/profile" element={commercial('profile', <ProtectedRoute><Profile /></ProtectedRoute>)} />,

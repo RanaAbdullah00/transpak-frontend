@@ -38,7 +38,20 @@ export function translateBidStatus(t, raw) {
   const key = `bidStatus.${s}`;
   const out = t(key);
   if (out !== key) return out;
-  return s.replace(/_/g, ' ');
+  return t('status.unknown');
+}
+
+/** @param {(k: string) => string} t */
+export function translateSpaceRequestStatus(t, raw) {
+  const s = String(raw || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+  if (!s) return t('status.unknown');
+  const key = `spaceStatus.${s}`;
+  const out = t(key);
+  if (out !== key) return out;
+  return t('status.unknown');
 }
 
 /** @param {(k: string) => string} t */

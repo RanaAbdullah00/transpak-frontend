@@ -1,10 +1,11 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { FaGavel } from 'react-icons/fa';
 import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import { deriveBidType } from '../../utils/flowSession.js';
+import { mergeOptimisticBid } from '../../utils/contractActivationLayer.js';
 
 // List of bids. mode: 'shipper' | 'carrier' controls which actions are shown.
 const BidList = memo(({
@@ -26,22 +27,45 @@ const BidList = memo(({
   const defaultEmpty =
     mode === 'carrier' ? t('pages.bids.emptyCarrier') : t('pages.bids.emptyShipper');
   const resolvedEmpty = emptyMessage ?? defaultEmpty;
+  const [, bumpBidUi] = useState(0);
 
-  const { standardBids, suggestedBids, acceptedBids, closedBids } = useMemo(() => {
+  useEffect(() => {
+    let pending = false;
+    const onBidUpdated = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        bumpBidUi((n) => n + 1);
+      });
+    };
+    window.addEventListener('tp:bid-updated', onBidUpdated);
+    window.addEventListener('tp:contract-activated', onBidUpdated);
+    return () => {
+      window.removeEventListener('tp:bid-updated', onBidUpdated);
+      window.removeEventListener('tp:contract-activated', onBidUpdated);
+    };
+  }, []);
+
+  const normalizedBids = useMemo(
+    () => (Array.isArray(bids) ? bids : []).map((b) => mergeOptimisticBid(b)),
+    [bids]
+  );
+
+  const { standardBids, suggestedBids, acceptedBids, rejectedBids, closedBids } = useMemo(() => {
     const standard = [];
     const suggested = [];
     const accepted = [];
+    const rejected = [];
     const closed = [];
-    for (const bid of Array.isArray(bids) ? bids : []) {
+    for (const bid of normalizedBids) {
       const status = normalizeBidStatus(bid.status);
       if (status === BID_STATUS.ACCEPTED) {
         accepted.push(bid);
-      } else if (
-        status === BID_STATUS.REJECTED ||
-        status === BID_STATUS.CANCELLED ||
-        status === 'expired'
-      ) {
-        /* hidden from commercial user views */
+      } else if (status === BID_STATUS.REJECTED || status === BID_STATUS.CANCELLED) {
+        rejected.push(bid);
+      } else if (status === 'expired') {
+        closed.push(bid);
       } else if (!bid.status || isActiveBidStatus(bid.status)) {
         if (deriveBidType(bid) === 'suggested') suggested.push(bid);
         else standard.push(bid);
@@ -55,7 +79,7 @@ const BidList = memo(({
       acceptedBids: accepted,
       closedBids: closed
     };
-  }, [bids]);
+  }, [normalizedBids]);
   const isShipper = mode === 'shipper';
   const isCarrier = mode === 'carrier';
 
@@ -67,7 +91,7 @@ const BidList = memo(({
 
   return (
     <div className="mt-2">
-      {standardBids.length === 0 && suggestedBids.length === 0 && bids.length === 0 ? (
+      {standardBids.length === 0 && suggestedBids.length === 0 && normalizedBids.length === 0 ? (
         <EmptyState icon={FaGavel} title={resolvedEmpty} body={t('empty.bidsBody')} />
       ) : (
         <>
@@ -114,6 +138,22 @@ const BidList = memo(({
               ))}
             </>
           ) : null}
+          {rejectedBids.length > 0 && (
+            <>
+              <hr className="my-4" />
+              <h6 className="text-danger mb-3">{t('pages.bids.rejectedBidsHeading')}</h6>
+              {rejectedBids.map((bid) => (
+                <BidCard
+                  key={`rejected-${bid.id}`}
+                  bid={bid}
+                  isShipper={isShipper}
+                  isCarrier={isCarrier}
+                  ratingTargetUserId={ratingTargetFor(bid)}
+                  counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
+                />
+              ))}
+            </>
+          )}
           {acceptedBids.length > 0 && (
             <>
               <hr className="my-4" />

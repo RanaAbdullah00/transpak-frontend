@@ -54,6 +54,32 @@ function mapBidToContractStatus(bidStatus) {
  * Map any legacy row (bid, load, space request, active shipment) → unified Contract.
  */
 export function mapLegacyToContract(input = {}) {
+  if (input.contractActivated) {
+    const fields = normalizeContractFields(input);
+    const ref = fields.ref || getTrackingRef(input);
+    const isSpaceRow =
+      input.listingId != null ||
+      input.requestedKg != null ||
+      input.spaceRequestId != null ||
+      String(input.flowType || '').toUpperCase() === 'CAPACITY' ||
+      String(input.booking_reference || input.bookingReference || '').startsWith('space:');
+    const shipmentStatus = input.shipmentStatus ?? input.status ?? 'booked';
+    const ship = mapShipmentToContractStatus(shipmentStatus);
+    const status =
+      ship === CONTRACT_STATUS.IN_TRANSIT || ship === CONTRACT_STATUS.COMPLETED
+        ? ship
+        : CONTRACT_STATUS.ACCEPTED;
+    return {
+      id: String(input.id ?? input.requestId ?? input.shipmentId ?? ref ?? '').trim() || null,
+      type: isSpaceRow ? CONTRACT_TYPE.SPACE : CONTRACT_TYPE.LOAD,
+      status,
+      shipperId: input.shipperId ?? input.shipper_id ?? null,
+      carrierId: fields.assignedCarrierId ?? input.carrierId ?? input.carrier_id ?? null,
+      trackingEnabled: Boolean(ref),
+      ref
+    };
+  }
+
   const fields = normalizeContractFields(input);
   const ref = fields.ref || getTrackingRef(input);
   const isSpaceRow =
@@ -89,13 +115,9 @@ export function mapLegacyToContract(input = {}) {
     status = mapSpaceStatus(spaceStatus);
   }
 
-  const hasCarrier = Boolean(
-    String(fields.assignedCarrierId ?? input.carrierId ?? input.carrier_id ?? '').trim()
-  );
   const trackingEnabled =
     (status === CONTRACT_STATUS.ACCEPTED || status === CONTRACT_STATUS.IN_TRANSIT) &&
-    Boolean(ref) &&
-    hasCarrier;
+    Boolean(ref);
 
   return {
     id: String(input.id ?? input.requestId ?? input.shipmentId ?? ref ?? '').trim() || null,

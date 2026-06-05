@@ -37,10 +37,22 @@ const BidManagement = () => {
     try {
       const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
       await triggerAcceptActivationSync(res);
+      emitRealtimeRefresh('all');
       notifySuccess(t('flowSession.bidFlowStarted'));
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptFailed') }));
+    }
+  };
+
+  const handleSuggest = async (bid, amount) => {
+    try {
+      await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
+      notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
+      emitRealtimeRefresh('bids');
+      fetchBidsData();
+    } catch (err) {
+      notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
     }
   };
 
@@ -130,7 +142,14 @@ const BidManagement = () => {
           <Loader />
         </div>
       ) : (
-        <BidList bids={bidsWithDistance} mode="shipper" onAccept={handleAccept} onReject={handleReject} actionsDisabled={!profileComplete} />
+        <BidList
+          bids={bidsWithDistance}
+          mode="shipper"
+          onAccept={handleAccept}
+          onReject={handleReject}
+          onSuggest={handleSuggest}
+          actionsDisabled={!profileComplete}
+        />
       )}
     </div>
   );

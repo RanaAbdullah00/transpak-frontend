@@ -23,4 +23,5 @@ export {
   triggerStatusActivationSync,
   resolveAcceptActivationRef
 } from './contractActivation.js';
+export { hasOptimisticActivation, buildOptimisticTrackingRow } from './contractActivationLayer.js';
 // contractStateResolver / contractLatchStore are deprecated — use shipmentUIState + REST only.

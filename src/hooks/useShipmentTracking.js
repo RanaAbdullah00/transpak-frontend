@@ -35,6 +35,11 @@ import {
   scheduleThrottledTrackingFetch,
   bumpTrackingFetchGeneration
 } from '../utils/productionStabilityLayer.js';
+import {
+  getOptimisticActivation,
+  mergeOptimisticContractInput,
+  subscribeOptimisticActivation
+} from '../utils/contractActivationLayer.js';
 
 /**
  * Coordinates + live GPS only. State gates come exclusively from GET /shipments/active row.
@@ -57,22 +62,29 @@ export function useShipmentTracking({
   if (role && stableRoleRef.current == null) stableRoleRef.current = role;
   const effectiveRole = stableRoleRef.current ?? role;
 
-  const safeShipment = useMemo(
-    () =>
-      normalizeContractFields({
-        ref: trackRef,
-        code: trackRef,
-        trackRef,
-        loadCode: trackRef,
-        assignedCarrierId,
-        assigned_carrier_id: assignedCarrierId,
-        status: shipmentStatus,
-        shipmentStatus,
-        flowType,
-        role: effectiveRole
-      }),
-    [trackRef, assignedCarrierId, shipmentStatus, flowType, effectiveRole]
+  const optimistic = useMemo(
+    () => (trackRef ? getOptimisticActivation(trackRef) : null),
+    [trackRef]
   );
+
+  const [, bumpOptimistic] = useState(0);
+  useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
+
+  const safeShipment = useMemo(() => {
+    const merged = mergeOptimisticContractInput({
+      ref: trackRef,
+      code: trackRef,
+      trackRef,
+      loadCode: trackRef,
+      assignedCarrierId,
+      assigned_carrier_id: assignedCarrierId,
+      status: shipmentStatus,
+      shipmentStatus,
+      flowType,
+      role: effectiveRole
+    });
+    return normalizeContractFields(merged);
+  }, [trackRef, assignedCarrierId, shipmentStatus, flowType, effectiveRole, optimistic?.ts]);
 
   const localRef = useMemo(
     () => getTrackingRef(safeShipment) || getTrackingRef({ trackRef, code: trackRef }),
@@ -88,7 +100,10 @@ export function useShipmentTracking({
   const fetchTrackRef = useRef(null);
   const socketKey = payload?.refKey || localRef;
 
-  const hasActiveRow = shipmentStatus != null;
+  const contractActivated = Boolean(optimistic?.contractActivated);
+  const effectiveShipmentStatus = shipmentStatus ?? optimistic?.shipmentStatus ?? null;
+  const effectiveTrackingEnabled = trackingEnabled || contractActivated;
+  const hasActiveRow = effectiveShipmentStatus != null || contractActivated;
 
   const uiState = useMemo(() => {
     const isCarrier = String(effectiveRole || '').toLowerCase() === 'carrier';
@@ -98,40 +113,70 @@ export function useShipmentTracking({
       role: effectiveRole
     });
     const unified = resolved.uiState.unifiedContract;
-    const contractTrackable = Boolean(unified?.trackingEnabled);
-    const restTrackable = isActiveShipmentTrackable({ shipmentStatus, trackingEnabled });
-    const gate = hasActiveRow && enabled && (restTrackable || contractTrackable);
-    const trackLive = gate || Boolean(resolved.uiState.canTrack);
+    const contractTrackable = Boolean(unified?.trackingEnabled) || contractActivated;
+    const restTrackable = isActiveShipmentTrackable({
+      shipmentStatus: effectiveShipmentStatus,
+      trackingEnabled: effectiveTrackingEnabled
+    });
+    const gate =
+      enabled && (contractActivated || (hasActiveRow && (restTrackable || contractTrackable)));
+    const trackLive = gate || Boolean(resolved.uiState.canTrack) || contractActivated;
     const {
       canUpdateStatus,
       showCarrierAdvance,
       upcomingStatus,
       unifiedContract,
+      contractActivated: uiContractActivated,
+      shipmentActive,
+      statusEngineUnlocked,
       ...trackingNeutralUi
     } = resolved.uiState;
+    const permissionUnlocked =
+      canUpdateStatus ||
+      (contractActivated &&
+        isCarrier &&
+        Boolean(String(unified?.ref || trackRef || '').trim()));
     return {
       ...trackingNeutralUi,
-      status: shipmentStatus || resolved.uiState.status,
-      canUpdateStatus,
-      showCarrierAdvance,
+      status: effectiveShipmentStatus || resolved.uiState.status,
+      canUpdateStatus: permissionUnlocked,
+      showCarrierAdvance: permissionUnlocked,
       upcomingStatus,
       unifiedContract,
+      contractActivated: uiContractActivated || contractActivated,
+      shipmentActive: shipmentActive || contractActivated,
+      statusEngineUnlocked: statusEngineUnlocked || contractActivated,
+      trackingEnabled: effectiveTrackingEnabled || Boolean(resolved.uiState.trackingEnabled),
       canTrack: trackLive,
       trackingActive: trackLive,
-      contractActive: trackLive || resolved.uiState.contractActive,
-      isActive: trackLive,
+      contractActive: trackLive || resolved.uiState.contractActive || contractActivated,
+      isActive: trackLive || contractActivated,
       showLiveMap: trackLive,
       showLiveDriver: trackLive,
       allowSocketJoin: trackLive,
       allowGpsPublish: trackLive && isCarrier
     };
-  }, [effectiveRole, safeShipment, hasActiveRow, enabled, shipmentStatus, trackingEnabled]);
+  }, [
+    effectiveRole,
+    safeShipment,
+    hasActiveRow,
+    enabled,
+    effectiveShipmentStatus,
+    effectiveTrackingEnabled,
+    contractActivated,
+    optimistic?.ts,
+    trackRef
+  ]);
 
   const trackingGate =
-    hasActiveRow &&
     enabled &&
-    (isActiveShipmentTrackable({ shipmentStatus, trackingEnabled }) ||
-      Boolean(uiState.unifiedContract?.trackingEnabled));
+    (contractActivated ||
+      (hasActiveRow &&
+        (isActiveShipmentTrackable({
+          shipmentStatus: effectiveShipmentStatus,
+          trackingEnabled: effectiveTrackingEnabled
+        }) ||
+          Boolean(uiState.unifiedContract?.trackingEnabled))));
   const gpsAllowed = shareLive && trackingGate && uiState.allowGpsPublish;
 
   const { position: livePos, error: geoError } = useLiveLocation(gpsAllowed && Boolean(localRef));
@@ -204,7 +249,9 @@ export function useShipmentTracking({
 
   useEffect(() => {
     if (!hasActiveRow || !enabled || !localRef) {
-      setPayload(null);
+      if (!contractActivated) {
+        setPayload(null);
+      }
       setError('');
       setLoading(false);
       return undefined;
@@ -213,12 +260,12 @@ export function useShipmentTracking({
     fetchGenerationRef.current += 1;
     setError('');
     setPayload((prev) => hydrateTrackingFromCache(localRef, prev));
-    fetchTrack();
+    fetchTrack({ silent: contractActivated });
 
     return () => {
       fetchGenerationRef.current += 1;
     };
-  }, [fetchTrack, enabled, localRef, hasActiveRow]);
+  }, [fetchTrack, enabled, localRef, hasActiveRow, contractActivated]);
 
   const applyUpdate = useCallback(
     (incoming) => {
@@ -354,8 +401,25 @@ export function useShipmentTracking({
       .catch(() => {});
   }, [gpsAllowed, liveLat, liveLng, localRef, publishLocation, applyUpdate]);
 
+  const displayPayload = useMemo(() => {
+    if (payload) return payload;
+    if (!contractActivated || !localRef) return null;
+    const cached = getCachedTrackingPayload(localRef);
+    if (cached) return cached;
+    return {
+      refKey: localRef,
+      origin: '',
+      destination: '',
+      tracking: {
+        status: effectiveShipmentStatus || 'booked',
+        locationUnavailable: true
+      },
+      liveTrackingMap: { coordinates: [] }
+    };
+  }, [payload, contractActivated, localRef, effectiveShipmentStatus]);
+
   return {
-    trackingData: payload,
+    trackingData: displayPayload,
     uiState,
     loading,
     error,

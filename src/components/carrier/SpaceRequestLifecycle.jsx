@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
 import FlowTimeline, { SPACE_STEPS, SPACE_STEPS_REJECTED } from '../ui/FlowTimeline.jsx';
@@ -6,15 +6,59 @@ import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import { spaceStepId, proposedSpacePrice } from '../../utils/spaceFlow.js';
+import { translateSpaceRequestStatus } from '../../utils/i18nLabels.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
+import { getTrackingRef, hasOptimisticActivation } from '../../utils/contractActivationLayer.js';
 import { formatTons } from '../../utils/weightUnits.js';
 
 const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplete, showCarrierActions, priority = false }) => {
   const { t } = useLanguage();
-  const status = String(row.status || '').toLowerCase();
+  const [eventAccepted, setEventAccepted] = useState(false);
+
+  const rawStatus = String(row.status || '').toLowerCase();
+  const trackingRef = useMemo(
+    () => getTrackingRef(row) || null,
+    [
+      row.loadCode,
+      row.bridgeRef,
+      row.bridge_ref,
+      row.shipmentRef,
+      row.code,
+      row.ref,
+      row.trackRef,
+      row.booking_reference,
+      row.bookingReference
+    ]
+  );
+  const optimisticActive = trackingRef ? hasOptimisticActivation(trackingRef) : false;
+
+  useEffect(() => {
+    const onActivated = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      const spaceRequestId = String(e?.detail?.spaceRequestId || '').trim();
+      if (spaceRequestId && String(row.id) === spaceRequestId) setEventAccepted(true);
+      if (ref && trackingRef && ref === trackingRef) setEventAccepted(true);
+    };
+    window.addEventListener('tp:contract-activated', onActivated);
+    window.addEventListener('tp:bid-updated', onActivated);
+    return () => {
+      window.removeEventListener('tp:contract-activated', onActivated);
+      window.removeEventListener('tp:bid-updated', onActivated);
+    };
+  }, [row.id, trackingRef]);
+
+  const status = useMemo(() => {
+    if (rawStatus === 'rejected') return 'rejected';
+    if (eventAccepted || optimisticActive) {
+      if (rawStatus === 'in_transit' || rawStatus === 'intransit') return 'in_transit';
+      if (rawStatus === 'completed') return 'completed';
+      return 'accepted';
+    }
+    return rawStatus;
+  }, [rawStatus, eventAccepted, optimisticActive]);
+
   const stepId = spaceStepId(status);
-  const trackRef = isValidShipmentTrackRef(row.loadCode) ? String(row.loadCode).trim() : null;
-  const usesShipmentEngine = Boolean(trackRef);
+  const usesShipmentEngine = Boolean(trackRef) || optimisticActive || eventAccepted;
   const proposed = proposedSpacePrice(row);
   const steps = status === 'rejected' ? SPACE_STEPS_REJECTED : SPACE_STEPS;
   const badgeClass =
@@ -22,7 +66,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
       ? 'text-bg-danger'
       : status === 'completed'
         ? 'text-bg-success'
-        : status === 'active' || status === 'in_transit'
+        : status === 'accepted' || status === 'active' || status === 'in_transit'
           ? 'text-bg-primary'
           : 'text-bg-secondary';
 
@@ -37,7 +81,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           )}{' '}
           · {formatTons(row.requestedKg)} t
         </div>
-        <span className={`badge text-uppercase ${badgeClass}`}>{status.replace(/_/g, ' ')}</span>
+        <span className={`badge ${badgeClass}`}>{translateSpaceRequestStatus(t, status)}</span>
       </div>
       <div className="small text-muted mb-2">
         {row.origin} → {row.destination}
@@ -73,9 +117,11 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           </Button>
         </div>
       ) : null}
-      {usesShipmentEngine && trackRef && (status === 'active' || status === 'accepted' || status === 'in_transit') ? (
+      {usesShipmentEngine &&
+      isValidShipmentTrackRef(trackingRef) &&
+      (status === 'accepted' || status === 'active' || status === 'in_transit') ? (
         <Link
-          to={`/shipments/tracking/${encodeURIComponent(trackRef)}`}
+          to={`/shipments/tracking/${encodeURIComponent(trackingRef)}`}
           className="btn btn-sm btn-primary"
         >
           {t('pages.dashboard.viewLiveTracking')}

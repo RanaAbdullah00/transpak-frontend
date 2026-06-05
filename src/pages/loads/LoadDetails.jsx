@@ -21,6 +21,7 @@ import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
+import { commitOptimisticBidAccept } from '../../utils/contractActivationLayer.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 const LoadDetails = () => {
@@ -93,7 +94,14 @@ const LoadDetails = () => {
   const handleAccept = async (bid) => {
     try {
       const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
+      commitOptimisticBidAccept(bid.id, res, {
+        loadCode: res?.loadCode || bid.loadCode,
+        carrierId: bid.carrierId,
+        userId: user?.id,
+        role: user?.activeRole
+      });
       await triggerAcceptActivationSync(res);
+      emitRealtimeRefresh('all');
       notifySuccess(t('flowSession.bidFlowStarted'));
       await fetchData();
     } catch (error) {
@@ -109,6 +117,17 @@ const LoadDetails = () => {
       await fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.rejectFailed') }));
+    }
+  };
+
+  const handleSuggest = async (bid, amount) => {
+    try {
+      await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
+      notifyCounterOffer(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
+      emitRealtimeRefresh('bids');
+      await fetchData();
+    } catch (error) {
+      notifyError(formatUserError(error, t, { fallback: t('pages.bids.suggestFailed') }));
     }
   };
 
@@ -185,6 +204,7 @@ const LoadDetails = () => {
             mode="shipper"
             onAccept={handleAccept}
             onReject={handleReject}
+            onSuggest={handleSuggest}
           />
         </>
       )}

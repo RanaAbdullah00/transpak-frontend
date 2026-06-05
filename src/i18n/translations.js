@@ -434,7 +434,8 @@ export const translations = {
     },
     status: {
       posted: 'Posted',
-      accepted: 'Accepted — contract active',
+      accepted: 'Accepted',
+      rejected: 'Rejected',
       booked: 'Booked',
       pickedup: 'Picked up',
       intransit: 'In transit',
@@ -470,8 +471,20 @@ export const translations = {
       negotiationCounter: 'Counter offer — awaiting response',
       negotiationAwaitingShipper: 'Awaiting shipper confirmation'
     },
+    spaceStatus: {
+      request_sent: 'Request sent',
+      pending: 'Pending',
+      requested: 'Requested',
+      active: 'Active',
+      accepted: 'Accepted',
+      in_transit: 'In transit',
+      intransit: 'In transit',
+      completed: 'Completed',
+      rejected: 'Rejected',
+      closed: 'Closed'
+    },
     flowSession: {
-      badgeActive: 'ACTIVE',
+      badgeActive: 'Active',
       bidFlowStarted: 'Bid flow started — live tracking is now available',
       carrierBidActive: 'ACTIVE BID FLOW',
       carrierCapacityActive: 'ACTIVE CAPACITY MATCH',
@@ -709,9 +722,13 @@ export const translations = {
         historyClosedLabel: 'Closed',
         historyLoadFailed: 'Could not load shipment history.',
         historyTabCompleted: 'Completed',
+        historyTabAccepted: 'Accepted',
+        historyTabRejected: 'Rejected',
         historyTabClosed: 'Closed',
         historyTabCancelled: 'Cancelled',
-        historyBidRow: 'Rejected bid'
+        historyBidRow: 'Rejected bid',
+        activeTitle: 'Active shipments',
+        activeLead: 'Live contracts you are shipping or carrying right now.'
       },
       supportPage: {
         title: 'Support',
@@ -999,7 +1016,8 @@ export const translations = {
         approveCarrierOk: 'OK',
         emptyShipper: 'No bids yet. Carriers will start bidding soon after you post.',
         emptyCarrier: 'No bids yet.',
-        acceptedBidsHeading: 'Accepted Bids',
+        acceptedBidsHeading: 'Accepted bids',
+        rejectedBidsHeading: 'Rejected bids',
         standardBidsHeading: 'Standard bids',
         suggestedBidsHeading: 'Suggested bids',
         closedBidsHeading: 'Closed bids',
@@ -1400,6 +1418,9 @@ export const translations = {
       fleetApproval: 'Fleet approval',
       disputes: 'Disputes',
       shipments: 'Shipments',
+      shipmentsActive: 'Active shipments',
+      shipmentsHistory: 'Shipment history',
+      shipmentsTracking: 'Live tracking',
       roleManagement: 'Role administration',
       notifications: 'Notifications',
       settings: 'Settings',
@@ -1873,7 +1894,8 @@ export const translations = {
     },
     status: {
       posted: 'پوسٹ شدہ',
-      accepted: 'قبول — معاہدہ فعال',
+      accepted: 'قبول شدہ',
+      rejected: 'مسترد',
       booked: 'بک شدہ',
       pickedup: 'اٹھا لیا گیا',
       intransit: 'راستے میں',
@@ -1908,6 +1930,18 @@ export const translations = {
     bidFlow: {
       negotiationCounter: 'کاؤنٹر آفر — جواب کا انتظار',
       negotiationAwaitingShipper: 'شپپر کی تصدیق کا انتظار'
+    },
+    spaceStatus: {
+      request_sent: 'درخواست بھیجی گئی',
+      pending: 'زیر التواء',
+      requested: 'درخواست شدہ',
+      active: 'فعال',
+      accepted: 'قبول شدہ',
+      in_transit: 'راستے میں',
+      intransit: 'راستے میں',
+      completed: 'مکمل',
+      rejected: 'مسترد',
+      closed: 'بند'
     },
     flowSession: {
       badgeActive: 'فعال',
@@ -2355,6 +2389,7 @@ export const translations = {
         emptyShipper: 'ابھی کوئی بڈ نہیں۔ لوڈ پوسٹ کرنے کے بعد کیریئرز بڈ لگانا شروع کریں گے۔',
         emptyCarrier: 'ابھی کوئی بڈ نہیں۔',
         acceptedBidsHeading: 'قبول شدہ بڈز',
+        rejectedBidsHeading: 'مسترد بڈز',
         standardBidsHeading: 'معمولی بڈز',
         suggestedBidsHeading: 'تجویز شدہ بڈز',
         closedBidsHeading: 'بند بڈز',
@@ -2549,9 +2584,13 @@ export const translations = {
         historyClosedLabel: 'بند',
         historyLoadFailed: 'شپمنٹ ہسٹری لوڈ نہیں ہو سکی۔',
         historyTabCompleted: 'مکمل',
+        historyTabAccepted: 'قبول شدہ',
+        historyTabRejected: 'مسترد',
         historyTabClosed: 'بند',
         historyTabCancelled: 'منسوخ',
-        historyBidRow: 'مسترد بڈ'
+        historyBidRow: 'مسترد بڈ',
+        activeTitle: 'فعال شپمنٹس',
+        activeLead: 'وہ معاہدے جو ابھی لائیو ہیں۔'
       },
       // wallet removed: ادائیگی آف لائن
       dashboard: {
@@ -2798,6 +2837,9 @@ export const translations = {
       fleetApproval: 'فلیٹ منظوری',
       disputes: 'تنازعات',
       shipments: 'ترسیلات',
+      shipmentsActive: 'فعال شپمنٹس',
+      shipmentsHistory: 'شپمنٹ کی تاریخ',
+      shipmentsTracking: 'لائیو ٹریکنگ',
       roleManagement: 'کرداروں کی اجازتیں',
       notifications: 'اطلاعات',
       settings: 'سیٹنگز',
