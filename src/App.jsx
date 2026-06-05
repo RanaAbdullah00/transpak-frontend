@@ -15,10 +15,10 @@ import AtomicRoute from './components/routing/AtomicRoute.jsx';
 import { AppContext } from './context/AppContext.jsx';
 import { resolveAdminShell } from './utils/rbac.js';
 import { useAdminSessionBootstrap } from './hooks/useAdminSessionBootstrap.js';
-import AuthRoutes from './routes/authRoutes.jsx';
-import DashboardRoutes from './routes/dashboardRoutes.jsx';
-import AdminRoutes from './routes/adminRoutes.jsx';
-import CommercialRoutes from './routes/commercialRoutes.jsx';
+import { authRoutes } from './routes/authRoutes.jsx';
+import { dashboardRoutes } from './routes/dashboardRoutes.jsx';
+import { adminRoutes } from './routes/adminRoutes.jsx';
+import { commercialRoutes } from './routes/commercialRoutes.jsx';
 
 const PAGE_BG_EXACT = {
   '/': 'landing',
@@ -85,10 +85,10 @@ function App() {
           data-tp-page-bg={pageBg}
         >
           <Routes>
-            <AuthRoutes />
-            <DashboardRoutes />
-            <AdminRoutes />
-            <CommercialRoutes />
+            {authRoutes}
+            {dashboardRoutes}
+            {adminRoutes}
+            {commercialRoutes}
             <Route
               path="*"
               element={

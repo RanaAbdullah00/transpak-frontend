@@ -36,44 +36,37 @@ function protectedCommercial(name, children, allowedRoles) {
   return commercial(name, <ProtectedRoute allowedRoles={allowedRoles}>{children}</ProtectedRoute>);
 }
 
-export default function CommercialRoutes() {
-  return (
-    <>
-      <Route path="/loads/post" element={protectedCommercial('loads-post', <PostLoad />, ['shipper'])} />
-      <Route path="/loads/manage" element={protectedCommercial('loads-manage', <LoadsHub />, ['shipper', 'carrier'])} />
-      <Route path="/carrier/space/post" element={protectedCommercial('carrier-space-post', <PostCarrierSpace />, ['carrier'])} />
-      <Route
-        path="/loads"
-        element={protectedCommercial(
-          'loads-redirect',
-          <Navigate to="/loads/manage?tab=freight" replace />,
-          ['carrier']
-        )}
-      />
-      <Route path="/loads/accepted" element={protectedCommercial('loads-accepted', <AcceptedLoads />, ['carrier'])} />
-      <Route path="/loads/:id/edit" element={protectedCommercial('loads-edit', <EditLoad />, ['shipper'])} />
-      <Route path="/loads/:id" element={commercial('loads-detail', <ProtectedRoute><LoadDetails /></ProtectedRoute>)} />
-
-      <Route path="/bids" element={protectedCommercial('bids', <BidManagement />, ['shipper'])} />
-      <Route path="/bids/mine" element={protectedCommercial('bids-mine', <MyBids />, ['carrier'])} />
-      <Route path="/bids/place" element={protectedCommercial('bids-place', <PlaceBid />, ['carrier'])} />
-      <Route path="/bids/approve" element={protectedCommercial('bids-approve', <ApproveCarrier />, ['shipper'])} />
-
-      <Route path="/fleet" element={protectedCommercial('fleet', <FleetMonitoring />, ['carrier'])} />
-      <Route path="/carrier/truck-details" element={protectedCommercial('carrier-truck-details', <TruckDetails />, ['carrier'])} />
-      <Route path="/carrier/verification" element={protectedCommercial('carrier-verification', <CarrierVerification />, ['carrier'])} />
-      <Route path="/fleet/add" element={protectedCommercial('fleet-add', <AddTruck />, ['carrier'])} />
-
-      <Route path="/shipments/tracking/:trackId?" element={protectedCommercial('shipments-tracking', <ShipmentTracking />, ['shipper', 'carrier'])} />
-      <Route path="/shipments/history" element={protectedCommercial('shipments-history', <ShipmentHistory />, ['shipper', 'carrier'])} />
-
-      <Route path="/profile" element={commercial('profile', <ProtectedRoute><Profile /></ProtectedRoute>)} />
-      <Route path="/settings" element={commercial('settings', <ProtectedRoute><Settings /></ProtectedRoute>)} />
-      <Route path="/support" element={commercial('support', <ProtectedRoute><Support /></ProtectedRoute>)} />
-      <Route path="/feedback" element={commercial('feedback', <ProtectedRoute><Feedback /></ProtectedRoute>)} />
-      <Route path="/notifications" element={commercial('notifications', <ProtectedRoute><Notifications /></ProtectedRoute>)} />
-      <Route path="/messages" element={commercial('messages', <ProtectedRoute><Messages /></ProtectedRoute>)} />
-      <Route path="/profile/u/:id" element={commercial('public-profile', <ProtectedRoute><PublicProfile /></ProtectedRoute>)} />
-    </>
-  );
-}
+export const commercialRoutes = [
+  <Route key="loads-post" path="/loads/post" element={protectedCommercial('loads-post', <PostLoad />, ['shipper'])} />,
+  <Route key="loads-manage" path="/loads/manage" element={protectedCommercial('loads-manage', <LoadsHub />, ['shipper', 'carrier'])} />,
+  <Route key="carrier-space-post" path="/carrier/space/post" element={protectedCommercial('carrier-space-post', <PostCarrierSpace />, ['carrier'])} />,
+  <Route
+    key="loads-redirect"
+    path="/loads"
+    element={protectedCommercial(
+      'loads-redirect',
+      <Navigate to="/loads/manage?tab=freight" replace />,
+      ['carrier']
+    )}
+  />,
+  <Route key="loads-accepted" path="/loads/accepted" element={protectedCommercial('loads-accepted', <AcceptedLoads />, ['carrier'])} />,
+  <Route key="loads-edit" path="/loads/:id/edit" element={protectedCommercial('loads-edit', <EditLoad />, ['shipper'])} />,
+  <Route key="loads-detail" path="/loads/:id" element={commercial('loads-detail', <ProtectedRoute><LoadDetails /></ProtectedRoute>)} />,
+  <Route key="bids" path="/bids" element={protectedCommercial('bids', <BidManagement />, ['shipper'])} />,
+  <Route key="bids-mine" path="/bids/mine" element={protectedCommercial('bids-mine', <MyBids />, ['carrier'])} />,
+  <Route key="bids-place" path="/bids/place" element={protectedCommercial('bids-place', <PlaceBid />, ['carrier'])} />,
+  <Route key="bids-approve" path="/bids/approve" element={protectedCommercial('bids-approve', <ApproveCarrier />, ['shipper'])} />,
+  <Route key="fleet" path="/fleet" element={protectedCommercial('fleet', <FleetMonitoring />, ['carrier'])} />,
+  <Route key="carrier-truck-details" path="/carrier/truck-details" element={protectedCommercial('carrier-truck-details', <TruckDetails />, ['carrier'])} />,
+  <Route key="carrier-verification" path="/carrier/verification" element={protectedCommercial('carrier-verification', <CarrierVerification />, ['carrier'])} />,
+  <Route key="fleet-add" path="/fleet/add" element={protectedCommercial('fleet-add', <AddTruck />, ['carrier'])} />,
+  <Route key="shipments-tracking" path="/shipments/tracking/:trackId?" element={protectedCommercial('shipments-tracking', <ShipmentTracking />, ['shipper', 'carrier'])} />,
+  <Route key="shipments-history" path="/shipments/history" element={protectedCommercial('shipments-history', <ShipmentHistory />, ['shipper', 'carrier'])} />,
+  <Route key="profile" path="/profile" element={commercial('profile', <ProtectedRoute><Profile /></ProtectedRoute>)} />,
+  <Route key="settings" path="/settings" element={commercial('settings', <ProtectedRoute><Settings /></ProtectedRoute>)} />,
+  <Route key="support" path="/support" element={commercial('support', <ProtectedRoute><Support /></ProtectedRoute>)} />,
+  <Route key="feedback" path="/feedback" element={commercial('feedback', <ProtectedRoute><Feedback /></ProtectedRoute>)} />,
+  <Route key="notifications" path="/notifications" element={commercial('notifications', <ProtectedRoute><Notifications /></ProtectedRoute>)} />,
+  <Route key="messages" path="/messages" element={commercial('messages', <ProtectedRoute><Messages /></ProtectedRoute>)} />,
+  <Route key="public-profile" path="/profile/u/:id" element={commercial('public-profile', <ProtectedRoute><PublicProfile /></ProtectedRoute>)} />
+];

@@ -4,39 +4,38 @@ import AtomicRoute from '../components/routing/AtomicRoute.jsx';
 import { ProtectedRoute, RoleDashboard } from './guards.jsx';
 import { ShipperDashboard, CarrierDashboard } from './lazyPages.js';
 
-export default function DashboardRoutes() {
-  return (
-    <>
-      <Route
-        path="/dashboard"
-        element={
-          <AtomicRoute name="dashboard">
-            <ProtectedRoute>
-              <RoleDashboard />
-            </ProtectedRoute>
-          </AtomicRoute>
-        }
-      />
-      <Route
-        path="/dashboard/shipper"
-        element={
-          <AtomicRoute name="dashboard-shipper">
-            <ProtectedRoute allowedRoles={['shipper']}>
-              <ShipperDashboard />
-            </ProtectedRoute>
-          </AtomicRoute>
-        }
-      />
-      <Route
-        path="/dashboard/carrier"
-        element={
-          <AtomicRoute name="dashboard-carrier">
-            <ProtectedRoute allowedRoles={['carrier']}>
-              <CarrierDashboard />
-            </ProtectedRoute>
-          </AtomicRoute>
-        }
-      />
-    </>
-  );
-}
+export const dashboardRoutes = [
+  <Route
+    key="dashboard"
+    path="/dashboard"
+    element={
+      <AtomicRoute name="dashboard">
+        <ProtectedRoute>
+          <RoleDashboard />
+        </ProtectedRoute>
+      </AtomicRoute>
+    }
+  />,
+  <Route
+    key="dashboard-shipper"
+    path="/dashboard/shipper"
+    element={
+      <AtomicRoute name="dashboard-shipper">
+        <ProtectedRoute allowedRoles={['shipper']}>
+          <ShipperDashboard />
+        </ProtectedRoute>
+      </AtomicRoute>
+    }
+  />,
+  <Route
+    key="dashboard-carrier"
+    path="/dashboard/carrier"
+    element={
+      <AtomicRoute name="dashboard-carrier">
+        <ProtectedRoute allowedRoles={['carrier']}>
+          <CarrierDashboard />
+        </ProtectedRoute>
+      </AtomicRoute>
+    }
+  />
+];
