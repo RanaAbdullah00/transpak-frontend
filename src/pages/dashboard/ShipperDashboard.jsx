@@ -12,10 +12,10 @@ import SpaceSentRequestsPanel from '../../components/carrier/SpaceSentRequestsPa
 import { normalizeLoads } from '../../adapters/normalize.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 import Loader from '../../components/ui/Loader.jsx';
-
 const ShipperDashboard = () => {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const activeRole = user?.activeRole ?? user?.roles?.[0];
   const profileComplete = user?.profileComplete === true;
   const { ops, loadingOps, activities, refreshOps } = useDashboardMetrics();
   const [mineLoads, setMineLoads] = useState([]);
@@ -77,6 +77,14 @@ const ShipperDashboard = () => {
   }, [ops?.shipper, earnings, t]);
 
   const openLoads = useMemo(() => mineLoads.filter((l) => l.status === 'open'), [mineLoads]);
+
+  if (authLoading || !user?.id || !activeRole) {
+    return (
+      <div className="container py-3 text-center">
+        <Loader />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--shipper">

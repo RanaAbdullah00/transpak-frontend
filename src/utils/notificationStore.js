@@ -1,11 +1,25 @@
 const MAX_ITEMS = 100;
 const DEDUPE_WINDOW_MS = 30000;
 /** @type {import('./notificationEngine.js').buildNotification extends Function ? ReturnType<typeof import('./notificationEngine.js').buildNotification>[] : object[]} */
+const EMPTY_SNAPSHOT = Object.freeze([]);
 let items = [];
+let snapshotVersion = 0;
+let cachedSnapshot = EMPTY_SNAPSHOT;
+let cachedSnapshotVersion = -1;
+let snapshotInFlight = false;
 const listeners = new Set();
+
+function freezeItems(rows) {
+  return Object.freeze(rows.map((row) => Object.freeze({ ...row })));
+}
 const recentKeys = new Map();
 
+function bumpSnapshot() {
+  snapshotVersion += 1;
+}
+
 function notifyListeners() {
+  bumpSnapshot();
   listeners.forEach((fn) => {
     try {
       fn();
@@ -28,7 +42,15 @@ function pruneDedupe() {
 }
 
 export function getNotificationSnapshot() {
-  return items;
+  if (cachedSnapshotVersion === snapshotVersion) return cachedSnapshot;
+  if (snapshotInFlight) return cachedSnapshot;
+  snapshotInFlight = true;
+  cachedSnapshot = items.length ? freezeItems(items) : EMPTY_SNAPSHOT;
+  cachedSnapshotVersion = snapshotVersion;
+  queueMicrotask(() => {
+    snapshotInFlight = false;
+  });
+  return cachedSnapshot;
 }
 
 export function subscribeNotifications(listener) {
@@ -86,6 +108,9 @@ export function clearNotificationsByRef(shipmentRef) {
 export function clearNotificationStore() {
   items = [];
   recentKeys.clear();
+  cachedSnapshot = EMPTY_SNAPSHOT;
+  cachedSnapshotVersion = snapshotVersion;
+  snapshotInFlight = false;
   notifyListeners();
 }
 

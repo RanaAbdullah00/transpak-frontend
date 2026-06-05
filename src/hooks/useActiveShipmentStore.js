@@ -4,17 +4,21 @@ import {
   subscribeActiveShipmentStore
 } from '../utils/activeShipmentStore.js';
 
+import { getActiveShipmentEmptySnapshot } from '../utils/activeShipmentStore.js';
+
+const EMPTY_ROWS = getActiveShipmentEmptySnapshot();
+
 /**
  * Subscribe to ActiveShipmentStore — single in-memory read model for active shipments UI.
  */
 export function useActiveShipmentStore() {
-  const rows = useSyncExternalStore(
+  const snapshot = useSyncExternalStore(
     subscribeActiveShipmentStore,
     getActiveShipmentList,
     getActiveShipmentList
   );
 
-  return { rows, loading: false };
+  return { rows: Array.isArray(snapshot) ? snapshot : EMPTY_ROWS, loading: false };
 }
 
 /** Legacy hook shape for gradual migration. */

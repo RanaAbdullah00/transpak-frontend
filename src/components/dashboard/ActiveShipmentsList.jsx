@@ -71,9 +71,9 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
     };
   }, [bootstrap]);
 
-  const loading = bootLoading && !hasLoadedRef.current && !rows.length;
+  const loading = bootLoading && !hasLoadedRef.current;
 
-  if (loading) {
+  if (loading && !rows.length) {
     return (
       <div className="text-center py-4">
         <Loader />
@@ -82,7 +82,9 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   }
 
   if (!rows.length) {
-    return emptyState;
+    return emptyState ?? (
+      <div className="text-muted text-center py-4 small">{t('pages.dashboard.emptyNoActiveShipments')}</div>
+    );
   }
 
   return (

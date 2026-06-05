@@ -19,10 +19,10 @@ import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { isActiveBidStatus, normalizeBidStatus } from '../../utils/bidStatus.js';
-
 const CarrierDashboard = () => {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const activeRole = user?.activeRole ?? user?.roles?.[0];
   const profileComplete = user?.profileComplete === true;
   const { ops, loadingOps, activities } = useDashboardMetrics();
   const [openLoads, setOpenLoads] = useState([]);
@@ -116,6 +116,14 @@ const CarrierDashboard = () => {
       setOfferBusyId(null);
     }
   };
+
+  if (authLoading || !user?.id || !activeRole) {
+    return (
+      <div className="container py-3 text-center">
+        <Loader />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--carrier">

@@ -14,7 +14,14 @@ function adminBoundaryMessage(error) {
 export default class AdminErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, resetKey: props.resetKey };
+  }
+
+  static getDerivedStateFromProps(props, state) {
+    if (props.resetKey !== state.resetKey) {
+      return { error: null, resetKey: props.resetKey };
+    }
+    return null;
   }
 
   static getDerivedStateFromError(error) {

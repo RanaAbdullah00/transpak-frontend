@@ -6,6 +6,22 @@ const rowsByKey = new Map();
 let listVersion = 0;
 const listeners = new Set();
 let bootstrapped = false;
+/** Stable immutable snapshot for useSyncExternalStore. */
+const EMPTY_SNAPSHOT = Object.freeze([]);
+let cachedList = EMPTY_SNAPSHOT;
+let cachedListVersion = -1;
+let snapshotInFlight = false;
+
+function freezeRows(rows) {
+  return Object.freeze(rows.map((row) => Object.freeze({ ...row })));
+}
+
+function rebuildSnapshot() {
+  if (rowsByKey.size === 0) return EMPTY_SNAPSHOT;
+  return freezeRows(
+    [...rowsByKey.values()].sort((a, b) => (b._storeVersion || 0) - (a._storeVersion || 0))
+  );
+}
 
 function rowKey(row = {}) {
   return (
@@ -97,10 +113,20 @@ export function removeActiveShipment(key) {
   return getActiveShipmentList();
 }
 
+export function getActiveShipmentEmptySnapshot() {
+  return EMPTY_SNAPSHOT;
+}
+
 export function getActiveShipmentList() {
-  return [...rowsByKey.values()].sort(
-    (a, b) => (b._storeVersion || 0) - (a._storeVersion || 0)
-  );
+  if (cachedListVersion === listVersion) return cachedList;
+  if (snapshotInFlight) return cachedList;
+  snapshotInFlight = true;
+  cachedList = rebuildSnapshot();
+  cachedListVersion = listVersion;
+  queueMicrotask(() => {
+    snapshotInFlight = false;
+  });
+  return cachedList;
 }
 
 export function getActiveShipmentStoreVersion() {
@@ -119,6 +145,9 @@ export function clearActiveShipmentStore() {
   rowsByKey.clear();
   listVersion = 0;
   bootstrapped = false;
+  cachedList = EMPTY_SNAPSHOT;
+  cachedListVersion = -1;
+  snapshotInFlight = false;
   notify();
 }
 

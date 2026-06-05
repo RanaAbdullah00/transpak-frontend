@@ -33,7 +33,14 @@ function ErrorBoundaryFallback({ error, onReset }) {
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, resetKey: props.resetKey };
+  }
+
+  static getDerivedStateFromProps(props, state) {
+    if (props.resetKey !== state.resetKey) {
+      return { hasError: false, error: null, resetKey: props.resetKey };
+    }
+    return null;
   }
 
   static getDerivedStateFromError(error) {
@@ -53,7 +60,6 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return <ErrorBoundaryFallback error={this.state.error} onReset={this.handleReset} />;
     }
-
     return this.props.children;
   }
 }
