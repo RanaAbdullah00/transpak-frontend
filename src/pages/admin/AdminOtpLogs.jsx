@@ -5,6 +5,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../../components/ui/TranslatedText.jsx';
 
 const AdminOtpLogs = () => {
   const { request } = useApi();
@@ -59,7 +60,11 @@ const AdminOtpLogs = () => {
           </button>
         </div>
       </form>
-      {error && <div className="alert alert-warning rounded-3">{error}</div>}
+      {error && (
+        <div className="alert alert-warning rounded-3">
+          <TranslatedText text={error} as="span" />
+        </div>
+      )}
       {loading ? (
         <SkeletonTable cols={5} rows={6} />
       ) : (

@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../../components/ui/TranslatedText.jsx';
 
 const AdminBids = () => {
   const { request } = useApi();
@@ -60,7 +61,11 @@ const AdminBids = () => {
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-3">{t('pages.admin.bidsTitle')}</h5>
-      {error && <div className="alert alert-warning rounded-3">{error}</div>}
+      {error && (
+        <div className="alert alert-warning rounded-3">
+          <TranslatedText text={error} as="span" />
+        </div>
+      )}
       {loading ? (
         <SkeletonTable cols={6} rows={8} />
       ) : (

@@ -7,6 +7,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../ui/TranslatedText.jsx';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
@@ -195,7 +196,9 @@ const CapacityMarketplace = () => {
       </div>
       {listError ? (
         <Card className="p-4 text-center">
-          <p className="text-danger small mb-3">{listError}</p>
+          <p className="text-danger small mb-3">
+            <TranslatedText text={listError} as="span" />
+          </p>
           <Button variant="outline-primary" size="sm" onClick={refreshMarketplace}>
             {t('pages.admin.tryAgain')}
           </Button>

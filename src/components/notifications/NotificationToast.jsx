@@ -6,6 +6,7 @@ import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { resolveNotificationPath } from '../../utils/notificationNavigation.js';
 import { notificationUILabels } from '../../utils/i18nLabels.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import TranslatedText from '../ui/TranslatedText.jsx';
 
 const PRIORITY_CLASS = {
   high: 'tp-toast tp-toast--success',
@@ -52,8 +53,8 @@ const NotificationToastHost = () => {
 
       const body = (
         <div className="tp-notification-toast">
-          {title ? <div className="fw-semibold small">{title}</div> : null}
-          {message ? <div className="small">{message}</div> : null}
+          {title ? <TranslatedText text={title} as="div" className="fw-semibold small" /> : null}
+          {message ? <TranslatedText text={message} as="div" className="small" /> : null}
           {showCta ? (
             <button
               type="button"

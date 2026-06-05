@@ -3,6 +3,7 @@ import Button from '../ui/Button.jsx';
 import FlowTimeline, { SPACE_STEPS, SPACE_STEPS_REJECTED } from '../ui/FlowTimeline.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import TranslatedText from '../ui/TranslatedText.jsx';
 import { spaceStepId, proposedSpacePrice } from '../../utils/spaceFlow.js';
 import { formatTons } from '../../utils/weightUnits.js';
 
@@ -52,7 +53,8 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
       ) : null}
       {row.message ? (
         <p className="small text-body-secondary mb-2 text-break">
-          <span className="text-muted">{t('loadsHub.requestMessage')}:</span> {row.message}
+          <span className="text-muted">{t('loadsHub.requestMessage')}:</span>{' '}
+          <TranslatedText text={row.message} as="span" />
         </p>
       ) : null}
       {status === 'rejected' ? (

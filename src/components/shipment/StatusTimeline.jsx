@@ -2,6 +2,7 @@ import React from 'react';
 import Card from '../ui/Card.jsx';
 import StatusBadge from './StatusBadge.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import TranslatedText from '../ui/TranslatedText.jsx';
 
 const StatusTimeline = ({ currentStatus, uiState = null, events }) => {
   const { t } = useLanguage();
@@ -17,9 +18,15 @@ const StatusTimeline = ({ currentStatus, uiState = null, events }) => {
           <li key={`${e.label}-${idx}`} className="tp-timeline-item">
             <div className={`tp-timeline-dot ${e.done ? 'done' : ''}`} />
             <div className="tp-timeline-content">
-              <div className="fw-semibold text-body">{e.label}</div>
+              <div className="fw-semibold text-body">
+                <TranslatedText text={e.label} as="span" />
+              </div>
               <div className="tp-timeline-meta">{e.time}</div>
-              {e.note ? <div className="tp-timeline-meta">{e.note}</div> : null}
+              {e.note ? (
+                <div className="tp-timeline-meta">
+                  <TranslatedText text={e.note} as="span" />
+                </div>
+              ) : null}
             </div>
           </li>
         ))}

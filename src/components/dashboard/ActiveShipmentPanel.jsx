@@ -8,6 +8,7 @@ import StatusTimeline from '../shipment/StatusTimeline.jsx';
 import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import TranslatedText from '../ui/TranslatedText.jsx';
 
 /**
  * Single tracking UI for shipper + carrier dashboards (backend tracking only, progress above map).
@@ -74,8 +75,10 @@ const ActiveShipmentPanel = ({
           </Link>
         ) : null}
       </div>
-      {ui?.showShipperAcceptedBanner ? (
-        <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
+      {ui?.showShipperAcceptedBanner && ui.label ? (
+        <p className="small text-primary mb-2 fw-semibold">
+          <TranslatedText text={ui.label} as="span" />
+        </p>
       ) : null}
       {!showTracking ? (
         <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>

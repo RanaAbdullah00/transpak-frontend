@@ -17,11 +17,12 @@ import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
 import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
 import { fetchActiveShipmentRow } from '../../utils/activeShipmentModel.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
-import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../../components/ui/TranslatedText.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 
 const ShipmentTracking = () => {
@@ -101,9 +102,10 @@ const ShipmentTracking = () => {
         shipmentRef: id,
         roleType: workspaceRole,
         soundType: 'status',
-        priority: 'medium'
+        priority: 'medium',
+        skipShipmentSync: true
       });
-      emitRealtimeRefresh('shipments');
+      void handleShipmentActivationSync(id, { force: true });
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.tracking.loadFailed') }));
     } finally {
@@ -263,7 +265,9 @@ const ShipmentTracking = () => {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
-        <p className="text-danger small">{userError}</p>
+        <p className="text-danger small">
+          <TranslatedText text={userError} as="span" />
+        </p>
         <Link to="/loads" className="btn btn-outline-primary btn-sm">
           {t('pages.tracking.trackByCodeCta')}
         </Link>
@@ -284,7 +288,11 @@ const ShipmentTracking = () => {
       {!showTracking && !loading ? (
         <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
       ) : null}
-      {userError ? <p className="text-warning small mb-2">{userError}</p> : null}
+      {userError ? (
+        <p className="text-warning small mb-2">
+          <TranslatedText text={userError} as="span" />
+        </p>
+      ) : null}
       <ShipmentCard shipment={shipment} uiState={ui} />
       <div className="tp-tracking-progress mb-3">
         <ShipmentProgressBox uiState={ui} eta={shipment.eta} />

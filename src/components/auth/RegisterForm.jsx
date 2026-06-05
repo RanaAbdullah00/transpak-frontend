@@ -8,6 +8,7 @@ import { registerApi, fetchProfileApi, addRoleApi } from '../../services/authSer
 import { notifySuccess, notifyError } from '../ui/ToastProvider.jsx';
 import { notifyAuthError } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../ui/TranslatedText.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { safeUnwrapAuthResponse } from '../../utils/authApiSafe.js';
 import { isEmailDelivered, getDeliveryHint } from '../../utils/otpDelivery.js';
@@ -213,11 +214,11 @@ const RegisterForm = ({ prefill: prefillProp = null, upgradeRole: upgradeRolePro
 
   return (
     <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-register-form mt-2">
-      {error && (
+      {error ? (
         <div className="alert alert-danger py-2 small" role="alert">
-          {error}
+          <TranslatedText text={error} as="span" />
         </div>
-      )}
+      ) : null}
       {success && (
         <div className="alert alert-success py-2 small" role="alert">
           {success}

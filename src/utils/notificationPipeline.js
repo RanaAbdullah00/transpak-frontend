@@ -1,4 +1,8 @@
-import { activateContractUI, isContractDispatchType } from './contractActivation.js';
+import {
+  handleShipmentActivationSync,
+  isContractDispatchType,
+  isShipmentSyncType
+} from './contractActivation.js';
 import { emitRealtimeRefresh } from './realtimeRefresh.js';
 import {
   buildNotification,
@@ -60,14 +64,6 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
   const type = String(dispatch.type || '').toUpperCase();
 
   if (isContractDispatchType(type)) {
-    const contractRef =
-      dispatch.notification?.shipmentRef ||
-      dispatch.notification?.refKey ||
-      dispatch.notification?.code ||
-      dispatch.payload?.loadCode ||
-      dispatch.refKey ||
-      null;
-    activateContractUI(contractRef);
     if (type === 'BID_ACCEPTED') emitRealtimeRefresh('bids');
     if (type === 'SPACE_ACCEPTED') emitRealtimeRefresh('space');
   } else {
@@ -77,18 +73,14 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
       COUNTER_OFFERED: 'bids',
       BID_SUGGESTED: 'bids',
       SHIPPER_CONFIRMATION_REQUEST: 'bids',
-      SHIPMENT_STATUS: 'shipments',
-      SHIPMENT_PICKED_UP: 'shipments',
-      SHIPMENT_IN_TRANSIT: 'shipments',
-      DELIVERED: 'shipments',
-      DELIVERY_COMPLETED: 'shipments',
-      STATUS_UPDATED: 'shipments',
       SPACE_REJECTED: 'space',
       SPACE_REQUEST: 'space',
       SPACE_IN_TRANSIT: 'space',
       SPACE_COMPLETED: 'space'
     };
-    emitRealtimeRefresh(scopes[type] || 'all');
+    const scope = scopes[type];
+    if (scope) emitRealtimeRefresh(scope);
+    else if (!isShipmentSyncType(type)) emitRealtimeRefresh('all');
   }
 
   const engineItems = processDispatchEvent(dispatch);
@@ -152,7 +144,9 @@ export function ingestFlowNotification(input = {}) {
   n.globalEventId = buildNotificationEventId(n);
   if (!claimNotificationEvent(n)) return n;
   if (pushNotification(n)) {
-    emitRealtimeRefresh('shipments');
+    if (!input.skipShipmentSync) {
+      void handleShipmentActivationSync(n.shipmentRef || null);
+    }
     publishNotificationEffects(n, { burstKey: n.globalEventId });
   }
   return n;

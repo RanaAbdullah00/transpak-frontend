@@ -8,6 +8,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { ensureArray, ensureRolesArray } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../../components/ui/TranslatedText.jsx';
 
 const ROLE_OPTIONS = ['shipper', 'carrier', 'admin'];
 
@@ -104,7 +105,7 @@ const AdminRoleManagement = () => {
 
       {listError && (
         <div className="alert alert-danger rounded-3 border-0 shadow-sm" role="alert">
-          {listError}
+          <TranslatedText text={listError} as="span" />
           <button type="button" className="btn btn-sm btn-outline-danger ms-2 rounded-lg" onClick={() => refresh()}>
             {t('pages.admin.tryAgain')}
           </button>

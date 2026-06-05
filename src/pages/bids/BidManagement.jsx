@@ -10,7 +10,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
-import { activateContractUI } from '../../utils/contractActivation.js';
+import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 // Screen summarising bids across loads.
@@ -37,7 +37,7 @@ const BidManagement = () => {
     try {
       const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
       const trackRef = res?.loadCode || bid.loadCode || bid.loadId;
-      activateContractUI(trackRef, { force: true });
+      void handleShipmentActivationSync(trackRef, { force: true });
       notifySuccess(t('flowSession.bidFlowStarted'));
       fetchBidsData();
     } catch (err) {

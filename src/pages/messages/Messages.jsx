@@ -9,6 +9,7 @@ import { AppContext } from '../../context/AppContext.jsx';
 import * as chatApi from '../../services/chatApi.js';
 import api from '../../services/api.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../ui/TranslatedText.jsx';
 import { translateRoleLabel } from '../../utils/i18nLabels.js';
 import TranslatedText from '../../components/ui/TranslatedText.jsx';
 
@@ -309,7 +310,11 @@ const Messages = () => {
   return (
     <div className={`container py-3 ${isUrdu ? 'tp-rtl' : ''}`}>
       <h5 className="mb-3">{t('common.messages')}</h5>
-      {err ? <div className="alert alert-warning py-2 small mb-2">{err}</div> : null}
+      {err ? (
+        <div className="alert alert-warning py-2 small mb-2">
+          <TranslatedText text={err} as="span" />
+        </div>
+      ) : null}
 
       <div className="row g-2">
         <div className="col-12 col-lg-4">

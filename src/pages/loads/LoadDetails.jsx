@@ -20,7 +20,7 @@ import {
 import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
-import { activateContractUI } from '../../utils/contractActivation.js';
+import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 const LoadDetails = () => {
@@ -94,7 +94,7 @@ const LoadDetails = () => {
     try {
       const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
       const trackRef = res?.loadCode || bid.loadCode || load?.code || bid.loadId;
-      activateContractUI(trackRef, { force: true });
+      void handleShipmentActivationSync(trackRef, { force: true });
       notifySuccess(t('flowSession.bidFlowStarted'));
       await fetchData();
     } catch (error) {

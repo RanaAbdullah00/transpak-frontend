@@ -9,7 +9,7 @@ import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
-import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import FlowSessionBanner from '../flow/FlowSessionBanner.jsx';
@@ -76,9 +76,10 @@ const ActiveShipmentCard = ({
         shipmentRef: trackRef,
         roleType: carrierMode ? 'carrier' : 'shipper',
         soundType: 'status',
-        priority: 'medium'
+        priority: 'medium',
+        skipShipmentSync: true
       });
-      emitRealtimeRefresh('shipments');
+      void handleShipmentActivationSync(trackRef, { force: true });
     } catch (err) {
       notifyApiError(err);
     } finally {

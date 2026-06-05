@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import { formatUserError } from '../../utils/userErrors.js';
+import TranslatedText from '../../components/ui/TranslatedText.jsx';
 
 const AdminNotifications = () => {
   const { request } = useApi();
@@ -49,7 +50,11 @@ const AdminNotifications = () => {
     <div className="container py-3 tp-dashboard tp-dashboard--admin">
       <h5 className="mb-2">{t('pages.admin.notificationsTitle')}</h5>
       <p className="small text-muted mb-3">{t('pages.admin.notificationsLead')}</p>
-      {error && <div className="alert alert-warning rounded-3">{error}</div>}
+      {error && (
+        <div className="alert alert-warning rounded-3">
+          <TranslatedText text={error} as="span" />
+        </div>
+      )}
       {loading ? (
         <SkeletonTable cols={5} rows={8} />
       ) : (

@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { normalizeActiveShipmentList } from '../../utils/activeShipmentModel.js';
+import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 
 const AcceptedLoads = () => {
@@ -29,17 +30,28 @@ const AcceptedLoads = () => {
   }, [request]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    void handleShipmentActivationSync(null, { force: true });
+  }, []);
 
   useEffect(() => {
+    const onHydrate = (e) => {
+      const nextRows = e?.detail?.rows;
+      if (!Array.isArray(nextRows)) return;
+      if (!nextRows.length && e?.detail?.pendingRetry) return;
+      setRows(nextRows);
+    };
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'shipments') return;
+      if (scope !== 'shipments') return;
+      if (e?.detail?.atomicSync) return;
       refresh();
     };
+    window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    return () => {
+      window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+    };
   }, [refresh]);
 
   const dashboardHref = dashboardPathForRole(user?.activeRole);

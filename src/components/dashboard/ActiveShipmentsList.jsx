@@ -4,10 +4,11 @@ import Loader from '../ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeActiveShipmentList } from '../../utils/activeShipmentModel.js';
+import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
 
 /**
  * Active shipments — sole source of truth: GET /shipments/active.
- * Bid/capacity/socket state must not drive this list.
+ * State updates via handleShipmentActivationSync hydrate only.
  */
 const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   const { t } = useLanguage();
@@ -16,7 +17,6 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await request({
         method: 'GET',
@@ -32,19 +32,29 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   }, [request]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    void handleShipmentActivationSync(null, { force: true });
+  }, []);
 
   useEffect(() => {
+    const onHydrate = (e) => {
+      const nextRows = e?.detail?.rows;
+      if (!Array.isArray(nextRows)) return;
+      if (!nextRows.length && e?.detail?.pendingRetry) return;
+      setRows(nextRows);
+      setLoading(false);
+    };
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'shipments') {
-        return;
-      }
+      if (scope !== 'shipments') return;
+      if (e?.detail?.atomicSync) return;
       refresh();
     };
+    window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    return () => {
+      window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+    };
   }, [refresh]);
 
   if (loading) {

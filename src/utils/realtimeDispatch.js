@@ -1,3 +1,4 @@
+import { runShipmentSyncFromDispatch } from './contractActivation.js';
 import { ingestRealtimeDispatch } from './notificationPipeline.js';
 import {
   buildNotificationEventId,
@@ -47,21 +48,26 @@ export const SCOPE_REFRESH = {
 };
 
 /**
- * Socket dispatch entry — refresh scopes, notification engine, store, toast, sound.
+ * Socket dispatch entry — shipment sync ALWAYS runs; dedupe blocks notifications only.
  */
 export function handleDispatchEvent(dispatch, { onNotification } = {}) {
   if (!dispatch || typeof dispatch !== 'object') return;
   const type = String(dispatch.type || '').toUpperCase();
+
+  runShipmentSyncFromDispatch(dispatch, type);
+
   const probeId = buildNotificationEventId({
     dispatchType: type,
     shipmentRef:
       dispatch.notification?.shipmentRef ||
       dispatch.notification?.refKey ||
+      dispatch.payload?.loadCode ||
       dispatch.refKey ||
       dispatch.notification?.code,
     timestamp: dispatch.notification?.createdAt || dispatch.ts,
     eventId: dispatch.eventId || dispatch.notification?.id
   });
   if (hasNotificationEventId(probeId)) return;
+
   ingestRealtimeDispatch(dispatch, { onPersistedNotification: onNotification });
 }
