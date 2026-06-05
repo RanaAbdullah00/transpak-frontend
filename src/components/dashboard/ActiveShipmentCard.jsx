@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ActiveShipmentPanel from './ActiveShipmentPanel.jsx';
 import StatusBadge from '../shipment/StatusBadge.jsx';
@@ -6,6 +6,7 @@ import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
 import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
+import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
@@ -32,7 +33,17 @@ const ActiveShipmentCard = ({
   const { t } = useLanguage();
   const { request } = useApi();
   const { user } = useAuth();
-  const workspaceRole = carrierMode ? 'carrier' : user?.activeRole === 'shipper' ? 'shipper' : null;
+  const stableRoleRef = useRef(null);
+  if (stableRoleRef.current == null) {
+    stableRoleRef.current = carrierMode
+      ? 'carrier'
+      : user?.activeRole === 'shipper'
+        ? 'shipper'
+        : user?.activeRole === 'carrier'
+          ? 'carrier'
+          : null;
+  }
+  const workspaceRole = stableRoleRef.current;
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [advancingStatus, setAdvancingStatus] = useState(false);
 
@@ -44,22 +55,28 @@ const ActiveShipmentCard = ({
     shipmentStatus,
     trackingEnabled: trackingEnabledProp,
     shareLive: shareLive && Boolean(assignedCarrierId),
-    enabled: trackingEnabled,
-    role: workspaceRole
+    enabled: Boolean(trackRef),
+    role: workspaceRole,
+    flowType
   });
 
   const ui = useMemo(() => withShipmentUILabels(uiState, t), [uiState, t]);
+  const liveTrackingActive = Boolean(ui.unifiedContract?.trackingEnabled ?? trackingEnabled);
+  const canRenderAdvanceButton =
+    carrierMode && isValidShipmentTrackRef(trackRef) && ui.canUpdateStatus;
+  const canEnableAdvance = canRenderAdvanceButton && ui.upcomingStatus != null;
 
   useEffect(() => {
-    if (trackingEnabled && (defaultExpanded || carrierMode)) setExpanded(true);
-  }, [trackingEnabled, defaultExpanded, carrierMode]);
+    if (liveTrackingActive && (defaultExpanded || carrierMode)) setExpanded(true);
+  }, [liveTrackingActive, defaultExpanded, carrierMode]);
 
-  const href = trackingEnabled
-    ? `/shipments/tracking/${encodeURIComponent(trackRef)}`
-    : null;
+  const href =
+    liveTrackingActive && isValidShipmentTrackRef(trackRef)
+      ? `/shipments/tracking/${encodeURIComponent(trackRef)}`
+      : null;
 
   const handleAdvanceStatus = async (next) => {
-    if (!next || !trackRef || !trackingEnabled || !ui.canUpdateStatus) return;
+    if (!next || !trackRef || !canEnableAdvance) return;
     setAdvancingStatus(true);
     try {
       await request({
@@ -133,19 +150,21 @@ const ActiveShipmentCard = ({
           <ActiveShipmentPanel
             trackingData={trackingData}
             loadingTracking={loading}
-            liveDriver={trackingEnabled && shareLive && expanded}
+            liveDriver={liveTrackingActive && shareLive && expanded}
             liveLocation={livePos}
             geoError={geoError}
             trackHref={href}
-            trackingEnabled={trackingEnabled}
+            trackingEnabled={liveTrackingActive}
             uiState={ui}
             carrierAdvance={
-              trackingEnabled && ui.canUpdateStatus
+              carrierMode && isValidShipmentTrackRef(trackRef)
                 ? {
                     title: t('pages.tracking.updateStatus'),
-                    upcoming: ui.upcomingStatus,
+                    upcoming: canEnableAdvance ? ui.upcomingStatus : null,
                     loadingStatus: advancingStatus,
-                    buttonLabel: t(advanceStatusLabelKey(ui.upcomingStatus)),
+                    buttonLabel: ui.upcomingStatus
+                      ? t(advanceStatusLabelKey(ui.upcomingStatus))
+                      : t('pages.tracking.updateStatus'),
                     statusLine: t('pages.tracking.advanceStatus'),
                     onAdvance: handleAdvanceStatus
                   }

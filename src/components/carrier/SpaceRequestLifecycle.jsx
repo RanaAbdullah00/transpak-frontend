@@ -1,17 +1,19 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
 import FlowTimeline, { SPACE_STEPS, SPACE_STEPS_REJECTED } from '../ui/FlowTimeline.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import { spaceStepId, proposedSpacePrice } from '../../utils/spaceFlow.js';
+import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { formatTons } from '../../utils/weightUnits.js';
 
 const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplete, showCarrierActions, priority = false }) => {
   const { t } = useLanguage();
   const status = String(row.status || '').toLowerCase();
   const stepId = spaceStepId(status);
-  const trackRef = row.loadCode || row.loadId;
+  const trackRef = isValidShipmentTrackRef(row.loadCode) ? String(row.loadCode).trim() : null;
   const usesShipmentEngine = Boolean(trackRef);
   const proposed = proposedSpacePrice(row);
   const steps = status === 'rejected' ? SPACE_STEPS_REJECTED : SPACE_STEPS;
@@ -70,6 +72,14 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
             {t('loadsHub.rejectRequest')}
           </Button>
         </div>
+      ) : null}
+      {usesShipmentEngine && trackRef && (status === 'active' || status === 'accepted' || status === 'in_transit') ? (
+        <Link
+          to={`/shipments/tracking/${encodeURIComponent(trackRef)}`}
+          className="btn btn-sm btn-primary"
+        >
+          {t('pages.dashboard.viewLiveTracking')}
+        </Link>
       ) : null}
       {!usesShipmentEngine && (status === 'active' || status === 'accepted') ? (
         <Button size="sm" variant="primary" onClick={() => onInTransit?.(row.id)}>

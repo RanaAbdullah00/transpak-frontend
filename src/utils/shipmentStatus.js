@@ -1,6 +1,25 @@
 /** Keep in sync with backend `utils/shipmentStatus.js` (canonical values). */
 export const SHIPMENT_ORDER = ['posted', 'booked', 'pickedup', 'intransit', 'delivered', 'closed'];
 
+const UUID_TRACK_REF =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Reject null/empty/UUID refs — shipment engine routes require load codes. */
+export function isValidShipmentTrackRef(ref) {
+  if (ref == null) return false;
+  if (typeof ref !== 'string' && typeof ref !== 'number') return false;
+  const s = String(ref).trim();
+  if (!s) return false;
+  if (UUID_TRACK_REF.test(s)) return false;
+  return true;
+}
+
+export function getAuthoritativeTrackRef(row) {
+  if (!row || typeof row !== 'object') return null;
+  const candidate = row.trackRef ?? row.ref ?? row.code ?? row.loadCode ?? null;
+  return isValidShipmentTrackRef(candidate) ? String(candidate).trim() : null;
+}
+
 const LEGACY_TO_CANON = {
   posted: 'posted',
   booked: 'booked',
@@ -9,6 +28,8 @@ const LEGACY_TO_CANON = {
   intransit: 'intransit',
   in_transit: 'intransit',
   assigned: 'booked',
+  active: 'booked',
+  accepted: 'booked',
   delivered: 'delivered',
   closed: 'closed',
   pending: 'posted',

@@ -9,7 +9,11 @@ import {
   CONTRACT_PHASE
 } from './contractStateEngine.js';
 import { resolveContractConsistency } from './contractConsistencyResolver.js';
-import { mapLegacyToContract, canCarrierUpdateContractStatus } from './contractMapper.js';
+import {
+  mapLegacyToContract,
+  canCarrierUpdateContractStatus,
+  CONTRACT_STATUS
+} from './contractMapper.js';
 
 /** Statuses where live GPS + socket tracking are allowed (matches backend contract). */
 export const TRACKING_ACTIVE_STATUSES = Object.freeze(['booked', 'pickedup', 'intransit']);
@@ -57,7 +61,22 @@ export function getShipmentUIState(input = {}) {
   const normalized = normalizeContractFields(input);
   const ref = normalized.ref || getTrackingRef(normalized);
   const { status, hasAssigned, hasValidRef } = contractTrackFlags({ ...normalized, ref });
-  const canTrack = canTrackShipment({ ...normalized, ref, status: input.shipmentStatus ?? input.status });
+  const unifiedContract = mapLegacyToContract({
+    ...normalized,
+    ref,
+    ...input,
+    shipmentStatus: input.shipmentStatus ?? input.status
+  });
+  const legacyCanTrack = canTrackShipment({
+    ...normalized,
+    ref,
+    status: input.shipmentStatus ?? input.status
+  });
+  const contractCanTrack =
+    (unifiedContract.status === CONTRACT_STATUS.ACCEPTED ||
+      unifiedContract.status === CONTRACT_STATUS.IN_TRANSIT) &&
+    Boolean(unifiedContract.trackingEnabled);
+  const canTrack = legacyCanTrack || contractCanTrack;
 
   const contractPhase = deriveContractPhase({ ...normalized, ref, ...input });
   const phase =
@@ -87,13 +106,17 @@ export function getShipmentUIState(input = {}) {
           ? `status.${status}`
           : getContractUILabelKey(contractPhase, status);
 
-  const upcoming = nextShipmentStatus(status);
-  const unifiedContract = mapLegacyToContract({ ...normalized, ref, ...input, shipmentStatus: input.shipmentStatus ?? input.status });
+  const contractRef = unifiedContract.ref || ref;
+  const advanceFromStatus =
+    unifiedContract.status === CONTRACT_STATUS.IN_TRANSIT
+      ? 'intransit'
+      : unifiedContract.status === CONTRACT_STATUS.ACCEPTED
+        ? 'booked'
+        : status;
+  const upcoming = nextShipmentStatus(advanceFromStatus);
   const canUpdateStatus =
-    canTrack &&
     isCarrier &&
-    status !== 'closed' &&
-    Boolean(upcoming) &&
+    Boolean(String(contractRef || '').trim()) &&
     canCarrierUpdateContractStatus(unifiedContract);
 
   return {

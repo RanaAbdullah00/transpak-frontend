@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import TrackingMap from '../../components/shipment/TrackingMap.jsx';
 import RouteInfo from '../../components/shipment/RouteInfo.jsx';
@@ -14,6 +14,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
+import { getAuthoritativeTrackRef, isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
 import { fetchActiveShipmentRow } from '../../utils/activeShipmentModel.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
@@ -34,25 +35,33 @@ const ShipmentTracking = () => {
   const [advancing, setAdvancing] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const [activeLoading, setActiveLoading] = useState(true);
+  const [backgroundHydrating, setBackgroundHydrating] = useState(false);
   const isCarrier =
     user?.activeRole === 'carrier' || (user?.roles || []).includes('carrier');
-  const shareLive = isCarrier && Boolean(id);
-  const workspaceRole = isCarrier ? 'carrier' : 'shipper';
+  const stableRoleRef = useRef(null);
+  if (stableRoleRef.current == null) {
+    stableRoleRef.current = isCarrier ? 'carrier' : 'shipper';
+  }
+  const workspaceRole = stableRoleRef.current;
+  const shareLive = workspaceRole === 'carrier' && Boolean(id);
 
-  const refreshActiveRow = useCallback(async () => {
+  const refreshActiveRow = useCallback(async ({ silent = false } = {}) => {
     if (!id) {
       setActiveRow(null);
       setActiveLoading(false);
+      setBackgroundHydrating(false);
       return;
     }
-    setActiveLoading(true);
+    if (silent) setBackgroundHydrating(true);
+    else setActiveLoading(true);
     try {
       const row = await fetchActiveShipmentRow(request, id);
       setActiveRow(row);
     } catch {
       setActiveRow(null);
     } finally {
-      setActiveLoading(false);
+      if (silent) setBackgroundHydrating(false);
+      else setActiveLoading(false);
     }
   }, [id, request]);
 
@@ -63,29 +72,63 @@ const ShipmentTracking = () => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (!scope || scope === 'all' || scope === 'shipments') refreshActiveRow();
+      if (!scope || scope === 'all' || scope === 'shipments') refreshActiveRow({ silent: true });
+    };
+    const onHydrate = () => refreshActiveRow({ silent: true });
+    const onContractSync = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      if (ref && ref === id) refreshActiveRow({ silent: true });
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
-  }, [refreshActiveRow]);
+    window.addEventListener('tp:active-shipments-hydrate', onHydrate);
+    window.addEventListener('tp:contract-sync', onContractSync);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
+      window.removeEventListener('tp:contract-sync', onContractSync);
+    };
+  }, [refreshActiveRow, id]);
 
-  const trackingEnabled = Boolean(activeRow?.trackingEnabled);
+  const isHydrating = activeLoading || backgroundHydrating;
+  const hasAuthoritativeRow = Boolean(getAuthoritativeTrackRef(activeRow));
+  const awaitingAuthoritativeRow =
+    workspaceRole === 'carrier' && Boolean(id) && !isHydrating && !hasAuthoritativeRow;
+
+  const rowForTracking = useMemo(() => {
+    if (activeRow) return activeRow;
+    if (!id || isHydrating || !isValidShipmentTrackRef(id)) return null;
+    if (workspaceRole !== 'carrier') return null;
+    return {
+      trackRef: id,
+      code: id,
+      loadCode: id,
+      shipmentStatus: 'booked',
+      trackingEnabled: true,
+      flowType: 'CAPACITY',
+      assignedCarrierId: user?.id ?? null
+    };
+  }, [activeRow, id, isHydrating, workspaceRole, user?.id]);
+
+  const trackingEnabled = Boolean(rowForTracking?.trackingEnabled);
 
   const { trackingData: payload, uiState, loading, error, livePos, geoError } = useShipmentTracking({
     trackRef: id,
-    shipmentStatus: activeRow?.shipmentStatus ?? null,
+    shipmentStatus: rowForTracking?.shipmentStatus ?? null,
     trackingEnabled,
-    assignedCarrierId: activeRow?.assignedCarrierId ?? null,
+    assignedCarrierId: rowForTracking?.assignedCarrierId ?? null,
     shareLive,
-    enabled: Boolean(id && activeRow && trackingEnabled),
-    role: workspaceRole
+    enabled: Boolean(id && rowForTracking),
+    role: workspaceRole,
+    flowType: rowForTracking?.flowType ?? null
   });
 
   const ui = useMemo(() => withShipmentUILabels(uiState || {}, t), [uiState, t]);
   const upcomingStatus = ui.upcomingStatus;
+  const canRenderAdvanceButton = hasAuthoritativeRow && ui.canUpdateStatus;
+  const canEnableButton = canRenderAdvanceButton && upcomingStatus != null;
 
   const handleAdvanceStatus = useCallback(async () => {
-    if (!upcomingStatus || !id) return;
+    if (!upcomingStatus || !id || !canEnableButton) return;
     setAdvancing(true);
     try {
       await request({
@@ -110,7 +153,7 @@ const ShipmentTracking = () => {
     } finally {
       setAdvancing(false);
     }
-  }, [id, upcomingStatus, request, t]);
+  }, [id, upcomingStatus, canEnableButton, request, t, workspaceRole]);
 
   const tracking = payload?.tracking;
   const originName = payload?.origin || '';
@@ -137,7 +180,7 @@ const ShipmentTracking = () => {
       .map((c) => [Number(c[0]), Number(c[1])]);
   }, [payload?.liveTrackingMap?.coordinates]);
 
-  const showTracking = trackingEnabled;
+  const showTracking = Boolean(ui.unifiedContract?.trackingEnabled ?? trackingEnabled);
 
   const currentLocation = useMemo(() => {
     if (!showTracking) return null;
@@ -202,7 +245,7 @@ const ShipmentTracking = () => {
     [tracking, currentLocation, payload, coords, originName, destinationName, loading]
   );
 
-  if (!id) {
+  if (!id || !isValidShipmentTrackRef(id)) {
     return (
       <div className="container py-4 tp-tracking-page">
         <h5 className="mb-3 text-body">{t('pages.tracking.title')}</h5>
@@ -227,7 +270,18 @@ const ShipmentTracking = () => {
     );
   }
 
-  if (!activeRow) {
+  if (!rowForTracking) {
+    if (isHydrating) {
+      return (
+        <div className="container py-4 tp-tracking-page">
+          <h5 className="mb-3 text-body">{t('pages.tracking.title')}</h5>
+          <div className="text-center py-4">
+            <Loader />
+            <p className="small tp-support-muted mt-3 mb-0">{t('pages.tracking.waitingForData')}</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="container py-4 tp-tracking-page">
         <h5 className="mb-3 text-body">{t('pages.tracking.title')}</h5>
@@ -285,7 +339,7 @@ const ShipmentTracking = () => {
         <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
       ) : null}
       {!showTracking && !loading ? (
-        <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
+        <p className="small text-muted mb-2">{t('pages.tracking.waitingForData')}</p>
       ) : null}
       {userError ? (
         <p className="text-warning small mb-2">
@@ -309,16 +363,23 @@ const ShipmentTracking = () => {
         </div>
       ) : null}
       <StatusTimeline uiState={ui} events={timelineEvents} />
-      {ui.canUpdateStatus && upcomingStatus ? (
+      {workspaceRole === 'carrier' && rowForTracking ? (
         <div className="mt-3 mb-3">
           <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>
+          {awaitingAuthoritativeRow || !canRenderAdvanceButton ? (
+            <p className="small text-muted mb-2">{t('pages.tracking.waitingForData')}</p>
+          ) : null}
           <Button
             variant="primary"
             className="tp-touch-target"
-            disabled={advancing}
+            disabled={!canEnableButton || advancing}
             onClick={handleAdvanceStatus}
           >
-            {advancing ? t('common.loading') : t(advanceStatusLabelKey(upcomingStatus))}
+            {advancing
+              ? t('common.loading')
+              : upcomingStatus
+                ? t(advanceStatusLabelKey(upcomingStatus))
+                : t('pages.tracking.updateStatus')}
           </Button>
         </div>
       ) : null}

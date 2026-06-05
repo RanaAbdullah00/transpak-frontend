@@ -48,10 +48,14 @@ export function useShipmentTracking({
   /** Required — status from GET /shipments/active */
   shipmentStatus = null,
   /** Required — trackingEnabled from GET /shipments/active row only */
-  trackingEnabled = false
+  trackingEnabled = false,
+  flowType = null
 }) {
   const { t } = useLanguage();
   const { registerTrackingHandler, getSocket, socketStatus } = useContext(AppContext) || {};
+  const stableRoleRef = useRef(role);
+  if (role && stableRoleRef.current == null) stableRoleRef.current = role;
+  const effectiveRole = stableRoleRef.current ?? role;
 
   const safeShipment = useMemo(
     () =>
@@ -63,9 +67,11 @@ export function useShipmentTracking({
         assignedCarrierId,
         assigned_carrier_id: assignedCarrierId,
         status: shipmentStatus,
-        shipmentStatus
+        shipmentStatus,
+        flowType,
+        role: effectiveRole
       }),
-    [trackRef, assignedCarrierId, shipmentStatus]
+    [trackRef, assignedCarrierId, shipmentStatus, flowType, effectiveRole]
   );
 
   const localRef = useMemo(
@@ -85,31 +91,47 @@ export function useShipmentTracking({
   const hasActiveRow = shipmentStatus != null;
 
   const uiState = useMemo(() => {
-    const gate =
-      hasActiveRow && enabled && isActiveShipmentTrackable({ shipmentStatus, trackingEnabled });
-    const isCarrier = String(role || '').toLowerCase() === 'carrier';
+    const isCarrier = String(effectiveRole || '').toLowerCase() === 'carrier';
     const resolved = resolveContractConsistency({
       restShipment: safeShipment,
       trackingPayload: null,
-      role
+      role: effectiveRole
     });
+    const unified = resolved.uiState.unifiedContract;
+    const contractTrackable = Boolean(unified?.trackingEnabled);
+    const restTrackable = isActiveShipmentTrackable({ shipmentStatus, trackingEnabled });
+    const gate = hasActiveRow && enabled && (restTrackable || contractTrackable);
+    const trackLive = gate || Boolean(resolved.uiState.canTrack);
+    const {
+      canUpdateStatus,
+      showCarrierAdvance,
+      upcomingStatus,
+      unifiedContract,
+      ...trackingNeutralUi
+    } = resolved.uiState;
     return {
-      ...resolved.uiState,
+      ...trackingNeutralUi,
       status: shipmentStatus || resolved.uiState.status,
-      canTrack: gate,
-      trackingActive: gate,
-      contractActive: gate,
-      isActive: gate,
-      showLiveMap: gate,
-      showLiveDriver: gate,
-      allowSocketJoin: gate,
-      allowGpsPublish: gate && isCarrier,
-      canUpdateStatus: gate && isCarrier && Boolean(resolved.uiState.upcomingStatus)
+      canUpdateStatus,
+      showCarrierAdvance,
+      upcomingStatus,
+      unifiedContract,
+      canTrack: trackLive,
+      trackingActive: trackLive,
+      contractActive: trackLive || resolved.uiState.contractActive,
+      isActive: trackLive,
+      showLiveMap: trackLive,
+      showLiveDriver: trackLive,
+      allowSocketJoin: trackLive,
+      allowGpsPublish: trackLive && isCarrier
     };
-  }, [role, safeShipment, hasActiveRow, enabled, shipmentStatus, trackingEnabled]);
+  }, [effectiveRole, safeShipment, hasActiveRow, enabled, shipmentStatus, trackingEnabled]);
 
   const trackingGate =
-    hasActiveRow && enabled && isActiveShipmentTrackable({ shipmentStatus, trackingEnabled });
+    hasActiveRow &&
+    enabled &&
+    (isActiveShipmentTrackable({ shipmentStatus, trackingEnabled }) ||
+      Boolean(uiState.unifiedContract?.trackingEnabled));
   const gpsAllowed = shareLive && trackingGate && uiState.allowGpsPublish;
 
   const { position: livePos, error: geoError } = useLiveLocation(gpsAllowed && Boolean(localRef));

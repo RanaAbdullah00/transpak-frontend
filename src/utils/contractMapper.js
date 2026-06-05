@@ -2,7 +2,6 @@ import { normalizeBidStatus, BID_STATUS, isCounterOffered, isAwaitingShipper } f
 import { normalizeShipmentStatus } from './shipmentStatus.js';
 import { normalizeContractFields } from './contractFieldNormalizer.js';
 import { getTrackingRef } from './trackingRefResolver.js';
-import { canTrackShipment } from './shipmentUIState.js';
 
 /** Unified contract model — maps legacy bid/load/space rows without changing APIs. */
 export const CONTRACT_TYPE = Object.freeze({
@@ -57,14 +56,21 @@ function mapBidToContractStatus(bidStatus) {
 export function mapLegacyToContract(input = {}) {
   const fields = normalizeContractFields(input);
   const ref = fields.ref || getTrackingRef(input);
-  const spaceStatus = input.spaceRequestStatus ?? input.spaceStatus ?? (input.listingId ? input.status : null);
+  const isSpaceRow =
+    input.listingId != null ||
+    input.requestedKg != null ||
+    input.spaceRequestId != null ||
+    String(input.flowType || '').toUpperCase() === 'CAPACITY' ||
+    String(input.booking_reference || input.bookingReference || '').startsWith('space:');
+  const spaceStatus =
+    input.spaceRequestStatus ?? input.spaceStatus ?? (isSpaceRow ? input.status : null);
   const bidStatus = input.bidStatus ?? input.bid?.status;
   const shipmentStatus = input.shipmentStatus ?? input.tracking?.status ?? input.status;
 
   let type = CONTRACT_TYPE.LOAD;
   let status = CONTRACT_STATUS.PENDING;
 
-  if (spaceStatus != null && (input.listingId != null || input.requestedKg != null || input.spaceRequestId)) {
+  if (spaceStatus != null && isSpaceRow) {
     type = CONTRACT_TYPE.SPACE;
     status = mapSpaceStatus(spaceStatus);
   } else if (bidStatus != null) {
@@ -83,12 +89,13 @@ export function mapLegacyToContract(input = {}) {
     status = mapSpaceStatus(spaceStatus);
   }
 
-  const trackingEnabled = canTrackShipment({
-    ...fields,
-    ref,
-    status: shipmentStatus,
-    shipmentStatus
-  });
+  const hasCarrier = Boolean(
+    String(fields.assignedCarrierId ?? input.carrierId ?? input.carrier_id ?? '').trim()
+  );
+  const trackingEnabled =
+    (status === CONTRACT_STATUS.ACCEPTED || status === CONTRACT_STATUS.IN_TRANSIT) &&
+    Boolean(ref) &&
+    hasCarrier;
 
   return {
     id: String(input.id ?? input.requestId ?? input.shipmentId ?? ref ?? '').trim() || null,
