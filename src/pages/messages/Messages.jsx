@@ -9,9 +9,8 @@ import { AppContext } from '../../context/AppContext.jsx';
 import * as chatApi from '../../services/chatApi.js';
 import api from '../../services/api.js';
 import { formatUserError } from '../../utils/userErrors.js';
-import TranslatedText from '../ui/TranslatedText.jsx';
-import { translateRoleLabel } from '../../utils/i18nLabels.js';
 import TranslatedText from '../../components/ui/TranslatedText.jsx';
+import { translateRoleLabel } from '../../utils/i18nLabels.js';
 
 const SEEN_DEBOUNCE_MS = 800;
 const CHAT_FILE_PREVIEW = '__TP_FILE__';
