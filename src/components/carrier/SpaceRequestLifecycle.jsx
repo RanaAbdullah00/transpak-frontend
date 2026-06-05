@@ -71,7 +71,7 @@ const SpaceRequestLifecycle = ({ row, onAccept, onReject, onInTransit, onComplet
           </Button>
         </div>
       ) : null}
-      {!usesShipmentEngine && status === 'active' ? (
+      {!usesShipmentEngine && (status === 'active' || status === 'accepted') ? (
         <Button size="sm" variant="primary" onClick={() => onInTransit?.(row.id)}>
           {t('loadsHub.markInTransit')}
         </Button>

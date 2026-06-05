@@ -1,6 +1,7 @@
 import { runShipmentSyncFromDispatch } from './contractActivation.js';
 import { bridgeDispatchToShipmentStore } from './shipmentEventBridge.js';
 import { ingestRealtimeDispatch } from './notificationPipeline.js';
+import { reconcileContractUpdate, shouldTriggerContractSync } from './contractSyncGuarantee.js';
 import {
   buildNotificationEventId,
   hasNotificationEventId
@@ -57,6 +58,10 @@ export function handleDispatchEvent(dispatch, { onNotification } = {}) {
 
   if (!bridgeDispatchToShipmentStore(dispatch)) {
     runShipmentSyncFromDispatch(dispatch, type);
+  }
+
+  if (shouldTriggerContractSync(type)) {
+    void reconcileContractUpdate({ dispatch, source: 'socket' });
   }
 
   const probeId = buildNotificationEventId({

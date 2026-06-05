@@ -31,6 +31,10 @@ import {
   trackingPayloadEqual
 } from '../utils/trackingPayloadSanitizer.js';
 import { isActiveShipmentTrackable } from '../utils/activeShipmentModel.js';
+import {
+  scheduleThrottledTrackingFetch,
+  bumpTrackingFetchGeneration
+} from '../utils/productionStabilityLayer.js';
 
 /**
  * Coordinates + live GPS only. State gates come exclusively from GET /shipments/active row.
@@ -75,6 +79,7 @@ export function useShipmentTracking({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fetchGenerationRef = useRef(0);
+  const fetchTrackRef = useRef(null);
   const socketKey = payload?.refKey || localRef;
 
   const hasActiveRow = shipmentStatus != null;
@@ -153,8 +158,11 @@ export function useShipmentTracking({
     [enabled, localRef, t, applyPipeline]
   );
 
+  fetchTrackRef.current = fetchTrack;
+
   useEffect(() => {
     const reset = () => {
+      bumpTrackingFetchGeneration(localRef);
       fetchGenerationRef.current += 1;
       setPayload(null);
       setError('');
@@ -211,21 +219,37 @@ export function useShipmentTracking({
 
   useEffect(() => {
     if (!enabled || !localRef) return undefined;
+    const runThrottledFetch = (opts = {}) => {
+      scheduleThrottledTrackingFetch(localRef, () =>
+        fetchTrackRef.current?.({ silent: true, ...opts })
+      );
+    };
     const onRefresh = (e) => {
       if (e?.detail?.scope !== 'shipments') return;
       if (e?.detail?.atomicSync) return;
-      fetchTrack({ silent: true });
+      runThrottledFetch();
+    };
+    const onContractSync = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      if (!ref || (ref !== localRef && ref !== socketKey)) return;
+      runThrottledFetch({ reconnectSnapshot: e?.detail?.source === 'fallback' });
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
-  }, [enabled, localRef, fetchTrack]);
+    window.addEventListener('tp:contract-sync', onContractSync);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:contract-sync', onContractSync);
+    };
+  }, [enabled, localRef, socketKey, fetchTrack]);
 
   useEffect(() => {
     if (!enabled || !localRef) return undefined;
     const onReconnectSnapshot = (e) => {
       const ref = String(e.detail?.ref || '').trim();
       if (ref !== localRef && ref !== socketKey) return;
-      fetchTrack({ silent: true, reconnectSnapshot: true });
+      scheduleThrottledTrackingFetch(localRef, () =>
+        fetchTrackRef.current?.({ silent: true, reconnectSnapshot: true })
+      );
     };
     window.addEventListener('tp:tracking-snapshot', onReconnectSnapshot);
     return () => window.removeEventListener('tp:tracking-snapshot', onReconnectSnapshot);

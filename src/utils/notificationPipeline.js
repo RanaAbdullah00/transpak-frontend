@@ -14,6 +14,7 @@ import {
   buildNotificationEventId,
   claimNotificationEvent
 } from './notificationEventRegistry.js';
+import { reconcileContractUpdate } from './contractSyncGuarantee.js';
 
 const effectBurstAt = new Map();
 const EFFECT_BURST_MS = 1200;
@@ -67,8 +68,18 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
       SHIPPER_CONFIRMATION_REQUEST: 'bids',
       SPACE_REJECTED: 'space',
       SPACE_REQUEST: 'space',
+      SPACE_REQUEST_SENT: 'space',
+      SPACE_ACCEPTED: 'space',
       SPACE_IN_TRANSIT: 'space',
-      SPACE_COMPLETED: 'space'
+      SPACE_COMPLETED: 'space',
+      STATUS_UPDATED: 'shipments',
+      LOCATION_UPDATED: 'shipments',
+      CONTRACT_CREATED: 'shipments',
+      CONTRACT_ACCEPTED: 'shipments',
+      CONTRACT_REJECTED: 'bids',
+      CONTRACT_COMPLETED: 'shipments',
+      COUNTER_OFFER_SENT: 'bids',
+      COUNTER_OFFER_ACCEPTED: 'bids'
     };
     const scope = scopes[type];
     if (scope) emitRealtimeRefresh(scope);
@@ -136,5 +147,29 @@ export function ingestFlowNotification(input = {}) {
   if (pushNotification(n)) {
     publishNotificationEffects(n, { burstKey: n.globalEventId });
   }
+  emitRealtimeRefresh('shipments', { contractSync: true });
+  void reconcileContractUpdate({
+    dispatch: {
+      type: input.dispatchType || 'STATUS_UPDATED',
+      ts: input.timestamp || Date.now(),
+      payload: {
+        shipmentRef: input.shipmentRef,
+        ref: input.shipmentRef,
+        loadCode: input.shipmentRef,
+        status: input.status,
+        shipmentStatus: input.status,
+        updatedAt: input.timestamp || Date.now()
+      }
+    },
+    restRow: {
+      shipmentRef: input.shipmentRef,
+      ref: input.shipmentRef,
+      loadCode: input.shipmentRef,
+      status: input.status,
+      shipmentStatus: input.status,
+      updatedAt: input.timestamp || Date.now()
+    },
+    source: 'flow'
+  });
   return n;
 }

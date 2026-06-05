@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Card from '../ui/Card.jsx';
 import Button from '../ui/Button.jsx';
+import Modal from '../ui/Modal.jsx';
 import { SkeletonCard } from '../ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -226,10 +227,14 @@ const CapacityMarketplace = () => {
         </div>
       )}
 
-      {detailsTarget ? (
-        <div className="tp-overlay-dim position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3">
-          <Card className="p-3 w-100 tp-max-w-modal-sm">
-            <h6 className="mb-2">{t('loadsHub.listingDetails')}</h6>
+      <Modal
+        open={Boolean(detailsTarget)}
+        title={t('loadsHub.listingDetails')}
+        onClose={() => setDetailsTarget(null)}
+        size="sm"
+      >
+        {detailsTarget ? (
+          <>
             <p className="fw-semibold mb-2">
               {detailsTarget.origin} → {detailsTarget.destination}
             </p>
@@ -268,14 +273,21 @@ const CapacityMarketplace = () => {
                 {t('common.cancel')}
               </Button>
             </div>
-          </Card>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </Modal>
 
-      {requestTarget ? (
-        <div className="tp-overlay-dim position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3">
-          <Card className="p-3 w-100 tp-max-w-modal-sm">
-            <h6 className="mb-2">{t('loadsHub.requestCapacity')}</h6>
+      <Modal
+        open={Boolean(requestTarget)}
+        title={t('loadsHub.requestCapacity')}
+        onClose={() => {
+          setRequestTarget(null);
+          setRequestMessage('');
+        }}
+        size="sm"
+      >
+        {requestTarget ? (
+          <>
             <p className="small text-muted">
               {requestTarget.origin} → {requestTarget.destination}
             </p>
@@ -312,9 +324,9 @@ const CapacityMarketplace = () => {
                 {t('common.cancel')}
               </Button>
             </div>
-          </Card>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </Modal>
     </div>
   );
 };

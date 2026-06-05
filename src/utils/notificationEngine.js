@@ -59,6 +59,62 @@ const DISPATCH_MAP = Object.freeze({
     priority: 'high',
     focus: true
   },
+  SPACE_REQUEST: {
+    kind: NOTIFICATION_KIND.SUGGEST,
+    category: NOTIFICATION_CATEGORY.BID,
+    soundType: 'suggest',
+    priority: 'medium',
+    focus: true
+  },
+  SPACE_REQUEST_SENT: {
+    kind: NOTIFICATION_KIND.SUGGEST,
+    category: NOTIFICATION_CATEGORY.BID,
+    soundType: 'suggest',
+    priority: 'low',
+    focus: false
+  },
+  COUNTER_OFFER_ACCEPTED: {
+    kind: NOTIFICATION_KIND.CONTRACT,
+    category: NOTIFICATION_CATEGORY.CONTRACT,
+    soundType: 'contract',
+    priority: 'high',
+    focus: true
+  },
+  LOCATION_UPDATED: {
+    kind: NOTIFICATION_KIND.STATUS_UPDATE,
+    category: NOTIFICATION_CATEGORY.STATUS,
+    soundType: 'status',
+    priority: 'low',
+    focus: false
+  },
+  CONTRACT_CREATED: {
+    kind: NOTIFICATION_KIND.CONTRACT,
+    category: NOTIFICATION_CATEGORY.CONTRACT,
+    soundType: 'contract',
+    priority: 'high',
+    focus: true
+  },
+  CONTRACT_ACCEPTED: {
+    kind: NOTIFICATION_KIND.CONTRACT,
+    category: NOTIFICATION_CATEGORY.CONTRACT,
+    soundType: 'contract',
+    priority: 'high',
+    focus: true
+  },
+  CONTRACT_REJECTED: {
+    kind: NOTIFICATION_KIND.REJECT,
+    category: NOTIFICATION_CATEGORY.BID,
+    soundType: 'reject',
+    priority: 'medium',
+    focus: true
+  },
+  CONTRACT_COMPLETED: {
+    kind: NOTIFICATION_KIND.STATUS_UPDATE,
+    category: NOTIFICATION_CATEGORY.STATUS,
+    soundType: 'status',
+    priority: 'medium',
+    focus: true
+  },
   BID_REJECTED: {
     kind: NOTIFICATION_KIND.REJECT,
     category: NOTIFICATION_CATEGORY.BID,
@@ -231,7 +287,19 @@ export function dedupeKey(n) {
  * Build unified notification from socket dispatch and/or persisted row.
  */
 export function buildNotification(input = {}) {
-  const dispatchType = String(input.dispatchType || input.type || input.title || '').toUpperCase();
+  const rawType = String(input.dispatchType || input.type || input.title || '').toUpperCase();
+  const dispatchType =
+    {
+      CONTRACT_CREATED: 'CONTRACT_STARTED',
+      CONTRACT_ACCEPTED: 'CONTRACT_STARTED',
+      CONTRACT_REJECTED: 'BID_REJECTED',
+      CONTRACT_COMPLETED: 'DELIVERY_COMPLETED',
+      COUNTER_OFFER_SENT: 'COUNTER_OFFERED',
+      COUNTER_OFFER_ACCEPTED: 'BID_ACCEPTED',
+      REQUEST_SENT: 'SPACE_REQUEST_SENT',
+      REQUEST_ACCEPTED: 'SPACE_ACCEPTED',
+      REQUEST_REJECTED: 'SPACE_REJECTED'
+    }[rawType] || rawType;
   const meta = DISPATCH_MAP[dispatchType] || {
     kind: NOTIFICATION_KIND.ACCEPT,
     category: NOTIFICATION_CATEGORY.SYSTEM,

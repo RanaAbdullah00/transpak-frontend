@@ -9,6 +9,7 @@ import {
   CONTRACT_PHASE
 } from './contractStateEngine.js';
 import { resolveContractConsistency } from './contractConsistencyResolver.js';
+import { mapLegacyToContract, canCarrierUpdateContractStatus } from './contractMapper.js';
 
 /** Statuses where live GPS + socket tracking are allowed (matches backend contract). */
 export const TRACKING_ACTIVE_STATUSES = Object.freeze(['booked', 'pickedup', 'intransit']);
@@ -87,11 +88,18 @@ export function getShipmentUIState(input = {}) {
           : getContractUILabelKey(contractPhase, status);
 
   const upcoming = nextShipmentStatus(status);
-  const canUpdateStatus = canTrack && isCarrier && status !== 'closed' && Boolean(upcoming);
+  const unifiedContract = mapLegacyToContract({ ...normalized, ref, ...input, shipmentStatus: input.shipmentStatus ?? input.status });
+  const canUpdateStatus =
+    canTrack &&
+    isCarrier &&
+    status !== 'closed' &&
+    Boolean(upcoming) &&
+    canCarrierUpdateContractStatus(unifiedContract);
 
   return {
     status,
     phase,
+    unifiedContract,
     labelKey,
     colorVariant,
     canTrack,

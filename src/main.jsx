@@ -17,9 +17,11 @@ import { ToastProvider } from './components/ui/ToastProvider.jsx';
 import NotificationToastHost from './components/notifications/NotificationToast.jsx';
 import { initTranspakBuildInfo } from './utils/buildInfo.js';
 import { verifyProductionDeploy } from './utils/verifyDeploy.js';
+import { initContractSyncGuarantee } from './utils/contractSyncGuarantee.js';
 
 initTranspakBuildInfo();
 verifyProductionDeploy();
+initContractSyncGuarantee();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

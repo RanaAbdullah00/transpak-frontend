@@ -6,6 +6,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import VehicleTypeLabel from '../loadboard/VehicleTypeLabel.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
 import { formatTons, ratePerKgToTon } from '../../utils/weightUnits.js';
+import { canCloseListingWithContract } from '../../utils/contractMapper.js';
 
 const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onViewDetails }) => {
   const { t } = useLanguage();
@@ -14,6 +15,7 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onVi
   const rem = Number(listing.remainingSpaceKg ?? 0);
   const cap = Number(listing.truckCapacityKg ?? 0);
   const pct = cap > 0 ? Math.round((rem / cap) * 100) : 0;
+  const canCloseListing = canCloseListingWithContract(listing);
 
   return (
     <Card className="p-3 h-100 tp-space-card">
@@ -60,7 +62,9 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onVi
               {t('loadsHub.editListing')}
             </Button>
           ) : null}
-          {onClose ? (
+          {!canCloseListing ? (
+            <p className="small text-muted mb-0">{t('loadsHub.closeListingDisabled')}</p>
+          ) : onClose ? (
             <Button variant="outline-secondary" size="sm" className="w-100" onClick={onClose}>
               {t('loadsHub.closeListing')}
             </Button>

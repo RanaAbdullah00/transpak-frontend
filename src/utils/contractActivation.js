@@ -222,9 +222,9 @@ export function triggerStatusActivationSync(trackRef) {
  * Socket entry — signals only. Never runs activation sync; never mutates UI directly.
  * Deduped notifications still reach this via handleDispatchEvent (runs before dedupe).
  */
-export function runShipmentSyncFromDispatch(_dispatch, type) {
+export function runShipmentSyncFromDispatch(dispatch, type) {
   if (!isShipmentSyncType(type)) return;
-  emitRealtimeRefresh('shipments');
+  emitRealtimeRefresh('shipments', { contractSync: true, dispatchType: type });
 }
 
 /** @deprecated Use triggerAcceptActivationSync after accept API 200. */

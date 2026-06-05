@@ -112,8 +112,32 @@ export function notifySystem(type, message, opts = {}) {
 export function routeRealtimeNotification(normalized) {
   const msg = String(normalized?.message || '').trim();
   if (!msg) return;
-  const type = String(normalized?.type || normalized?.title || '').toUpperCase();
+  const rawType = String(normalized?.type || normalized?.title || '').toUpperCase();
+  const type =
+    {
+      CONTRACT_CREATED: 'CONTRACT_STARTED',
+      CONTRACT_ACCEPTED: 'CONTRACT_STARTED',
+      CONTRACT_REJECTED: 'BID_REJECTED',
+      CONTRACT_COMPLETED: 'DELIVERY_COMPLETED',
+      COUNTER_OFFER_SENT: 'COUNTER_OFFERED',
+      COUNTER_OFFER_ACCEPTED: 'BID_ACCEPTED',
+      REQUEST_SENT: 'SPACE_REQUEST_SENT',
+      REQUEST_ACCEPTED: 'SPACE_ACCEPTED',
+      REQUEST_REJECTED: 'SPACE_REJECTED'
+    }[rawType] || rawType;
 
+  if (type.includes('CONTRACT_CREATED') || type.includes('CONTRACT_ACCEPTED')) {
+    notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
+    return;
+  }
+  if (type.includes('CONTRACT_REJECTED')) {
+    notifySystem(SystemNotifyType.BID_REJECTED, msg);
+    return;
+  }
+  if (type.includes('CONTRACT_COMPLETED')) {
+    notifySystem(SystemNotifyType.SUCCESS, msg);
+    return;
+  }
   if (type.includes('BID_ACCEPTED') || (type.includes('ACCEPTED') && type.includes('BID'))) {
     notifySystem(SystemNotifyType.BID_ACCEPTED, msg);
     return;
@@ -145,8 +169,24 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.SHIPMENT_ASSIGNED, msg);
     return;
   }
-  if (type.includes('SPACE_REQUEST') || type.includes('SPACE_ACCEPTED') || type.includes('SPACE_REQUEST_SENT')) {
+  if (type.includes('SPACE_REQUEST_SENT') || type.includes('REQUEST_SENT')) {
     notifySystem(SystemNotifyType.BID_RECEIVED, msg);
+    return;
+  }
+  if (type.includes('SPACE_REQUEST')) {
+    notifySystem(SystemNotifyType.BID_RECEIVED, msg);
+    return;
+  }
+  if (type.includes('SPACE_ACCEPTED') || type.includes('REQUEST_ACCEPTED')) {
+    notifySystem(SystemNotifyType.BID_ACCEPTED, msg);
+    return;
+  }
+  if (type.includes('COUNTER_OFFER_ACCEPTED') || (type.includes('COUNTER') && type.includes('ACCEPTED'))) {
+    notifySystem(SystemNotifyType.BID_ACCEPTED, msg);
+    return;
+  }
+  if (type.includes('STATUS_UPDATED')) {
+    notifySystem(SystemNotifyType.LOCATION_UPDATED, msg);
     return;
   }
   if (type.includes('SPACE_REJECTED')) {
