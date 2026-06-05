@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card.jsx';
 import Badge from '../../components/ui/Badge.jsx';
@@ -6,8 +6,7 @@ import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
-import { normalizeActiveShipmentList } from '../../utils/activeShipmentModel.js';
-import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
+import { mergeActiveShipmentRows } from '../../utils/activeShipmentModel.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 
 const AcceptedLoads = () => {
@@ -15,36 +14,41 @@ const AcceptedLoads = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
+  const hasLoadedRef = useRef(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ silent = false } = {}) => {
     try {
       const data = await request({
         method: 'GET',
         url: '/shipments/active',
         skipGlobalErrorToast: true
       });
-      setRows(normalizeActiveShipmentList(data));
+      setRows((prev) => {
+        const next = mergeActiveShipmentRows(prev, data, { silent });
+        if (next.length) hasLoadedRef.current = true;
+        return next;
+      });
     } catch {
-      setRows([]);
+      if (!silent) setRows([]);
     }
   }, [request]);
 
   useEffect(() => {
-    void handleShipmentActivationSync(null, { force: true });
-  }, []);
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     const onHydrate = (e) => {
       const nextRows = e?.detail?.rows;
       if (!Array.isArray(nextRows)) return;
       if (!nextRows.length && e?.detail?.pendingRetry) return;
-      setRows(nextRows);
+      setRows((prev) => mergeActiveShipmentRows(prev, nextRows));
     };
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
       if (scope !== 'shipments') return;
       if (e?.detail?.atomicSync) return;
-      refresh();
+      refresh({ silent: hasLoadedRef.current });
     };
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:realtime-refresh', onRefresh);

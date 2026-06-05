@@ -5,7 +5,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
-import { handleShipmentActivationSync, emitRealtimeRefresh } from '../../utils/spaceFlow.js';
+import { triggerAcceptActivationSync, emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 import { isCapacityFlowPending } from '../../utils/flowSession.js';
@@ -59,7 +59,7 @@ const SpaceRequestsPanel = () => {
       const res = await request({ method: 'PUT', url: `/carrier-space/requests/${id}/${action}` });
       notifySuccess(action === 'accept' ? t('loadsHub.requestAccepted') : t('loadsHub.requestRejected'));
       if (action === 'accept') {
-        void handleShipmentActivationSync(res?.loadCode, { force: true });
+        await triggerAcceptActivationSync(res);
       } else {
         emitRealtimeRefresh('space');
       }

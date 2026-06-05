@@ -212,8 +212,8 @@ export function useShipmentTracking({
   useEffect(() => {
     if (!enabled || !localRef) return undefined;
     const onRefresh = (e) => {
-      const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'shipments') return;
+      if (e?.detail?.scope !== 'shipments') return;
+      if (e?.detail?.atomicSync) return;
       fetchTrack({ silent: true });
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);

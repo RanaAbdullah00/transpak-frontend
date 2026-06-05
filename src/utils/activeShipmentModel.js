@@ -31,6 +31,16 @@ export function normalizeActiveShipmentList(rows = []) {
   return list.map(normalizeActiveShipmentRow).filter((r) => r.trackRef);
 }
 
+/**
+ * Merge active list update — never wipe valid UI on empty transient socket refresh.
+ */
+export function mergeActiveShipmentRows(prev = [], incoming, { silent = false } = {}) {
+  const next = normalizeActiveShipmentList(incoming);
+  const prior = Array.isArray(prev) ? prev : [];
+  if (silent && prior.length > 0 && next.length === 0) return prior;
+  return next;
+}
+
 export function isActiveShipmentTrackable(row = {}) {
   if (row.trackingEnabled != null) return Boolean(row.trackingEnabled);
   const status = normalizeShipmentStatus(row.shipmentStatus ?? row.status);
@@ -46,7 +56,8 @@ export function findActiveShipmentRow(rows = [], trackRef = '') {
     if (
       trackingRefsMatch(row.trackRef, ref) ||
       trackingRefsMatch(row.code, ref) ||
-      trackingRefsMatch(row.id, ref)
+      trackingRefsMatch(row.id, ref) ||
+      trackingRefsMatch(row.shipmentId, ref)
     ) {
       return row;
     }

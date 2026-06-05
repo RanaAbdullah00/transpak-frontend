@@ -1,8 +1,4 @@
-import {
-  handleShipmentActivationSync,
-  isContractDispatchType,
-  isShipmentSyncType
-} from './contractActivation.js';
+import { isContractDispatchType, isShipmentSyncType } from './contractActivation.js';
 import { emitRealtimeRefresh } from './realtimeRefresh.js';
 import {
   buildNotification,
@@ -31,9 +27,7 @@ function shouldPublishEffects(burstKey) {
   return true;
 }
 
-/**
- * Side effects for one notification per burst (toast + sound + focus).
- */
+/** Side effects for one notification per burst (toast + sound + focus). */
 export function publishNotificationEffects(notification, { showToast = true, burstKey } = {}) {
   if (!notification) return;
 
@@ -56,17 +50,15 @@ export function publishNotificationEffects(notification, { showToast = true, bur
 }
 
 /**
- * Full realtime dispatch pipeline (refresh + store + UX).
+ * Notification ingest only — shipment activation is API-driven (triggerAcceptActivationSync).
+ * Shipment socket signals refresh via runShipmentSyncFromDispatch in realtimeDispatch.js.
  */
 export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {}) {
   if (!dispatch || typeof dispatch !== 'object') return [];
 
   const type = String(dispatch.type || '').toUpperCase();
 
-  if (isContractDispatchType(type)) {
-    if (type === 'BID_ACCEPTED') emitRealtimeRefresh('bids');
-    if (type === 'SPACE_ACCEPTED') emitRealtimeRefresh('space');
-  } else {
+  if (!isContractDispatchType(type) && !isShipmentSyncType(type)) {
     const scopes = {
       BID_REJECTED: 'bids',
       BID_COUNTER: 'bids',
@@ -80,7 +72,7 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
     };
     const scope = scopes[type];
     if (scope) emitRealtimeRefresh(scope);
-    else if (!isShipmentSyncType(type)) emitRealtimeRefresh('all');
+    else emitRealtimeRefresh('all');
   }
 
   const engineItems = processDispatchEvent(dispatch);
@@ -131,9 +123,7 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
   return engineItems;
 }
 
-/**
- * Client-side flow notification (e.g. status update).
- */
+/** Client-side flow notification (toast/sound only). */
 export function ingestFlowNotification(input = {}) {
   const n = buildNotification({
     ...input,
@@ -144,9 +134,6 @@ export function ingestFlowNotification(input = {}) {
   n.globalEventId = buildNotificationEventId(n);
   if (!claimNotificationEvent(n)) return n;
   if (pushNotification(n)) {
-    if (!input.skipShipmentSync) {
-      void handleShipmentActivationSync(n.shipmentRef || null);
-    }
     publishNotificationEffects(n, { burstKey: n.globalEventId });
   }
   return n;

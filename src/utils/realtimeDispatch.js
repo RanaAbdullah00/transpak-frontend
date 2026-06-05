@@ -1,4 +1,5 @@
 import { runShipmentSyncFromDispatch } from './contractActivation.js';
+import { bridgeDispatchToShipmentStore } from './shipmentEventBridge.js';
 import { ingestRealtimeDispatch } from './notificationPipeline.js';
 import {
   buildNotificationEventId,
@@ -48,13 +49,15 @@ export const SCOPE_REFRESH = {
 };
 
 /**
- * Socket dispatch entry — shipment sync ALWAYS runs; dedupe blocks notifications only.
+ * Socket dispatch entry — shipment refresh runs before dedupe; notifications may be deduped, UI refresh is not.
  */
 export function handleDispatchEvent(dispatch, { onNotification } = {}) {
   if (!dispatch || typeof dispatch !== 'object') return;
   const type = String(dispatch.type || '').toUpperCase();
 
-  runShipmentSyncFromDispatch(dispatch, type);
+  if (!bridgeDispatchToShipmentStore(dispatch)) {
+    runShipmentSyncFromDispatch(dispatch, type);
+  }
 
   const probeId = buildNotificationEventId({
     dispatchType: type,

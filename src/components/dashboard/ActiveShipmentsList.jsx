@@ -1,53 +1,67 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ActiveShipmentCard from './ActiveShipmentCard.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { normalizeActiveShipmentList } from '../../utils/activeShipmentModel.js';
-import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
+import { mergeActiveShipmentRows } from '../../utils/activeShipmentModel.js';
+import {
+  getActiveShipmentList,
+  markActiveShipmentStoreBootstrapped,
+  upsertActiveShipmentRows
+} from '../../utils/activeShipmentStore.js';
+import { useActiveShipmentStore } from '../../hooks/useActiveShipmentStore.js';
 
 /**
- * Active shipments — sole source of truth: GET /shipments/active.
- * State updates via handleShipmentActivationSync hydrate only.
+ * Active shipments — read model: ActiveShipmentStore.
+ * Bootstrap + socket refresh: GET /shipments/active (cold start / gap recovery).
+ * Runtime activation: hydrate pipeline → store.
  */
 const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   const { t } = useLanguage();
   const { request } = useApi();
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { rows } = useActiveShipmentStore();
+  const [bootLoading, setBootLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const data = await request({
-        method: 'GET',
-        url: '/shipments/active',
-        skipGlobalErrorToast: true
-      });
-      setRows(normalizeActiveShipmentList(data));
-    } catch {
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [request]);
+  const bootstrap = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!silent && !hasLoadedRef.current) setBootLoading(true);
+      try {
+        const data = await request({
+          method: 'GET',
+          url: '/shipments/active',
+          skipGlobalErrorToast: true
+        });
+        const prior = getActiveShipmentList();
+        const merged = mergeActiveShipmentRows(prior, data, { silent });
+        if (merged.length) hasLoadedRef.current = true;
+        upsertActiveShipmentRows(merged, { authoritative: !silent, source: 'bootstrap' });
+        markActiveShipmentStoreBootstrapped();
+      } catch {
+        if (!hasLoadedRef.current && !silent) {
+          upsertActiveShipmentRows([], { authoritative: true, source: 'bootstrap' });
+        }
+      } finally {
+        setBootLoading(false);
+      }
+    },
+    [request]
+  );
 
   useEffect(() => {
-    void handleShipmentActivationSync(null, { force: true });
-  }, []);
+    bootstrap();
+  }, [bootstrap]);
 
   useEffect(() => {
-    const onHydrate = (e) => {
-      const nextRows = e?.detail?.rows;
-      if (!Array.isArray(nextRows)) return;
-      if (!nextRows.length && e?.detail?.pendingRetry) return;
-      setRows(nextRows);
-      setLoading(false);
+    const onHydrate = () => {
+      hasLoadedRef.current = true;
+      setBootLoading(false);
     };
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
       if (scope !== 'shipments') return;
       if (e?.detail?.atomicSync) return;
-      refresh();
+      bootstrap({ silent: hasLoadedRef.current });
     };
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:realtime-refresh', onRefresh);
@@ -55,7 +69,9 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
       window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
       window.removeEventListener('tp:realtime-refresh', onRefresh);
     };
-  }, [refresh]);
+  }, [bootstrap]);
+
+  const loading = bootLoading && !hasLoadedRef.current && !rows.length;
 
   if (loading) {
     return (

@@ -17,7 +17,7 @@ import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
 import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
 import { fetchActiveShipmentRow } from '../../utils/activeShipmentModel.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
-import { handleShipmentActivationSync } from '../../utils/contractActivation.js';
+import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
@@ -103,9 +103,8 @@ const ShipmentTracking = () => {
         roleType: workspaceRole,
         soundType: 'status',
         priority: 'medium',
-        skipShipmentSync: true
       });
-      void handleShipmentActivationSync(id, { force: true });
+      await triggerStatusActivationSync(id);
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.tracking.loadFailed') }));
     } finally {
