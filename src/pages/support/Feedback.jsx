@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button.jsx';
 import api from '../../services/api.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
+import { formatUserError } from '../../utils/userErrors.js';
 
 const Feedback = () => {
   const { t, isUrdu } = useLanguage();
@@ -34,7 +34,7 @@ const Feedback = () => {
       notifySuccess(t('pages.feedbackPage.success'));
       setForm({ subject: '', message: '' });
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.feedbackPage.failed'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.feedbackPage.failed') }));
     } finally {
       setSubmitting(false);
     }

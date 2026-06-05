@@ -35,8 +35,10 @@ const BidManagement = () => {
 
   const handleAccept = async (bid) => {
     try {
-      await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      activateContractUI();
+      const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
+      const trackRef = res?.loadCode || bid.loadCode || bid.loadId;
+      activateContractUI(trackRef, { force: true });
+      notifySuccess(t('flowSession.bidFlowStarted'));
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptFailed') }));
@@ -48,7 +50,6 @@ const BidManagement = () => {
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject` });
       notifySuccess(t('pages.bids.bidRejected'));
       emitRealtimeRefresh('bids');
-      emitRealtimeRefresh('all');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectFailed') }));

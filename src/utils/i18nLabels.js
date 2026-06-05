@@ -51,6 +51,13 @@ export function translateRoleLabel(t, role) {
   return t('notifications.rolePlatform');
 }
 
+const INTERNAL_DISPATCH_RE = /^[A-Z][A-Z0-9_]{2,}$/;
+
+/** True when text looks like an internal socket/API dispatch label — not for UI. */
+export function isInternalDispatchLabel(text) {
+  return INTERNAL_DISPATCH_RE.test(String(text || '').trim());
+}
+
 /** @param {(k: string) => string} t */
 export function translateNotificationType(t, type) {
   if (!type) return '';
@@ -58,5 +65,39 @@ export function translateNotificationType(t, type) {
   const key = `notifications.type.${u}`;
   const out = t(key);
   if (out !== key) return out;
-  return t('notifications.typeGeneric', { type: u });
+  return t('notifications.typeGeneric');
+}
+
+/**
+ * User-safe notification copy — strips dispatch codes and technical titles.
+ * @param {(k: string) => string} t
+ */
+export function notificationUILabels(t, notification = {}) {
+  const dispatchType = String(
+    notification.dispatchType || notification.type || ''
+  ).toUpperCase();
+  const typeLabel = dispatchType ? translateNotificationType(t, dispatchType) : '';
+  const rawTitle = String(notification.title || '').trim();
+  const rawMessage = String(notification.message || '').trim();
+
+  let title = rawTitle;
+  if (
+    !title ||
+    isInternalDispatchLabel(title) ||
+    title.toUpperCase() === dispatchType
+  ) {
+    title = typeLabel || t('notifications.toastNew');
+  }
+
+  let message = rawMessage;
+  if (
+    !message ||
+    isInternalDispatchLabel(message) ||
+    message.toUpperCase() === dispatchType ||
+    message === rawTitle
+  ) {
+    message = typeLabel && typeLabel !== title ? typeLabel : '';
+  }
+
+  return { title, message };
 }

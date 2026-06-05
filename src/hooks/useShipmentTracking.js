@@ -30,19 +30,21 @@ import {
   sanitizeTrackingPayload,
   trackingPayloadEqual
 } from '../utils/trackingPayloadSanitizer.js';
-import { canTrackShipment } from '../utils/shipmentUIState.js';
-
-const TRACK_POLL_MS = Number(import.meta.env.VITE_TRACK_POLL_MS || 8000);
+import { isActiveShipmentTrackable } from '../utils/activeShipmentModel.js';
 
 /**
- * Shared REST + socket tracking. canTrack and socket join are driven by API state only.
+ * Coordinates + live GPS only. State gates come exclusively from GET /shipments/active row.
  */
 export function useShipmentTracking({
   trackRef,
   shareLive = false,
   enabled = true,
   role = null,
-  assignedCarrierId = null
+  assignedCarrierId = null,
+  /** Required — status from GET /shipments/active */
+  shipmentStatus = null,
+  /** Required — trackingEnabled from GET /shipments/active row only */
+  trackingEnabled = false
 }) {
   const { t } = useLanguage();
   const { registerTrackingHandler, getSocket, socketStatus } = useContext(AppContext) || {};
@@ -56,10 +58,10 @@ export function useShipmentTracking({
         loadCode: trackRef,
         assignedCarrierId,
         assigned_carrier_id: assignedCarrierId,
-        status: null,
-        shipmentStatus: null
+        status: shipmentStatus,
+        shipmentStatus
       }),
-    [trackRef, assignedCarrierId]
+    [trackRef, assignedCarrierId, shipmentStatus]
   );
 
   const localRef = useMemo(
@@ -75,17 +77,35 @@ export function useShipmentTracking({
   const fetchGenerationRef = useRef(0);
   const socketKey = payload?.refKey || localRef;
 
+  const hasActiveRow = shipmentStatus != null;
+
   const uiState = useMemo(() => {
+    const gate =
+      hasActiveRow && enabled && isActiveShipmentTrackable({ shipmentStatus, trackingEnabled });
+    const isCarrier = String(role || '').toLowerCase() === 'carrier';
     const resolved = resolveContractConsistency({
       restShipment: safeShipment,
-      trackingPayload: payload,
+      trackingPayload: null,
       role
     });
-    return resolved.uiState;
-  }, [payload, role, safeShipment]);
+    return {
+      ...resolved.uiState,
+      status: shipmentStatus || resolved.uiState.status,
+      canTrack: gate,
+      trackingActive: gate,
+      contractActive: gate,
+      isActive: gate,
+      showLiveMap: gate,
+      showLiveDriver: gate,
+      allowSocketJoin: gate,
+      allowGpsPublish: gate && isCarrier,
+      canUpdateStatus: gate && isCarrier && Boolean(resolved.uiState.upcomingStatus)
+    };
+  }, [role, safeShipment, hasActiveRow, enabled, shipmentStatus, trackingEnabled]);
 
-  const canTrack = uiState.canTrack;
-  const gpsAllowed = shareLive && uiState.allowGpsPublish && canTrack;
+  const trackingGate =
+    hasActiveRow && enabled && isActiveShipmentTrackable({ shipmentStatus, trackingEnabled });
+  const gpsAllowed = shareLive && trackingGate && uiState.allowGpsPublish;
 
   const { position: livePos, error: geoError } = useLiveLocation(gpsAllowed && Boolean(localRef));
 
@@ -153,7 +173,7 @@ export function useShipmentTracking({
   }, []);
 
   useEffect(() => {
-    if (!enabled || !localRef) {
+    if (!hasActiveRow || !enabled || !localRef) {
       setPayload(null);
       setError('');
       setLoading(false);
@@ -168,16 +188,7 @@ export function useShipmentTracking({
     return () => {
       fetchGenerationRef.current += 1;
     };
-  }, [fetchTrack, enabled, localRef]);
-
-  useEffect(() => {
-    if (!enabled || !localRef) return undefined;
-    if (socketStatus === 'connected') return undefined;
-    const id = setInterval(() => {
-      fetchTrack({ silent: true });
-    }, TRACK_POLL_MS);
-    return () => clearInterval(id);
-  }, [enabled, localRef, fetchTrack, socketStatus]);
+  }, [fetchTrack, enabled, localRef, hasActiveRow]);
 
   const applyUpdate = useCallback(
     (incoming) => {
@@ -202,16 +213,7 @@ export function useShipmentTracking({
     if (!enabled || !localRef) return undefined;
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (
-        scope &&
-        scope !== 'all' &&
-        scope !== 'shipments' &&
-        scope !== 'bids' &&
-        scope !== 'loads' &&
-        scope !== 'space'
-      ) {
-        return;
-      }
+      if (scope && scope !== 'all' && scope !== 'shipments') return;
       fetchTrack({ silent: true });
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
@@ -235,11 +237,11 @@ export function useShipmentTracking({
     socket,
     sessionRef: localRef,
     aliasRefs: [socketKey],
-    enabled: enabled && canTrack && Boolean(localRef) && uiState?.canTrack
+    enabled: trackingGate && Boolean(localRef)
   });
 
   useEffect(() => {
-    if (!enabled || !uiState?.canTrack || !localRef) {
+    if (!trackingGate || !localRef) {
       clearTrackingJoinRequest(localRef);
       return undefined;
     }
@@ -263,10 +265,10 @@ export function useShipmentTracking({
     return () => {
       if (retry) clearTimeout(retry);
     };
-  }, [uiState?.canTrack, localRef, socketKey, socketConnected, enabled, getSocket]);
+  }, [trackingGate, localRef, socketKey, socketConnected, getSocket]);
 
   useEffect(() => {
-    if (!enabled || !uiState?.canTrack || !localRef) return undefined;
+    if (!trackingGate || !localRef) return undefined;
     const activeSocket = getSocket?.();
     if (!activeSocket || !socketConnected) return undefined;
 
@@ -285,7 +287,7 @@ export function useShipmentTracking({
         /* ignore */
       }
     };
-  }, [enabled, uiState?.canTrack, localRef, socketKey, socketConnected, getSocket]);
+  }, [trackingGate, localRef, socketKey, socketConnected, getSocket]);
 
   const liveLat = livePos?.[0];
   const liveLng = livePos?.[1];

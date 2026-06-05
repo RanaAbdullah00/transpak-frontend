@@ -64,9 +64,12 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
       dispatch.notification?.shipmentRef ||
       dispatch.notification?.refKey ||
       dispatch.notification?.code ||
+      dispatch.payload?.loadCode ||
       dispatch.refKey ||
       null;
     activateContractUI(contractRef);
+    if (type === 'BID_ACCEPTED') emitRealtimeRefresh('bids');
+    if (type === 'SPACE_ACCEPTED') emitRealtimeRefresh('space');
   } else {
     const scopes = {
       BID_REJECTED: 'bids',

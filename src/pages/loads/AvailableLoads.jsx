@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import Loader from '../../components/ui/Loader.jsx';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
+import { formatUserError } from '../../utils/userErrors.js';
 import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
@@ -63,7 +63,7 @@ const AvailableLoads = ({ embedded = false }) => {
       });
       setLoads(normalizeLoads(ensureArray(data)));
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
       setLoads([]);
     }
   }, [debouncedFilters, request, t]);
@@ -94,7 +94,7 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
     } finally {
       setOfferBusyId(null);
     }
@@ -107,7 +107,7 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierRejectSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
     } finally {
       setOfferBusyId(null);
     }
@@ -120,7 +120,7 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.loads.failedLoadDetail'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
     } finally {
       setOfferBusyId(null);
     }

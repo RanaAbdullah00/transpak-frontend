@@ -20,7 +20,6 @@ import {
 import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
-import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import { activateContractUI } from '../../utils/contractActivation.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
@@ -35,6 +34,7 @@ const LoadDetails = () => {
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
+  const [activeShipmentRow, setActiveShipmentRow] = useState(null);
 
   const activeRole = user?.activeRole ?? user?.roles?.[0];
   const uid = user?.id || user?._id;
@@ -92,8 +92,10 @@ const LoadDetails = () => {
 
   const handleAccept = async (bid) => {
     try {
-      await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
-      activateContractUI();
+      const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept` });
+      const trackRef = res?.loadCode || bid.loadCode || load?.code || bid.loadId;
+      activateContractUI(trackRef, { force: true });
+      notifySuccess(t('flowSession.bidFlowStarted'));
       await fetchData();
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.bids.acceptFailed') }));
@@ -134,7 +136,6 @@ const LoadDetails = () => {
   if (!load) return <div className="container py-3 text-muted">{t('pages.loads.failedLoadDetail')}</div>;
 
   const isOpen = load.status === 'open';
-  const approvedBid = bids.find((b) => normalizeBidStatus(b.status) === BID_STATUS.ACCEPTED);
 
   return (
     <div className="container py-3">
@@ -186,17 +187,6 @@ const LoadDetails = () => {
             onAccept={handleAccept}
             onReject={handleReject}
           />
-          {approvedBid && (
-            <div className="alert alert-success mt-3 rounded-lg border-0">
-              {t('pages.bids.shipmentAssignedPrefix')}{' '}
-              <ProfileLink
-                userId={approvedBid.carrierId}
-                name={approvedBid.carrierName || t('auth.carrier')}
-                showBadge
-                role={t('auth.carrier')}
-              />
-            </div>
-          )}
         </>
       )}
 

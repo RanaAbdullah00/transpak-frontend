@@ -4,6 +4,7 @@ import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { deriveBidType } from '../../utils/flowSession.js';
 
 // List of bids. mode: 'shipper' | 'carrier' controls which actions are shown.
 const BidList = memo(({
@@ -26,8 +27,9 @@ const BidList = memo(({
     mode === 'carrier' ? t('pages.bids.emptyCarrier') : t('pages.bids.emptyShipper');
   const resolvedEmpty = emptyMessage ?? defaultEmpty;
 
-  const { activeBids, acceptedBids, closedBids } = useMemo(() => {
-    const active = [];
+  const { standardBids, suggestedBids, acceptedBids, closedBids } = useMemo(() => {
+    const standard = [];
+    const suggested = [];
     const accepted = [];
     const closed = [];
     for (const bid of Array.isArray(bids) ? bids : []) {
@@ -39,14 +41,20 @@ const BidList = memo(({
         status === BID_STATUS.CANCELLED ||
         status === 'expired'
       ) {
-        /* Phase 11: hidden from commercial user views */
+        /* hidden from commercial user views */
       } else if (!bid.status || isActiveBidStatus(bid.status)) {
-        active.push(bid);
+        if (deriveBidType(bid) === 'suggested') suggested.push(bid);
+        else standard.push(bid);
       } else {
         closed.push(bid);
       }
     }
-    return { activeBids: active, acceptedBids: accepted, closedBids: closed };
+    return {
+      standardBids: standard,
+      suggestedBids: suggested,
+      acceptedBids: accepted,
+      closedBids: closed
+    };
   }, [bids]);
   const isShipper = mode === 'shipper';
   const isCarrier = mode === 'carrier';
@@ -59,26 +67,53 @@ const BidList = memo(({
 
   return (
     <div className="mt-2">
-      {activeBids.length === 0 && bids.length === 0 ? (
+      {standardBids.length === 0 && suggestedBids.length === 0 && bids.length === 0 ? (
         <EmptyState icon={FaGavel} title={resolvedEmpty} body={t('empty.bidsBody')} />
       ) : (
         <>
-          {activeBids.map((bid) => (
-            <BidCard
-              key={bid.id}
-              bid={bid}
-              onAccept={onAccept}
-              onReject={onReject}
-              onSuggest={onSuggest}
-              onAcceptSuggestion={onAcceptSuggestion}
-              onRejectSuggestion={onRejectSuggestion}
-              isShipper={isShipper}
-              isCarrier={isCarrier}
-              actionsDisabled={actionsDisabled}
-              ratingTargetUserId={ratingTargetFor(bid)}
-              counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
-            />
-          ))}
+          {standardBids.length > 0 ? (
+            <>
+              <h6 className="text-muted small text-uppercase mb-2">{t('pages.bids.standardBidsHeading')}</h6>
+              {standardBids.map((bid) => (
+                <BidCard
+                  key={bid.id}
+                  bid={bid}
+                  onAccept={onAccept}
+                  onReject={onReject}
+                  onSuggest={onSuggest}
+                  onAcceptSuggestion={onAcceptSuggestion}
+                  onRejectSuggestion={onRejectSuggestion}
+                  isShipper={isShipper}
+                  isCarrier={isCarrier}
+                  actionsDisabled={actionsDisabled}
+                  ratingTargetUserId={ratingTargetFor(bid)}
+                  counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
+                />
+              ))}
+            </>
+          ) : null}
+          {suggestedBids.length > 0 ? (
+            <>
+              <hr className="my-3" />
+              <h6 className="text-info small text-uppercase mb-2">{t('pages.bids.suggestedBidsHeading')}</h6>
+              {suggestedBids.map((bid) => (
+                <BidCard
+                  key={`suggested-${bid.id}`}
+                  bid={bid}
+                  onAccept={onAccept}
+                  onReject={onReject}
+                  onSuggest={onSuggest}
+                  onAcceptSuggestion={onAcceptSuggestion}
+                  onRejectSuggestion={onRejectSuggestion}
+                  isShipper={isShipper}
+                  isCarrier={isCarrier}
+                  actionsDisabled={actionsDisabled}
+                  ratingTargetUserId={ratingTargetFor(bid)}
+                  counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
+                />
+              ))}
+            </>
+          ) : null}
           {acceptedBids.length > 0 && (
             <>
               <hr className="my-4" />

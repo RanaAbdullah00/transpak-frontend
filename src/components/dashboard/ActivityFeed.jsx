@@ -2,6 +2,7 @@ import React from 'react';
 import Card from '../ui/Card.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
+import { sanitizeProductText } from '../../utils/userErrors.js';
 
 // Stream of recent activity events.
 const ActivityFeed = ({ activities }) => {
@@ -15,7 +16,7 @@ const ActivityFeed = ({ activities }) => {
           {list.map((act) => (
             <li key={act.id} className="mb-2">
               <div>
-                <TranslatedText text={act.message} />
+                <TranslatedText text={sanitizeProductText(act.message) || t('pages.activityFeed.update')} />
               </div>
               <div className="text-muted">{act.time}</div>
             </li>

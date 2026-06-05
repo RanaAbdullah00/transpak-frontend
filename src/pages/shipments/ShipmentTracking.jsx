@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import TrackingMap from '../../components/shipment/TrackingMap.jsx';
 import RouteInfo from '../../components/shipment/RouteInfo.jsx';
@@ -14,11 +14,9 @@ import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
-import {
-  getShipmentUIState,
-  shipmentUIStateFromTracking,
-  withShipmentUILabels
-} from '../../utils/shipmentUIState.js';
+import { withShipmentUILabels } from '../../utils/shipmentUIState.js';
+import { fetchActiveShipmentRow } from '../../utils/activeShipmentModel.js';
+import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
@@ -33,23 +31,56 @@ const ShipmentTracking = () => {
   const { t } = useLanguage();
   const { request } = useApi();
   const [advancing, setAdvancing] = useState(false);
+  const [activeRow, setActiveRow] = useState(null);
+  const [activeLoading, setActiveLoading] = useState(true);
   const isCarrier =
     user?.activeRole === 'carrier' || (user?.roles || []).includes('carrier');
   const shareLive = isCarrier && Boolean(id);
   const workspaceRole = isCarrier ? 'carrier' : 'shipper';
 
+  const refreshActiveRow = useCallback(async () => {
+    if (!id) {
+      setActiveRow(null);
+      setActiveLoading(false);
+      return;
+    }
+    setActiveLoading(true);
+    try {
+      const row = await fetchActiveShipmentRow(request, id);
+      setActiveRow(row);
+    } catch {
+      setActiveRow(null);
+    } finally {
+      setActiveLoading(false);
+    }
+  }, [id, request]);
+
+  useEffect(() => {
+    refreshActiveRow();
+  }, [refreshActiveRow]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (!scope || scope === 'all' || scope === 'shipments') refreshActiveRow();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refreshActiveRow]);
+
+  const trackingEnabled = Boolean(activeRow?.trackingEnabled);
+
   const { trackingData: payload, uiState, loading, error, livePos, geoError } = useShipmentTracking({
     trackRef: id,
+    shipmentStatus: activeRow?.shipmentStatus ?? null,
+    trackingEnabled,
+    assignedCarrierId: activeRow?.assignedCarrierId ?? null,
     shareLive,
-    enabled: Boolean(id),
+    enabled: Boolean(id && activeRow && trackingEnabled),
     role: workspaceRole
   });
 
-  const resolvedUi =
-    uiState ||
-    shipmentUIStateFromTracking(payload, workspaceRole, { ref: id }) ||
-    getShipmentUIState({ status: 'posted', ref: id, role: workspaceRole });
-  const ui = useMemo(() => withShipmentUILabels(resolvedUi, t), [resolvedUi, t]);
+  const ui = useMemo(() => withShipmentUILabels(uiState || {}, t), [uiState, t]);
   const upcomingStatus = ui.upcomingStatus;
 
   const handleAdvanceStatus = useCallback(async () => {
@@ -73,7 +104,6 @@ const ShipmentTracking = () => {
         priority: 'medium'
       });
       emitRealtimeRefresh('shipments');
-      emitRealtimeRefresh('all');
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.tracking.loadFailed') }));
     } finally {
@@ -106,9 +136,11 @@ const ShipmentTracking = () => {
       .map((c) => [Number(c[0]), Number(c[1])]);
   }, [payload?.liveTrackingMap?.coordinates]);
 
+  const showTracking = trackingEnabled;
+
   const currentLocation = useMemo(() => {
-    if (!ui.canTrack) return null;
-    if (ui.canTrack && shareLive && livePos) return livePos;
+    if (!showTracking) return null;
+    if (showTracking && shareLive && livePos) return livePos;
     const direct = tracking?.currentLocation ?? tracking?.location;
     if (
       Array.isArray(direct) &&
@@ -119,7 +151,7 @@ const ShipmentTracking = () => {
       return [Number(direct[0]), Number(direct[1])];
     }
     return null;
-  }, [ui.canTrack, tracking?.currentLocation, tracking?.location, shareLive, livePos]);
+  }, [showTracking, tracking?.currentLocation, tracking?.location, shareLive, livePos]);
 
   const shipment = useMemo(
     () => ({
@@ -183,6 +215,31 @@ const ShipmentTracking = () => {
     );
   }
 
+  if (activeLoading) {
+    return (
+      <div className="container py-3 tp-tracking-page">
+        <h5 className="mb-3">{t('pages.tracking.title')}</h5>
+        <div className="text-center py-4">
+          <Loader />
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeRow) {
+    return (
+      <div className="container py-4 tp-tracking-page">
+        <h5 className="mb-3 text-body">{t('pages.tracking.title')}</h5>
+        <div className="tp-empty-state rounded-3 border border-dashed p-4 text-center">
+          <p className="small tp-support-muted mb-3">{t('pages.tracking.trackingNotActiveYet')}</p>
+          <Link to={dashboardPathForRole(user?.activeRole)} className="btn btn-primary btn-sm">
+            {t('pages.dashboard.myActiveShipments')}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (loading && !payload) {
     return (
       <div className="container py-3 tp-tracking-page">
@@ -200,11 +257,13 @@ const ShipmentTracking = () => {
     );
   }
 
+  const userError = error ? formatUserError({ message: error }, t, { fallback: t('pages.tracking.loadFailed') }) : '';
+
   if (error && !payload) {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
-        <p className="text-danger small">{error}</p>
+        <p className="text-danger small">{userError}</p>
         <Link to="/loads" className="btn btn-outline-primary btn-sm">
           {t('pages.tracking.trackByCodeCta')}
         </Link>
@@ -222,15 +281,15 @@ const ShipmentTracking = () => {
       {ui.showShipperAcceptedBanner ? (
         <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
       ) : null}
-      {!ui.canTrack && !loading ? (
+      {!showTracking && !loading ? (
         <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
       ) : null}
-      {error ? <p className="text-warning small mb-2">{error}</p> : null}
+      {userError ? <p className="text-warning small mb-2">{userError}</p> : null}
       <ShipmentCard shipment={shipment} uiState={ui} />
       <div className="tp-tracking-progress mb-3">
         <ShipmentProgressBox uiState={ui} eta={shipment.eta} />
       </div>
-      {ui.canTrack ? (
+      {showTracking ? (
         <div className="tp-tracking-map tp-tracking-map--fullscreen mb-3 overflow-hidden rounded-3 border">
           <TrackingMap
             trackingData={trackingDataForMap}

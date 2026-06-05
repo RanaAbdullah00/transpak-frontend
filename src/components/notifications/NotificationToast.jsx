@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { resolveNotificationPath } from '../../utils/notificationNavigation.js';
+import { notificationUILabels } from '../../utils/i18nLabels.js';
 import { useAuth } from '../../hooks/useAuth.js';
 
 const PRIORITY_CLASS = {
@@ -23,7 +24,8 @@ const NotificationToastHost = () => {
 
   const showToast = useCallback(
     (notification) => {
-      if (!notification?.message) return;
+      const { title, message } = notificationUILabels(t, notification);
+      if (!title && !message) return;
       const key = notification.dedupeKey || notification.id;
       if (key && recentRef.current.has(key)) return;
       if (key) {
@@ -50,8 +52,8 @@ const NotificationToastHost = () => {
 
       const body = (
         <div className="tp-notification-toast">
-          <div className="fw-semibold small">{notification.title}</div>
-          <div className="small">{notification.message}</div>
+          {title ? <div className="fw-semibold small">{title}</div> : null}
+          {message ? <div className="small">{message}</div> : null}
           {showCta ? (
             <button
               type="button"

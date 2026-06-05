@@ -8,6 +8,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
+import { isCapacityFlowActive } from '../../utils/flowSession.js';
 
 const SpaceSentRequestsPanel = () => {
   const { t } = useLanguage();
@@ -99,6 +100,7 @@ const SpaceSentRequestsPanel = () => {
             key={r.id}
             row={r}
             showCarrierActions={false}
+            priority={isCapacityFlowActive(r)}
             onInTransit={(id) => transition(id, 'in-transit')}
             onComplete={(id) => transition(id, 'complete')}
           />

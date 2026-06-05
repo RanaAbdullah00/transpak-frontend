@@ -8,6 +8,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { activateContractUI, emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
+import { isCapacityFlowPending } from '../../utils/flowSession.js';
 
 const SpaceRequestsPanel = () => {
   const { t } = useLanguage();
@@ -55,10 +56,10 @@ const SpaceRequestsPanel = () => {
 
   const respond = async (id, action) => {
     try {
-      await request({ method: 'PUT', url: `/carrier-space/requests/${id}/${action}` });
+      const res = await request({ method: 'PUT', url: `/carrier-space/requests/${id}/${action}` });
       notifySuccess(action === 'accept' ? t('loadsHub.requestAccepted') : t('loadsHub.requestRejected'));
       if (action === 'accept') {
-        activateContractUI();
+        activateContractUI(res?.loadCode, { force: true });
       } else {
         emitRealtimeRefresh('space');
       }
@@ -89,24 +90,34 @@ const SpaceRequestsPanel = () => {
     }
   };
 
-  if (!rows.length) return null;
+  const pendingCount = rows.filter((r) => isCapacityFlowPending(r)).length;
 
   return (
-    <Card className="p-3 mb-3">
-      <h6 className="mb-3">{t('loadsHub.incomingRequests')}</h6>
-      <div className="d-flex flex-column gap-3">
-        {rows.map((r) => (
-          <SpaceRequestLifecycle
-            key={r.id}
-            row={r}
-            showCarrierActions
-            onAccept={(id) => respond(id, 'accept')}
-            onReject={(id) => respond(id, 'reject')}
-            onInTransit={(id) => transition(id, 'in-transit')}
-            onComplete={(id) => transition(id, 'complete')}
-          />
-        ))}
+    <Card className={`p-3 mb-3 ${pendingCount > 0 ? 'tp-space-requests-panel--priority border-warning' : ''}`}>
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h6 className="mb-0">{t('loadsHub.incomingRequests')}</h6>
+        {pendingCount > 0 ? (
+          <span className="badge text-bg-warning">{t('loadsHub.pendingRequests', { count: pendingCount })}</span>
+        ) : null}
       </div>
+      {!rows.length ? (
+        <p className="small text-muted mb-0">{t('loadsHub.noIncomingRequests')}</p>
+      ) : (
+        <div className="d-flex flex-column gap-3">
+          {rows.map((r) => (
+            <SpaceRequestLifecycle
+              key={r.id}
+              row={r}
+              showCarrierActions
+              priority={isCapacityFlowPending(r)}
+              onAccept={(id) => respond(id, 'accept')}
+              onReject={(id) => respond(id, 'reject')}
+              onInTransit={(id) => transition(id, 'in-transit')}
+              onComplete={(id) => transition(id, 'complete')}
+            />
+          ))}
+        </div>
+      )}
     </Card>
   );
 };

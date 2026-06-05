@@ -332,3 +332,46 @@ body.dark-mode .tp-dashboard--admin .modal-content {
   color: var(--tp-text, #f1f5f9);
 }
 
+/* Active flow session banners (bid + capacity) */
+.tp-flow-session-banner {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--pak-border, rgba(0, 0, 0, 0.08));
+  background: var(--pak-light-green-bg, rgba(25, 135, 84, 0.06));
+  transition: opacity 0.25s ease, border-color 0.25s ease;
+}
+
+.tp-flow-session-banner--active {
+  border-color: rgba(25, 135, 84, 0.45);
+}
+
+.tp-bid-card--suggested {
+  border-left-width: 3px !important;
+}
+
+.tp-space-requests-panel--priority,
+.tp-space-request-row--priority {
+  box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.35);
+}
+
+.tp-animate-fade-in {
+  animation: tpFadeIn 0.25s ease-out;
+}
+
+@keyframes tpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body.dark-theme .tp-flow-session-banner,
+body.dark-mode .tp-flow-session-banner {
+  background: rgba(25, 135, 84, 0.12);
+  border-color: rgba(25, 135, 84, 0.35);
+}
+

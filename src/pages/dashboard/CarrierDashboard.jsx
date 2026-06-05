@@ -177,7 +177,9 @@ const CarrierDashboard = () => {
         </div>
       </div>
 
-      <SpaceRequestsPanel />
+      <div className="mt-4">
+        <SpaceRequestsPanel />
+      </div>
 
       <div className="mt-4">
         <h6 className="mb-3">{t('pages.dashboard.myAssignedShipments')}</h6>

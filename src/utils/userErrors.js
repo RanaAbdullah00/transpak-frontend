@@ -1,8 +1,12 @@
 import { unwrapErrorCode, unwrapErrorDetail, formatStructuredApiError } from './unwrapApi.js';
 import { translations } from '../i18n/translations.js';
+import { isInternalDispatchLabel } from './i18nLabels.js';
 
 const TECH =
   /insertBefore|removeChild|NotFoundError|HierarchyRequestError|NotSupportedError|Minified React|Invariant Violation/i;
+
+const UI_BLOCKED_RE =
+  /https?:\/\/|\/api\/|\/v1\/|VITE_|CORS|socket\.io|migration|Render|Cloudflare|npm run|HTTP\s*\d{3}|Timeout contacting|Network\/CORS|endpoint|AUTH:|SERVER:|TIMEOUT:|FORBIDDEN:|unwrap|schema outdated|Request failed \(/i;
 
 function walkLocale(key, locale) {
   const parts = String(key).split('.').filter(Boolean);
@@ -32,10 +36,39 @@ function serverUnavailableMessage(t) {
 }
 
 /**
- * Normalize API/network errors for UI: no stacks, no DOM/React internals, bounded length.
- * @param {unknown} err
- * @param {(key: string) => string} [t]
- * @param {{ fallback?: string }} [options] — used when message is empty or redacted
+ * Strip system/technical text before any UI render.
+ */
+export function sanitizeProductText(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  if (TECH.test(raw) || raw.length > 240) return '';
+  if (isInternalDispatchLabel(raw)) return '';
+  if (UI_BLOCKED_RE.test(raw)) return '';
+  const withoutCode = raw.replace(/\s*\([A-Z][A-Z0-9_]{2,}\)\s*$/, '').trim();
+  if (withoutCode && withoutCode !== raw) {
+    if (!UI_BLOCKED_RE.test(withoutCode) && !isInternalDispatchLabel(withoutCode)) return withoutCode;
+    return '';
+  }
+  return raw;
+}
+
+function resolveUserMessage(text, t, fallback) {
+  const sanitized = sanitizeProductText(text);
+  return sanitized || fallback || genericMessage(t);
+}
+
+function messageFromStructured(structured, t, fallback) {
+  const sanitized = sanitizeProductText(structured?.message);
+  if (sanitized) return sanitized;
+  const status = structured?.status;
+  if (status === 502 || status === 504) return serverUnavailableMessage(t);
+  const type = String(structured?.type || '').toUpperCase();
+  if (type === 'NETWORK' || type === 'TIMEOUT' || type === 'CORS') return networkMessage(t);
+  return fallback ?? genericMessage(t);
+}
+
+/**
+ * Normalize API/network errors for UI: no stacks, endpoints, HTTP codes, or infra text.
  */
 export function formatUserError(err, t, options = {}) {
   const { fallback } = options;
@@ -50,16 +83,7 @@ export function formatUserError(err, t, options = {}) {
 
   const structured = formatStructuredApiError(err);
   if (structured.message) {
-    const { endpoint, status, type } = structured;
-    if (endpoint || status != null || type) {
-      const statusPart = status != null ? ` (HTTP ${status})` : '';
-      const prefix = endpoint ? `${type}: ${endpoint}${statusPart}` : `${type}:`;
-      if (structured.message.includes(endpoint) || structured.message.includes(String(status))) {
-        return structured.message;
-      }
-      return `${prefix} — ${structured.message}`;
-    }
-    return structured.message;
+    return messageFromStructured(structured, t, fallback);
   }
 
   const apiCode = unwrapErrorCode(err);
@@ -80,16 +104,10 @@ export function formatUserError(err, t, options = {}) {
   }
 
   const { displayMessage, message } = unwrapErrorDetail(err);
-  const rawUnwrap = displayMessage || message;
   const status = err?.response?.status;
   if ((status === 502 || status === 504) && !message) {
     return serverUnavailableMessage(t);
   }
 
-  const raw = String(rawUnwrap || err?.message || '').trim();
-  if (!raw) return fallback ?? genericMessage(t);
-
-  if (TECH.test(raw) || raw.length > 240) return fallback ?? message ?? genericMessage(t);
-
-  return raw;
+  return resolveUserMessage(displayMessage || message || err?.message, t, fallback);
 }

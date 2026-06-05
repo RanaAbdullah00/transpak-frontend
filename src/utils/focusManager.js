@@ -1,3 +1,5 @@
+import { sanitizeProductText } from './userErrors.js';
+
 let flashTimer = null;
 let originalTitle = '';
 let flashOn = false;
@@ -30,7 +32,8 @@ export function notifyFocusAttention(notification = {}) {
     let toggle = false;
     flashTimer = window.setInterval(() => {
       toggle = !toggle;
-      document.title = toggle ? `• ${notification.title || 'TransPAK'}` : originalTitle;
+      const flashLabel = sanitizeProductText(notification.title) || 'TransPAK';
+      document.title = toggle ? `• ${flashLabel}` : originalTitle;
     }, 900);
 
     if (typeof navigator !== 'undefined' && navigator.vibrate) {

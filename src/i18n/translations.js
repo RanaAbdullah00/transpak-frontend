@@ -114,6 +114,8 @@ export const translations = {
       capacityListFailed: 'Could not load capacity listings.',
       minCapacityKg: 'Min needed (tons)',
       incomingRequests: 'Incoming capacity requests',
+      pendingRequests: '{{count}} pending',
+      noIncomingRequests: 'No incoming requests right now.',
       acceptRequest: 'Accept',
       rejectRequest: 'Decline',
       requestAccepted: 'Request accepted',
@@ -274,8 +276,8 @@ export const translations = {
       activityNoCommercialHint: 'Sign in with a shipper or carrier role to see your personal activity metrics.'
     },
     deploy: {
-      mismatchTitle: 'System version mismatch detected',
-      mismatchBody: 'Frontend and API builds may be out of sync. Redeploy Cloudflare Pages and Render, then hard-refresh.'
+      mismatchTitle: 'System updated',
+      mismatchBody: 'Please refresh the page to continue.'
     },
     reviews: {
       rateUsersHint:
@@ -463,6 +465,16 @@ export const translations = {
       negotiationCounter: 'Counter offer — awaiting response',
       negotiationAwaitingShipper: 'Awaiting shipper confirmation'
     },
+    flowSession: {
+      badgeActive: 'ACTIVE',
+      bidFlowStarted: 'Bid flow started — live tracking is now available',
+      carrierBidActive: 'ACTIVE BID FLOW',
+      carrierCapacityActive: 'ACTIVE CAPACITY MATCH',
+      shipperShipmentActive: 'ACTIVE SHIPMENT',
+      shipperCapacityActive: 'ACTIVE CAPACITY MATCH',
+      withCounterparty: 'With {{name}}',
+      liveTrackingEnabled: 'Your shipment is live on the map'
+    },
     notifications: {
       roleFallback: 'Role',
       rolePlatform: 'Platform',
@@ -470,11 +482,12 @@ export const translations = {
       badgeNew: 'New',
       seen: 'Seen',
       toastNew: 'New notification',
-      typeGeneric: '{{type}}',
+      typeGeneric: 'Update',
       type: {
         BID: 'Bid',
         BID_RECEIVED: 'New bid received',
         BID_ACCEPTED: 'Bid accepted',
+        STATUS_UPDATED: 'Shipment status updated',
         BID_REJECTED: 'Bid declined',
         COUNTER_OFFER: 'Counter offer',
         COUNTER_OFFERED: 'Counter offer',
@@ -920,7 +933,8 @@ export const translations = {
       activityFeed: {
         title: 'Recent activity',
         empty: 'No recent activity yet.',
-        emptySub: 'Updates will appear when loads, bids, or shipments change.'
+        emptySub: 'Updates will appear when loads, bids, or shipments change.',
+        update: 'Activity update'
       },
       adminDashboardPage: {
         title: 'Admin dashboard',
@@ -981,6 +995,8 @@ export const translations = {
         emptyShipper: 'No bids yet. Carriers will start bidding soon after you post.',
         emptyCarrier: 'No bids yet.',
         acceptedBidsHeading: 'Accepted Bids',
+        standardBidsHeading: 'Standard bids',
+        suggestedBidsHeading: 'Suggested bids',
         closedBidsHeading: 'Closed bids',
         myBidsTitle: 'My bids',
         bidManagementTitle: 'Bid management',
@@ -1189,7 +1205,7 @@ export const translations = {
         widgetAuthErrorHint: 'Your admin session may have expired. Sign in again; other dashboard areas stay available.',
         widgetForbiddenError: 'Access denied for this section.',
         widgetServerError: 'Server error — try again shortly.',
-        widgetNetworkError: 'Network/CORS failure — see endpoint details below.',
+        widgetNetworkError: 'Unable to load this section. Check your connection and try again.',
         widgetNotFoundError: 'This data source is not available on the server.',
         widgetDataError: 'Data could not be loaded.',
         widgetEmpty: 'No data yet.',
@@ -1412,6 +1428,7 @@ export const translations = {
       youSuggested: 'You suggested',
       carrierSuggested: 'Carrier suggested',
       suggestedLabel: 'Suggested',
+      suggestedBidType: 'Suggested bid',
       original: 'original',
       amountPlaceholder: 'Amount (PKR)',
       bidExpiredHint: 'This bid ended. You can place a new bid on open loads.',
@@ -1536,6 +1553,8 @@ export const translations = {
       sortRate: 'کم ترین شرح/کلو',
       resetFilters: 'فلٹرز ری سیٹ',
       incomingRequests: 'آنے والی درخواستیں',
+      pendingRequests: '{{count}} زیر التواء',
+      noIncomingRequests: 'فی الحال کوئی آنے والی درخواست نہیں۔',
       acceptRequest: 'قبول',
       rejectRequest: 'مسترد',
       requestAccepted: 'درخواست قبول',
@@ -1690,8 +1709,8 @@ export const translations = {
         'ذاتی سرگرمی کے اعداد و شمار کے لیے شپر یا کیریئر کردار سے سائن ان کریں۔'
     },
     deploy: {
-      mismatchTitle: 'سسٹم ورژن میں عدم مطابقت',
-      mismatchBody: 'فرنٹ اینڈ اور API ہم آہنگ نہیں۔ Cloudflare اور Render دوبارہ ڈپلائے کریں، پھر ہارڈ ریفریش کریں۔'
+      mismatchTitle: 'سسٹم اپ ڈیٹ ہو گیا',
+      mismatchBody: 'جاری رکھنے کے لیے صفحہ ریفریش کریں۔'
     },
     reviews: {
       rateUsersHint:
@@ -1880,6 +1899,16 @@ export const translations = {
       negotiationCounter: 'کاؤنٹر آفر — جواب کا انتظار',
       negotiationAwaitingShipper: 'شپپر کی تصدیق کا انتظار'
     },
+    flowSession: {
+      badgeActive: 'فعال',
+      bidFlowStarted: 'شپمنٹ فعال ہے — ٹریکنگ کے لیے ڈیش بورڈ کھولیں',
+      carrierBidActive: 'فعال بڈ فلو',
+      carrierCapacityActive: 'فعال گنجائش میچ',
+      shipperShipmentActive: 'فعال شپمنٹ',
+      shipperCapacityActive: 'فعال گنجائش میچ',
+      withCounterparty: '{{name}} کے ساتھ',
+      liveTrackingEnabled: 'آپ کی شپمنٹ میپ پر لائیو ہے'
+    },
     notifications: {
       roleFallback: 'کردار',
       rolePlatform: 'پلیٹ فارم',
@@ -1887,11 +1916,12 @@ export const translations = {
       badgeNew: 'نیا',
       seen: 'دیکھ لیا',
       toastNew: 'نئی نوٹیفکیشن',
-      typeGeneric: '{{type}}',
+      typeGeneric: 'اپ ڈیٹ',
       type: {
         BID: 'بڈ',
         BID_RECEIVED: 'نئی بڈ موصول',
         BID_ACCEPTED: 'بڈ قبول',
+        STATUS_UPDATED: 'شپمنٹ کی حالت اپ ڈیٹ',
         BID_REJECTED: 'بڈ مسترد',
         COUNTER_OFFER: 'کاؤنٹر آفر',
         COUNTER_OFFERED: 'کاؤنٹر آفر',
@@ -2253,7 +2283,8 @@ export const translations = {
       activityFeed: {
         title: 'تازہ سرگرمی',
         empty: 'ابھی کوئی سرگرمی نہیں۔',
-        emptySub: 'لوڈز، بڈز یا شپمنٹس بدلنے پر اپ ڈیٹس نظر آئیں گے۔'
+        emptySub: 'لوڈز، بڈز یا شپمنٹس بدلنے پر اپ ڈیٹس نظر آئیں گے۔',
+        update: 'سرگرمی کی اپ ڈیٹ'
       },
       adminDashboardPage: {
         title: 'ایڈمن ڈیش بورڈ',
@@ -2314,6 +2345,8 @@ export const translations = {
         emptyShipper: 'ابھی کوئی بڈ نہیں۔ لوڈ پوسٹ کرنے کے بعد کیریئرز بڈ لگانا شروع کریں گے۔',
         emptyCarrier: 'ابھی کوئی بڈ نہیں۔',
         acceptedBidsHeading: 'قبول شدہ بڈز',
+        standardBidsHeading: 'معمولی بڈز',
+        suggestedBidsHeading: 'تجویز شدہ بڈز',
         closedBidsHeading: 'بند بڈز',
         myBidsTitle: 'میرے بڈز',
         bidManagementTitle: 'بولیوں کا انتظام',
@@ -2594,7 +2627,7 @@ export const translations = {
         widgetAuthErrorHint: 'آپ کا ایڈمن سیشن ختم ہو سکتا ہے۔ دوبارہ سائن ان کریں؛ باقی ڈیش بورڈ دستیاب رہے گا۔',
         widgetForbiddenError: 'اس حصے تک رسائی نہیں۔',
         widgetServerError: 'سرور خرابی — تھوڑی دیر بعد دوبارہ کوشش کریں۔',
-        widgetNetworkError: 'نیٹ ورک/CORS خرابی — نیچے endpoint تفصیل دیکھیں۔',
+        widgetNetworkError: 'یہ حصہ لوڈ نہیں ہو سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
         widgetNotFoundError: 'یہ ڈیٹا سرور پر دستیاب نہیں۔',
         widgetDataError: 'ڈیٹا لوڈ نہیں ہو سکا۔',
         widgetEmpty: 'ابھی کوئی ڈیٹا نہیں۔',
@@ -2788,6 +2821,7 @@ export const translations = {
       youSuggested: 'آپ نے تجویز دی',
       carrierSuggested: 'کیریئر نے تجویز دی',
       suggestedLabel: 'تجویز',
+      suggestedBidType: 'تجویز شدہ بڈ',
       original: 'اصل',
       amountPlaceholder: 'رقم (PKR)',
       bidExpiredHint: 'یہ بڈ ختم ہو گیا۔ کھلے لوڈز پر نیا بڈ لگا سکتے ہیں۔',

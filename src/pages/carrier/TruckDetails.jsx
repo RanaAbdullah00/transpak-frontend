@@ -7,7 +7,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { unwrapErrorMessage } from '../../utils/unwrapApi.js';
+import { formatUserError } from '../../utils/userErrors.js';
 import { uploadMediaFile } from '../../services/uploadMedia.js';
 import { fleetStatusBadgeClass, isTruckMatchingEligible, normalizeTrucksResponse } from '../../utils/fleetApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
@@ -68,7 +68,7 @@ const TruckDetails = () => {
       const data = await request({ method: 'GET', url: '/trucks/mine' });
       setTrucks(normalizeTrucksResponse(data));
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.saveFailed') }));
       setTrucks([]);
     } finally {
       setListLoading(false);
@@ -87,7 +87,7 @@ const TruckDetails = () => {
       const url = await uploadMediaFile(file, { retries: 1 });
       setForm((p) => ({ ...p, [field]: url }));
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.uploadFailed'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.uploadFailed') }));
     } finally {
       setUploadingImage(false);
     }
@@ -115,7 +115,7 @@ const TruckDetails = () => {
       notifySuccess(t('pages.truckDetailsPage.defaultSet'));
       await refresh();
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.saveFailed') }));
     }
   };
 
@@ -127,7 +127,7 @@ const TruckDetails = () => {
       if (String(form.id) === String(row.id)) reset();
       await refresh();
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.saveFailed') }));
     }
   };
 
@@ -187,7 +187,7 @@ const TruckDetails = () => {
         await fetchList();
       }
     } catch (err) {
-      notifyError(unwrapErrorMessage(err) || t('pages.truckDetailsPage.saveFailed'));
+      notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.saveFailed') }));
     } finally {
       setSaving(false);
     }

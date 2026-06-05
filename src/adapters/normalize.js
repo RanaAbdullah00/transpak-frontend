@@ -1,4 +1,4 @@
-import { normalizeBidStatus } from '../utils/bidStatus.js';
+import { normalizeBidStatus, isCounterOffered } from '../utils/bidStatus.js';
 import { estimateLocalFare } from '../utils/localFareEstimate.js';
 
 // Data normalization adapters so UI never breaks on field mismatches.
@@ -81,7 +81,13 @@ export const normalizeBid = (raw) => {
     suggestedAmount: raw.suggestedAmount != null ? Number(raw.suggestedAmount) : null,
     suggestedAt: raw.suggestedAt ?? null,
     suggestedBy: raw.suggestedBy ?? null,
-    createdAt: raw.createdAt ?? new Date().toISOString()
+    bidType:
+      raw.bidType === 'suggested' ||
+      (isCounterOffered(raw.status) && raw.suggestedBy === 'carrier')
+        ? 'suggested'
+        : 'normal',
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+    expiresAt: raw.expiresAt ?? raw.expires_at ?? null
   };
 };
 

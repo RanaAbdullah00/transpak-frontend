@@ -3,12 +3,13 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import RelativeTime from '../ui/RelativeTime.jsx';
 import ProfileLink from '../profile/ProfileLink.jsx';
-import { translateNotificationType } from '../../utils/i18nLabels.js';
+import { notificationUILabels, translateNotificationType } from '../../utils/i18nLabels.js';
 
 const NotificationItem = ({ notification, onClick }) => {
   const { t } = useLanguage();
   const role = notification.roleType;
   const typeLbl = notification.type ? translateNotificationType(t, notification.type) : '';
+  const { message: displayMessage } = notificationUILabels(t, notification);
   const unread = !(notification.read || notification.isRead);
 
   const roleBadge =
@@ -45,7 +46,7 @@ const NotificationItem = ({ notification, onClick }) => {
             </div>
           ) : null}
           <div className="tp-notif-item__message small text-body">
-            <TranslatedText text={notification.message} className="" />
+            {displayMessage ? <TranslatedText text={displayMessage} className="" /> : null}
           </div>
         </div>
         {unread ? (

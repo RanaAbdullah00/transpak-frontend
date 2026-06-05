@@ -19,9 +19,11 @@ export function resolveContractConsistency({
   const restStatus = normalizeShipmentStatus(
     rest.status ?? rest.shipmentStatus ?? cachedUi?.status
   );
-  const socketStatus = track?.tracking?.status
-    ? normalizeShipmentStatus(track.tracking.status)
-    : null;
+  const lockRestStatus = Boolean(rest.status ?? rest.shipmentStatus);
+  const socketStatus =
+    !lockRestStatus && track?.tracking?.status
+      ? normalizeShipmentStatus(track.tracking.status)
+      : null;
 
   const merged = normalizeContractFields({
     ...(track || {}),

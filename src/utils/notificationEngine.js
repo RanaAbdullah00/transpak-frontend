@@ -2,6 +2,15 @@ import {
   buildNotificationEventId,
   claimNotificationEvent
 } from './notificationEventRegistry.js';
+import { isInternalDispatchLabel } from './i18nLabels.js';
+import { sanitizeProductText } from './userErrors.js';
+
+function cleanNotificationCopy(value, dispatchType) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (isInternalDispatchLabel(raw) || raw.toUpperCase() === dispatchType) return '';
+  return sanitizeProductText(raw);
+}
 
 function localEventId() {
   return `n-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -231,8 +240,8 @@ export function buildNotification(input = {}) {
     focus: false
   };
 
-  const message = String(input.message || input.body || '').trim();
-  const title = String(input.title || dispatchType || 'Update').trim();
+  const title = cleanNotificationCopy(input.title, dispatchType);
+  const message = cleanNotificationCopy(input.message || input.body, dispatchType);
   const shipmentRef = extractRef(input, input);
   const loadId = extractLoadId(input, input);
 
@@ -243,7 +252,7 @@ export function buildNotification(input = {}) {
     category: input.category || meta.category,
     dispatchType,
     title,
-    message: message || title,
+    message: message || title || '',
     shipmentRef: shipmentRef ? String(shipmentRef).trim() : null,
     loadId: loadId ? String(loadId) : null,
     roleTarget: Array.isArray(input.roleTarget)

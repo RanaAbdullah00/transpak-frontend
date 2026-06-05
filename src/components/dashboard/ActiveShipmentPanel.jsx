@@ -21,7 +21,9 @@ const ActiveShipmentPanel = ({
   liveDriver = false,
   liveLocation = null,
   geoError = null,
-  trackHref = null
+  trackHref = null,
+  /** From GET /shipments/active — overrides ui.canTrack for map gating */
+  trackingEnabled = null
 }) => {
   const { t } = useLanguage();
 
@@ -47,11 +49,11 @@ const ActiveShipmentPanel = ({
 
   const ui = uiState;
   const lifecycle = trackingData.lifecycleStage;
-  const ref = trackingData.refKey;
-  const href = ui?.canTrack && trackHref ? trackHref : null;
+  const showTracking = Boolean(trackingEnabled);
+  const href = showTracking && trackHref ? trackHref : null;
   const reportedLoc = trackingData?.tracking?.currentLocation ?? trackingData?.tracking?.location;
   const showDriver =
-    ui?.canTrack &&
+    showTracking &&
     (liveDriver ||
       (Array.isArray(reportedLoc) &&
         reportedLoc.length >= 2 &&
@@ -75,11 +77,11 @@ const ActiveShipmentPanel = ({
       {ui?.showShipperAcceptedBanner ? (
         <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
       ) : null}
-      {!ui?.canTrack ? (
+      {!showTracking ? (
         <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
       ) : null}
       <ShipmentProgressBox uiState={ui} eta={trackingData.tracking?.eta} />
-      {ui?.canTrack ? (
+      {showTracking ? (
         <div className="mt-3 tp-dashboard-map-preview">
           <TrackingMap
             trackingData={trackingData}

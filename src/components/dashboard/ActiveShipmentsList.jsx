@@ -3,19 +3,15 @@ import ActiveShipmentCard from './ActiveShipmentCard.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { useAuth } from '../../hooks/useAuth.js';
-import { canTrackShipment } from '../../utils/shipmentUIState.js';
-import { normalizeContractFields } from '../../utils/contractFieldNormalizer.js';
-import { getTrackingRef } from '../../utils/trackingRefResolver.js';
+import { normalizeActiveShipmentList } from '../../utils/activeShipmentModel.js';
 
 /**
- * Lists all in-progress shipments for the current user (shipper or carrier).
+ * Active shipments — sole source of truth: GET /shipments/active.
+ * Bid/capacity/socket state must not drive this list.
  */
 const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   const { t } = useLanguage();
-  const { user } = useAuth();
   const { request } = useApi();
-  const workspaceRole = carrierMode ? 'carrier' : user?.activeRole === 'shipper' ? 'shipper' : null;
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +23,7 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
         url: '/shipments/active',
         skipGlobalErrorToast: true
       });
-      setRows(Array.isArray(data) ? data : []);
+      setRows(normalizeActiveShipmentList(data));
     } catch {
       setRows([]);
     } finally {
@@ -42,14 +38,7 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   useEffect(() => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (
-        scope &&
-        scope !== 'all' &&
-        scope !== 'shipments' &&
-        scope !== 'loads' &&
-        scope !== 'bids' &&
-        scope !== 'space'
-      ) {
+      if (scope && scope !== 'all' && scope !== 'shipments') {
         return;
       }
       refresh();
@@ -77,32 +66,23 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
           {t('pages.dashboard.activeShipmentsCount', { count: rows.length })}
         </p>
       ) : null}
-      {rows
-        .filter((row) =>
-          canTrackShipment(
-            normalizeContractFields({
-              status: row.shipmentStatus ?? row.status,
-              assignedCarrierId: row.assignedCarrierId,
-              ref: getTrackingRef(row),
-              role: workspaceRole
-            })
-          )
-        )
-        .map((row, idx, arr) => {
-          const ref = getTrackingRef(row);
-          const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
-          return (
-            <ActiveShipmentCard
-              key={ref}
-              trackRef={ref}
-              label={label || ref}
-              assignedCarrierId={row.assignedCarrierId}
-              carrierMode={carrierMode}
-              shareLive={carrierMode}
-              defaultExpanded={idx === 0 && arr.length === 1}
-            />
-          );
-        })}
+      {rows.map((row, idx, arr) => {
+        const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
+        return (
+          <ActiveShipmentCard
+            key={row.trackRef || row.id}
+            trackRef={row.trackRef}
+            label={label || row.trackRef}
+            assignedCarrierId={row.assignedCarrierId}
+            shipmentStatus={row.shipmentStatus}
+            flowType={row.flowType}
+            trackingEnabled={row.trackingEnabled}
+            carrierMode={carrierMode}
+            shareLive={carrierMode}
+            defaultExpanded={idx === 0 && arr.length === 1}
+          />
+        );
+      })}
     </div>
   );
 };

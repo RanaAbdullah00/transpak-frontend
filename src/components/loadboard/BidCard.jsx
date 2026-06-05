@@ -8,6 +8,7 @@ import ProfileLink from '../profile/ProfileLink.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { translateBidStatus } from '../../utils/i18nLabels.js';
 import { isAwaitingShipper, isCounterOffered, isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { deriveBidType } from '../../utils/flowSession.js';
 import { formatDistanceKm } from '../../utils/formatDistance.js';
 
 function formatHHMMSS(totalSeconds) {
@@ -68,7 +69,8 @@ const BidCard = ({
   const amount = Number(bid?.amount ?? bid?.price ?? 0);
   const suggestedAmount = bid?.suggestedAmount != null ? Number(bid.suggestedAmount) : null;
   const currency = bid?.currency || 'PKR';
-  const isSuggested = isCounterOffered(bid.status);
+  const bidType = deriveBidType(bid);
+  const isSuggested = bidType === 'suggested' || isCounterOffered(bid.status);
   const suggestedByShipper = isSuggested && bid?.suggestedBy === 'shipper';
   const suggestedByCarrier = isSuggested && bid?.suggestedBy === 'carrier';
   const displayAmount = suggestedAmount != null ? suggestedAmount : amount;
@@ -134,8 +136,10 @@ const BidCard = ({
     }
   };
 
+  const isAccepted = canonStatus === BID_STATUS.ACCEPTED;
+
   return (
-    <Card className={`tp-bid-card ${isExpired ? 'opacity-50' : ''}`}>
+    <Card className={`tp-bid-card ${isSuggested ? 'tp-bid-card--suggested border-info' : ''} ${isExpired ? 'opacity-50' : ''}`}>
       <div className="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
         <div className="min-w-0 flex-grow-1 tp-min-w-12">
           <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -156,19 +160,24 @@ const BidCard = ({
             <small className="text-muted d-block">{routeDistance.display}</small>
           ) : null}
         </div>
-        <Badge
-          variant={
-            canonStatus === BID_STATUS.ACCEPTED
-              ? 'success'
-              : isCounterOffered(bid.status)
-                ? 'info'
-                : isExpired
-                  ? 'secondary'
-                  : 'warning'
-          }
-        >
-          {statusBadgeLabel}
-        </Badge>
+        <div className="d-flex flex-column align-items-end gap-1">
+          {isSuggested && !isAccepted ? (
+            <Badge variant="info">{t('bidCard.suggestedBidType')}</Badge>
+          ) : null}
+          <Badge
+            variant={
+              canonStatus === BID_STATUS.ACCEPTED
+                ? 'success'
+                : isSuggested
+                  ? 'info'
+                  : isExpired
+                    ? 'secondary'
+                    : 'warning'
+            }
+          >
+            {statusBadgeLabel}
+          </Badge>
+        </div>
       </div>
       <div className="d-flex justify-content-between align-items-end mb-2">
         <div>

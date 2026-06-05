@@ -23,7 +23,7 @@ export default class AdminErrorBoundary extends React.Component {
       return (
         <div className="alert alert-danger rounded-3 m-3" role="alert">
           <div className="fw-semibold mb-1">Admin panel error</div>
-          <p className="small mb-2">{error.message || 'Something went wrong rendering this view.'}</p>
+          <p className="small mb-2">Something went wrong. Please reload and try again.</p>
           <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => window.location.reload()}>
             Reload
           </button>

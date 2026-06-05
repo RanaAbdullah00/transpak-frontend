@@ -129,11 +129,16 @@ const ShipperDashboard = () => {
       </div>
 
       <div className="mt-4">
-        <div className="d-flex justify-content-between align-items-center mb-2">
+        <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
           <h6 className="mb-0">{t('loadsHub.mySpaceRequests')}</h6>
-          <Link to="/loads/manage?tab=market" className="small text-decoration-none">
-            {t('loadsHub.capacityMarket')}
-          </Link>
+          <div className="d-flex gap-2">
+            <Link to="/loads/manage?tab=market" className="btn btn-sm btn-primary">
+              {t('loadsHub.sendRequest')}
+            </Link>
+            <Link to="/loads/manage?tab=market" className="small text-decoration-none align-self-center">
+              {t('loadsHub.capacityMarket')}
+            </Link>
+          </div>
         </div>
         <SpaceSentRequestsPanel />
       </div>

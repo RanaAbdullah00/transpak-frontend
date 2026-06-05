@@ -7,16 +7,12 @@ const RECHECK_MS = Number(import.meta.env.VITE_HEALTH_RECHECK_MS || 30000);
 const DeployMismatchBanner = () => {
   const { t } = useLanguage();
   const [mismatch, setMismatch] = useState(false);
-  const [detail, setDetail] = useState('');
-
   useEffect(() => {
-    const onMismatch = (e) => {
+    const onMismatch = () => {
       setMismatch(true);
-      setDetail(e?.detail?.message || '');
     };
     const onOk = () => {
       setMismatch(false);
-      setDetail('');
     };
     window.addEventListener('tp:deploy-mismatch', onMismatch);
     window.addEventListener('tp:deploy-ok', onOk);
@@ -40,7 +36,6 @@ const DeployMismatchBanner = () => {
         const schema = body?.data?.schema;
         if (db === 'ready' && schema?.ok === true) {
           setMismatch(false);
-          setDetail('');
         }
         if (db === 'connecting' || schema?.booting === true) {
           setMismatch(false);
@@ -62,7 +57,7 @@ const DeployMismatchBanner = () => {
       role="alert"
     >
       <strong>{t('deploy.mismatchTitle')}</strong>
-      <span className="d-block mt-1">{detail || t('deploy.mismatchBody')}</span>
+      <span className="d-block mt-1">{t('deploy.mismatchBody')}</span>
     </div>
   );
 };

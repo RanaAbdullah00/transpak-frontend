@@ -67,10 +67,7 @@ function handleApiFailure(error, config) {
   if (isCanceledError(error)) return;
   logApiFailure(error, config);
   if (config?.skipGlobalErrorToast) return;
-  const { displayMessage } = unwrapErrorDetail(error);
-  const endpoint = fullUrl(config || {});
-  const msg = displayMessage || `Request failed (${endpoint})`;
-  notifyApiError(error, msg);
+  notifyApiError(error);
 }
 
 const api = axios.create({

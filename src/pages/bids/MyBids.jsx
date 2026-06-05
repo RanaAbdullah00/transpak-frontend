@@ -124,8 +124,13 @@ const MyBids = () => {
   );
   const bidsWithDistance = bids.map((b) => {
     const lid = b.loadId ? String(b.loadId) : null;
+    const meta = lid ? loadMetaByLoad[lid] : null;
     const distanceKm = lid ? distanceByLoadId[lid] : null;
-    return distanceKm != null && distanceKm > 0 ? { ...b, distanceKm } : b;
+    const enriched = {
+      ...b,
+      loadCode: b.loadCode || meta?.code || null
+    };
+    return distanceKm != null && distanceKm > 0 ? { ...enriched, distanceKm } : enriched;
   });
 
   const actionsDisabled = !profileComplete || !trucksComplete;

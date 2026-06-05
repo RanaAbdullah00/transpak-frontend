@@ -14,7 +14,7 @@ import {
 } from '../components/ui/ToastProvider.jsx';
 import { unwrapErrorDetail } from './unwrapApi.js';
 import { AUTH_NETWORK_ERROR, AUTH_UNEXPECTED_ERROR } from './authApiSafe.js';
-import { formatUserError } from './userErrors.js';
+import { formatUserError, sanitizeProductText } from './userErrors.js';
 
 export const SystemNotifyType = {
   SUCCESS: 'success',
@@ -279,13 +279,13 @@ export function notifyAuthError(err, t, flow = 'login') {
 
 /** Show a user-facing API error via the global toast router. */
 export function notifyApiError(err, fallback = '') {
-  const msg = formatUserError(err) || String(fallback || '').trim();
+  const msg = formatUserError(err) || sanitizeProductText(fallback);
   if (msg) notifySystem(SystemNotifyType.ERROR, msg);
 }
 
 /** Client-side validation / UX message (non-API). */
 export function notifyUserError(message, opts = {}) {
-  const text = String(message || '').trim();
+  const text = sanitizeProductText(message);
   if (text) notifySystem(SystemNotifyType.ERROR, text, opts);
 }
 
