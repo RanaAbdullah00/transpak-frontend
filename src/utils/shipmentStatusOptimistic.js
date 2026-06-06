@@ -2,6 +2,7 @@ import { normalizeShipmentStatus, nextShipmentStatus, SHIPMENT_ORDER } from './s
 
 /** View-layer optimistic status + timeline — does not touch activation/snapshot engines. */
 const statusByRef = new Map();
+const socketStatusByRef = new Map();
 const timelineByRef = new Map();
 const lastEmitByRef = new Map();
 const listeners = new Set();
@@ -24,6 +25,28 @@ function notify() {
 export function getOptimisticShipmentStatus(ref) {
   const key = refKey(ref);
   return key ? statusByRef.get(key) ?? null : null;
+}
+
+export function getSocketShipmentStatus(ref) {
+  const key = refKey(ref);
+  return key ? socketStatusByRef.get(key)?.status ?? null : null;
+}
+
+function statusRank(status) {
+  const normalized = normalizeShipmentStatus(status);
+  if (!normalized) return -1;
+  const idx = SHIPMENT_ORDER.indexOf(normalized);
+  return idx < 0 ? -1 : idx;
+}
+
+function pickFurthestStatus(current, incoming) {
+  if (!incoming) return current;
+  if (!current) return incoming;
+  const ci = statusRank(current);
+  const ii = statusRank(incoming);
+  if (ii < 0) return current;
+  if (ci < 0) return incoming;
+  return ii >= ci ? incoming : current;
 }
 
 export function getOptimisticStatusTimeline(ref) {
@@ -78,17 +101,19 @@ export function subscribeOptimisticShipmentStatus(listener) {
   return () => listeners.delete(listener);
 }
 
-/** Optimistic status wins when it is further along the canonical pipeline. */
-export function resolveEffectiveShipmentStatus(ref, serverStatus) {
+/**
+ * Strict status merge order: API base → socket overlay → optimistic overlay.
+ * Optimistic store always wins when further along the pipeline.
+ */
+export function resolveEffectiveShipmentStatus(ref, apiStatus) {
+  const api = normalizeShipmentStatus(apiStatus);
+  const socket = getSocketShipmentStatus(ref);
   const opt = getOptimisticShipmentStatus(ref);
-  const server = normalizeShipmentStatus(serverStatus);
-  if (!opt) return server || 'booked';
-  if (!server) return opt;
-  const oi = SHIPMENT_ORDER.indexOf(opt);
-  const si = SHIPMENT_ORDER.indexOf(server);
-  if (oi < 0) return server;
-  if (si < 0) return opt;
-  return oi >= si ? opt : server;
+
+  let resolved = api || 'booked';
+  if (socket) resolved = pickFurthestStatus(resolved, socket);
+  if (opt) resolved = pickFurthestStatus(resolved, opt);
+  return resolved || 'booked';
 }
 
 export function resolveUpcomingShipmentStatus(ref, currentStatus) {

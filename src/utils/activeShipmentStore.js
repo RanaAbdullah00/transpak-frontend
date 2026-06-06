@@ -1,4 +1,8 @@
 import { normalizeActiveShipmentList, normalizeActiveShipmentRow } from './activeShipmentModel.js';
+import {
+  hasOptimisticActivation,
+  shouldSuppressStaleRestRow
+} from './contractActivationLayer.js';
 
 /** @typedef {'rest' | 'hydrate' | 'event' | 'bootstrap'} ShipmentStoreSource */
 
@@ -10,7 +14,6 @@ let bootstrapped = false;
 const EMPTY_SNAPSHOT = Object.freeze([]);
 let cachedList = EMPTY_SNAPSHOT;
 let cachedListVersion = -1;
-let snapshotInFlight = false;
 
 function freezeRows(rows) {
   return Object.freeze(rows.map((row) => Object.freeze({ ...row })));
@@ -50,10 +53,19 @@ function notify() {
   });
 }
 
+function rowRef(row = {}) {
+  return String(row.trackRef || row.code || row.loadCode || '').trim();
+}
+
 function upsertRow(row, { source = 'hydrate' } = {}) {
   const normalized = normalizeActiveShipmentRow(row);
   const key = rowKey(normalized);
   if (!key) return false;
+
+  const ref = rowRef(normalized) || key;
+  if (source !== 'bootstrap' && shouldSuppressStaleRestRow(normalized, ref)) {
+    return false;
+  }
 
   const existing = rowsByKey.get(key);
   const nextVer = rowVersion(normalized) || Date.now();
@@ -61,6 +73,24 @@ function upsertRow(row, { source = 'hydrate' } = {}) {
 
   if (existing && nextVer < prevVer && source !== 'bootstrap') {
     return false;
+  }
+
+  if (
+    existing?._storeSource === 'bootstrap' &&
+    source !== 'bootstrap' &&
+    hasOptimisticActivation(ref)
+  ) {
+    rowsByKey.set(key, {
+      ...existing,
+      ...normalized,
+      trackingEnabled: true,
+      contractActivated: true,
+      shipmentStatus: existing.shipmentStatus || normalized.shipmentStatus,
+      status: existing.status || normalized.status,
+      _storeVersion: Math.max(nextVer, prevVer, existing._storeVersion || 0),
+      _storeSource: 'bootstrap'
+    });
+    return true;
   }
 
   rowsByKey.set(key, { ...normalized, _storeVersion: nextVer, _storeSource: source });
@@ -81,7 +111,11 @@ export function upsertActiveShipmentRows(rows = [], { authoritative = false, sou
       if (key) nextKeys.add(key);
     });
     for (const key of [...rowsByKey.keys()]) {
-      if (!nextKeys.has(key)) rowsByKey.delete(key);
+      if (nextKeys.has(key)) continue;
+      const row = rowsByKey.get(key);
+      const ref = rowRef(row) || key;
+      if (row?._storeSource === 'bootstrap' && hasOptimisticActivation(ref)) continue;
+      rowsByKey.delete(key);
     }
   }
 
@@ -119,13 +153,8 @@ export function getActiveShipmentEmptySnapshot() {
 
 export function getActiveShipmentList() {
   if (cachedListVersion === listVersion) return cachedList;
-  if (snapshotInFlight) return cachedList;
-  snapshotInFlight = true;
   cachedList = rebuildSnapshot();
   cachedListVersion = listVersion;
-  queueMicrotask(() => {
-    snapshotInFlight = false;
-  });
   return cachedList;
 }
 
@@ -147,7 +176,6 @@ export function clearActiveShipmentStore() {
   bootstrapped = false;
   cachedList = EMPTY_SNAPSHOT;
   cachedListVersion = -1;
-  snapshotInFlight = false;
   notify();
 }
 

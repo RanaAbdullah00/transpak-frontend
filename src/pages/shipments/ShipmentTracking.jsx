@@ -42,6 +42,9 @@ import {
   hasOptimisticActivation,
   subscribeOptimisticActivation
 } from '../../utils/contractActivationLayer.js';
+import { resolveMapDisplayFields } from '../../utils/trackingActiveGate.js';
+import { getLastKnownCoordinates } from '../../utils/trackingCache.js';
+import { useTrackingActive } from '../../hooks/useTrackingActive.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
@@ -206,49 +209,42 @@ const ShipmentTracking = () => {
   }, [id, refreshActiveRow]);
 
   const hasOptimistic = hasOptimisticActivation(id);
-  const storeRow = useMemo(
-    () => (id ? findActiveShipmentRow(getActiveShipmentList(), id) : null),
-    [id, activeRow, hasOptimistic]
-  );
   const isHydrating = (activeLoading || backgroundHydrating) && !hasOptimistic;
 
-  const pageSnapshot = useMemo(() => {
-    if (!id || !isValidShipmentTrackRef(id)) return EMPTY_UNIFIED_SNAPSHOT;
-    const fromStore = findActiveShipmentRow(getActiveShipmentList(), id);
-    const candidate = activeRow || fromStore;
-    return assertIsSnapshotConsumer(
-      getUnifiedShipmentSnapshot({
-        restRow: candidate,
-        storeRow: fromStore,
-        ref: id,
-        userId: user?.id ?? null,
-        role: workspaceRole
-      }),
-      'ShipmentTracking.pageSnapshot'
-    );
-  }, [activeRow, id, workspaceRole, user?.id, hasOptimistic]);
+  const {
+    trackingActive,
+    storeRow,
+    shipmentRow,
+    pageSnapshot: reactivePageSnapshot
+  } = useTrackingActive({
+    trackRef: id,
+    restRow: activeRow,
+    role: workspaceRole,
+    userId: user?.id ?? null
+  });
+
+  const pageSnapshot = reactivePageSnapshot ?? EMPTY_UNIFIED_SNAPSHOT;
 
   const rowForTracking = useMemo(() => {
     if (!id || !isValidShipmentTrackRef(id)) return null;
     return (
       pageSnapshot.activeRow ||
+      shipmentRow ||
       buildOptimisticTrackingRow(id, { userId: user?.id ?? null, role: workspaceRole }) ||
       null
     );
-  }, [pageSnapshot, id, workspaceRole, user?.id, hasOptimistic]);
-
-  const trackingEnabled = Boolean(pageSnapshot.tracking?.enabled) || hasOptimistic;
+  }, [pageSnapshot, shipmentRow, id, workspaceRole, user?.id, hasOptimistic]);
 
   const { trackingData: payload, uiState, loading, error, livePos, geoError } = useShipmentTracking({
     trackRef: id,
     shipmentStatus: pageSnapshot.shipmentStatus ?? rowForTracking?.shipmentStatus ?? null,
-    trackingEnabled,
+    trackingEnabled: trackingActive,
     assignedCarrierId:
       pageSnapshot.activeRow?.assignedCarrierId ??
       pageSnapshot.contractFields?.assignedCarrierId ??
       null,
     shareLive,
-    enabled: Boolean(id && (rowForTracking || hasOptimistic)),
+    enabled: Boolean(isValidShipmentTrackRef(id) && trackingActive),
     role: workspaceRole,
     flowType:
       pageSnapshot.activeRow?.flowType ?? pageSnapshot.contractFields?.flowType ?? FLOW_TYPE.BID
@@ -270,11 +266,7 @@ const ShipmentTracking = () => {
       ? resolveUpcomingShipmentStatus(id, baseShipmentStatus)
       : ui.upcomingStatus;
   const canRenderAdvanceButton =
-    workspaceRole === 'carrier' &&
-    isValidShipmentTrackRef(id) &&
-    (Boolean(pageSnapshot.contractActivated) ||
-      hasOptimistic ||
-      Boolean(pageSnapshot.permissions?.canUpdateStatus ?? ui.canUpdateStatus));
+    workspaceRole === 'carrier' && isValidShipmentTrackRef(id) && trackingActive;
   const canEnableButton = canRenderAdvanceButton && upcomingStatus != null;
 
   const handleAdvanceStatus = useCallback(async () => {
@@ -309,20 +301,21 @@ const ShipmentTracking = () => {
   }, [id, upcomingStatus, canEnableButton, request, t, workspaceRole]);
 
   const tracking = payload?.tracking;
-  const originName =
-    payload?.origin ||
-    activeRow?.origin ||
-    storeRow?.origin ||
-    rowForTracking?.origin ||
-    pageSnapshot.activeRow?.origin ||
-    '';
-  const destinationName =
-    payload?.destination ||
-    activeRow?.destination ||
-    storeRow?.destination ||
-    rowForTracking?.destination ||
-    pageSnapshot.activeRow?.destination ||
-    '';
+  const mapFields = useMemo(
+    () =>
+      resolveMapDisplayFields({
+        livePayload: payload,
+        livePos: shareLive && trackingActive ? livePos : null,
+        lastKnownLocation: getLastKnownCoordinates(id),
+        shipmentRow: rowForTracking,
+        storeRow,
+        status: effectiveStatus,
+        refKey: id
+      }),
+    [payload, livePos, rowForTracking, storeRow, effectiveStatus, id, shareLive, trackingActive]
+  );
+  const originName = mapFields.origin;
+  const destinationName = mapFields.destination;
 
   const routeEstimate = useMemo(() => {
     if (!originName || !destinationName) return null;
@@ -358,29 +351,7 @@ const ShipmentTracking = () => {
       .map((c) => [Number(c[0]), Number(c[1])]);
   }, [payload?.liveTrackingMap?.coordinates]);
 
-  const showTracking = Boolean(
-    hasOptimistic ||
-      pageSnapshot.contractActivated ||
-      ui.contractActivated ||
-      ui.trackingEnabled ||
-      ui.unifiedContract?.trackingEnabled ||
-      trackingEnabled
-  );
-
-  const currentLocation = useMemo(() => {
-    if (!showTracking) return null;
-    if (showTracking && shareLive && livePos) return livePos;
-    const direct = tracking?.currentLocation ?? tracking?.location;
-    if (
-      Array.isArray(direct) &&
-      direct.length >= 2 &&
-      Number.isFinite(Number(direct[0])) &&
-      Number.isFinite(Number(direct[1]))
-    ) {
-      return [Number(direct[0]), Number(direct[1])];
-    }
-    return null;
-  }, [showTracking, tracking?.currentLocation, tracking?.location, shareLive, livePos]);
+  const currentLocation = trackingActive ? mapFields.currentLocation : null;
 
   const shipment = useMemo(
     () => ({
@@ -418,19 +389,30 @@ const ShipmentTracking = () => {
 
   const trackingDataForMap = useMemo(
     () => ({
-      ...payload,
+      ...mapFields.trackingData,
       origin: originName,
       destination: destinationName,
       tracking: {
-        ...tracking,
+        ...mapFields.trackingData?.tracking,
         status: effectiveStatus,
         eta: tracking?.eta,
         currentLocation,
-        locationUnavailable: !currentLocation && !loading && !ui.contractActivated && !hasOptimistic
+        locationUnavailable: !currentLocation && trackingActive
       },
-      liveTrackingMap: payload?.liveTrackingMap || { coordinates: coords }
+      liveTrackingMap:
+        mapFields.trackingData?.liveTrackingMap || payload?.liveTrackingMap || { coordinates: coords }
     }),
-    [tracking, currentLocation, payload, coords, originName, destinationName, loading, ui.contractActivated, hasOptimistic, effectiveStatus]
+    [
+      mapFields.trackingData,
+      tracking,
+      currentLocation,
+      payload,
+      coords,
+      originName,
+      destinationName,
+      trackingActive,
+      effectiveStatus
+    ]
   );
 
   if (!id || !isValidShipmentTrackRef(id)) {
@@ -447,13 +429,7 @@ const ShipmentTracking = () => {
     );
   }
 
-  const shellReady =
-    hasOptimistic ||
-    Boolean(pageSnapshot.contractActivated) ||
-    Boolean(pageSnapshot.tracking?.showShell) ||
-    Boolean(rowForTracking);
-
-  if (activeLoading && !shellReady) {
+  if (activeLoading && !trackingActive) {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
@@ -464,7 +440,7 @@ const ShipmentTracking = () => {
     );
   }
 
-  if (!shellReady) {
+  if (!trackingActive) {
     if (isHydrating) {
       return (
         <div className="container py-4 tp-tracking-page">
@@ -489,30 +465,9 @@ const ShipmentTracking = () => {
     );
   }
 
-  const renderShellReady =
-    shellReady || Boolean(ui?.contractActivated) || Boolean(rowForTracking);
-  const showTrackingSkeleton = loading && !payload && !renderShellReady;
-
-  if (showTrackingSkeleton) {
-    return (
-      <div className="container py-3 tp-tracking-page">
-        <h5 className="mb-3">{t('pages.tracking.title')}</h5>
-        <div className="tp-tracking-skeleton rounded-3 border p-3 mb-3">
-          <div className="placeholder-glow mb-2">
-            <span className="placeholder col-5 rounded" />
-          </div>
-          <div className="placeholder-glow" style={{ minHeight: 320 }}>
-            <span className="placeholder col-12 rounded d-block h-100" style={{ minHeight: 320 }} />
-          </div>
-        </div>
-        <Loader />
-      </div>
-    );
-  }
-
   const userError = error ? formatUserError({ message: error }, t, { fallback: t('pages.tracking.loadFailed') }) : '';
 
-  if (error && !payload && !shellReady) {
+  if (error && !payload && !trackingActive) {
     return (
       <div className="container py-3 tp-tracking-page">
         <h5 className="mb-3">{t('pages.tracking.title')}</h5>
@@ -536,7 +491,7 @@ const ShipmentTracking = () => {
       {ui.showShipperAcceptedBanner ? (
         <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
       ) : null}
-      {!showTracking && !loading ? (
+      {loading && !payload ? (
         <p className="small text-muted mb-2">{t('pages.tracking.waitingForData')}</p>
       ) : null}
       {userError ? (
@@ -548,26 +503,21 @@ const ShipmentTracking = () => {
       <div className="tp-tracking-progress mb-3">
         <ShipmentProgressBox uiState={ui} eta={shipment.eta} />
       </div>
-      {showTracking ? (
-        <div className="tp-tracking-map tp-tracking-map--fullscreen mb-3 overflow-hidden rounded-3 border">
-          <TrackingMap
-            trackingData={trackingDataForMap}
-            currentLocation={currentLocation}
-            originName={originName}
-            destinationName={destinationName}
-            liveDriver={Boolean(shareLive && (livePos || hasOptimistic))}
-            geoError={geoError}
-          />
-        </div>
-      ) : null}
+      <div className="tp-tracking-map tp-tracking-map--fullscreen mb-3 overflow-hidden rounded-3 border">
+        <TrackingMap
+          trackingData={trackingDataForMap}
+          currentLocation={currentLocation}
+          originName={originName}
+          destinationName={destinationName}
+          liveDriver={Boolean(shareLive && (livePos || trackingActive))}
+          geoError={geoError}
+          trackingActive={trackingActive}
+        />
+      </div>
       <StatusTimeline uiState={{ ...ui, status: effectiveStatus }} events={timelineEvents} />
-      {workspaceRole === 'carrier' &&
-      (rowForTracking || hasOptimistic || pageSnapshot.contractActivated) ? (
+      {workspaceRole === 'carrier' && trackingActive ? (
         <div className="mt-3 mb-3">
           <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>
-          {!canRenderAdvanceButton ? (
-            <p className="small text-muted mb-2">{t('pages.tracking.waitingForData')}</p>
-          ) : null}
           <Button
             variant="primary"
             className="tp-touch-target"

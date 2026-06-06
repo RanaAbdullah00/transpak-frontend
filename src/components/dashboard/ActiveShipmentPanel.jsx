@@ -11,7 +11,8 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 
 /**
- * Single tracking UI for shipper + carrier dashboards (backend tracking only, progress above map).
+ * Single tracking UI for shipper + carrier dashboards.
+ * Visibility is controlled only by trackingEnabled (trackingActive).
  */
 const ActiveShipmentPanel = ({
   trackingData,
@@ -23,60 +24,47 @@ const ActiveShipmentPanel = ({
   liveLocation = null,
   geoError = null,
   trackHref = null,
-  /** From GET /shipments/active — overrides ui.canTrack for map gating */
+  originName = '',
+  destinationName = '',
+  /** trackingActive — sole visibility gate */
   trackingEnabled = null
 }) => {
   const { t } = useLanguage();
+  const trackingActive = Boolean(trackingEnabled);
 
-  if (loadingTracking) {
-    return (
-      <div className="tp-tracking-skeleton rounded-3 border p-3">
-        <div className="placeholder-glow mb-2">
-          <span className="placeholder col-4 rounded" />
-        </div>
-        <div className="placeholder-glow mb-3" style={{ minHeight: 180 }}>
-          <span className="placeholder col-12 rounded h-100 d-block" style={{ minHeight: 180 }} />
-        </div>
-        <div className="text-center py-2">
-          <Loader />
-        </div>
-      </div>
-    );
-  }
-
-  const showTracking = Boolean(trackingEnabled);
-  const activationShell =
-    showTracking && !trackingData
-      ? {
-          refKey: '',
-          origin: '',
-          destination: '',
-          tracking: { status: uiState?.status || 'booked' },
-          history: []
-        }
-      : null;
-  const data = trackingData || activationShell;
-
-  if (!data) {
+  if (!trackingActive) {
     return (
       emptyState ?? (
-        <div className="text-muted small py-3 text-center">{t('pages.tracking.waitingForData')}</div>
+        <div className="text-muted small py-3 text-center">{t('pages.tracking.trackingNotActiveYet')}</div>
       )
     );
   }
 
+  const data = trackingData || {
+    refKey: '',
+    origin: originName,
+    destination: destinationName,
+    tracking: {
+      status: uiState?.status || 'booked',
+      locationUnavailable: true
+    },
+    history: [],
+    liveTrackingMap: { coordinates: [] }
+  };
+
   const ui = uiState;
   const lifecycle = data.lifecycleStage;
-  const href = showTracking && trackHref ? trackHref : null;
+  const href = trackHref || null;
   const reportedLoc = data?.tracking?.currentLocation ?? data?.tracking?.location;
   const showDriver =
-    showTracking &&
-    (liveDriver ||
-      (Array.isArray(reportedLoc) &&
-        reportedLoc.length >= 2 &&
-        Number.isFinite(Number(reportedLoc[0])) &&
-        Number.isFinite(Number(reportedLoc[1]))));
+    liveDriver ||
+    (Array.isArray(reportedLoc) &&
+      reportedLoc.length >= 2 &&
+      Number.isFinite(Number(reportedLoc[0])) &&
+      Number.isFinite(Number(reportedLoc[1])));
   const mapLocation = showDriver ? liveLocation || reportedLoc : null;
+  const mapOrigin = data?.origin || originName;
+  const mapDestination = data?.destination || destinationName;
 
   return (
     <div className="tp-active-shipment-panel">
@@ -96,22 +84,32 @@ const ActiveShipmentPanel = ({
           <TranslatedText text={ui.label} as="span" />
         </p>
       ) : null}
-      {!showTracking ? (
-        <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
-      ) : null}
       <ShipmentProgressBox uiState={ui} eta={data.tracking?.eta} />
-      {showTracking ? (
-        <div className="mt-3 tp-dashboard-map-preview">
-          <TrackingMap
-            trackingData={data}
-            originName={data?.origin}
-            destinationName={data?.destination}
-            currentLocation={mapLocation}
-            liveDriver={liveDriver}
-            geoError={geoError}
-          />
-        </div>
-      ) : null}
+      <div className="mt-3 tp-dashboard-map-preview position-relative">
+        {loadingTracking ? (
+          <div className="position-absolute top-0 start-0 end-0 z-1 text-center py-1">
+            <Loader />
+          </div>
+        ) : null}
+        <TrackingMap
+          trackingData={{
+            ...data,
+            origin: mapOrigin,
+            destination: mapDestination,
+            tracking: {
+              ...data.tracking,
+              currentLocation: mapLocation,
+              locationUnavailable: !mapLocation
+            }
+          }}
+          originName={mapOrigin}
+          destinationName={mapDestination}
+          currentLocation={mapLocation}
+          liveDriver={liveDriver}
+          geoError={geoError}
+          trackingActive={trackingActive}
+        />
+      </div>
       {carrierAdvance ? (
         <div className="mt-3 pt-2 border-top">
           <h6 className="mb-2">{carrierAdvance.title}</h6>

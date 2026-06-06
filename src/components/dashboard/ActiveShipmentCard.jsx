@@ -15,6 +15,7 @@ import {
   getOptimisticActivation,
   subscribeOptimisticActivation
 } from '../../utils/contractActivationLayer.js';
+import { useTrackingActive } from '../../hooks/useTrackingActive.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
@@ -109,15 +110,20 @@ const ActiveShipmentCard = ({
     assignedCarrierId;
   const resolvedFlowType = snapshot.activeRow?.flowType ?? snapshot.contractFields?.flowType ?? flowType;
   const contractActivated = Boolean(snapshot.contractActivated);
-  const trackingEnabled = Boolean(snapshot.tracking?.enabled) || contractActivated;
+  const { trackingActive, storeRow, shipmentRow } = useTrackingActive({
+    trackRef: resolvedTrackRef,
+    restRow: snapshot.activeRow,
+    role: workspaceRole,
+    userId: user?.id ?? null
+  });
 
   const { trackingData, uiState, loading, livePos, geoError } = useShipmentTracking({
     trackRef: resolvedTrackRef,
     assignedCarrierId: resolvedCarrierId,
     shipmentStatus: resolvedStatus,
-    trackingEnabled,
-    shareLive: shareLive && (Boolean(resolvedCarrierId) || contractActivated),
-    enabled: Boolean(resolvedTrackRef) && (trackingEnabled || contractActivated),
+    trackingEnabled: trackingActive,
+    shareLive: shareLive && (Boolean(resolvedCarrierId) || trackingActive),
+    enabled: Boolean(resolvedTrackRef) && trackingActive,
     role: workspaceRole,
     flowType: resolvedFlowType
   });
@@ -126,29 +132,23 @@ const ActiveShipmentCard = ({
     () => withShipmentUILabels(snapshot.uiState ?? uiState, t),
     [snapshot.uiState, uiState, t]
   );
-  const liveTrackingActive = Boolean(
-    contractActivated || snapshot.tracking?.gate || snapshot.tracking?.enabled || ui.canTrack
-  );
   const baseStatus = resolvedStatus ?? snapshot.shipmentStatus ?? 'booked';
   const effectiveStatus = resolveEffectiveShipmentStatus(resolvedTrackRef, baseStatus);
   const upcomingForCarrier = resolveUpcomingShipmentStatus(resolvedTrackRef, baseStatus);
   const canRenderAdvanceButton =
-    carrierMode &&
-    isValidShipmentTrackRef(resolvedTrackRef) &&
-    (contractActivated ||
-      Boolean(snapshot.permissions?.canUpdateStatus ?? ui.canUpdateStatus));
+    carrierMode && isValidShipmentTrackRef(resolvedTrackRef) && trackingActive;
   const canEnableAdvance =
     canRenderAdvanceButton && (carrierMode ? upcomingForCarrier : ui.upcomingStatus) != null;
   const nextAdvanceStatus = carrierMode ? upcomingForCarrier : ui.upcomingStatus;
 
   useEffect(() => {
-    if (contractActivated || (liveTrackingActive && (defaultExpanded || carrierMode))) {
+    if (trackingActive && (defaultExpanded || carrierMode || contractActivated)) {
       setExpanded(true);
     }
-  }, [contractActivated, liveTrackingActive, defaultExpanded, carrierMode]);
+  }, [trackingActive, contractActivated, defaultExpanded, carrierMode]);
 
   const href =
-    (contractActivated || liveTrackingActive) && isValidShipmentTrackRef(resolvedTrackRef)
+    trackingActive && isValidShipmentTrackRef(resolvedTrackRef)
       ? `/shipments/tracking/${encodeURIComponent(resolvedTrackRef)}`
       : null;
 
@@ -230,15 +230,21 @@ const ActiveShipmentCard = ({
         <div className="px-3 pb-3 border-top">
           <ActiveShipmentPanel
             trackingData={trackingData}
-            loadingTracking={loading && !contractActivated}
-            liveDriver={liveTrackingActive && shareLive && expanded}
+            loadingTracking={loading}
+            liveDriver={trackingActive && shareLive && expanded}
             liveLocation={livePos}
             geoError={geoError}
             trackHref={href}
-            trackingEnabled={liveTrackingActive}
+            trackingEnabled={trackingActive}
+            originName={
+              trackingData?.origin || shipmentRow?.origin || storeRow?.origin || ''
+            }
+            destinationName={
+              trackingData?.destination || shipmentRow?.destination || storeRow?.destination || ''
+            }
             uiState={ui}
             carrierAdvance={
-              carrierMode && isValidShipmentTrackRef(resolvedTrackRef)
+              carrierMode && trackingActive && isValidShipmentTrackRef(resolvedTrackRef)
                 ? {
                     title: t('pages.tracking.updateStatus'),
                     upcoming: canEnableAdvance ? nextAdvanceStatus : null,

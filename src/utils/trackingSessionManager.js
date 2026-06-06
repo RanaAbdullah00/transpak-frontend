@@ -2,6 +2,7 @@ import {
   flushTrackingJoinQueue,
   clearTrackingJoinQueue
 } from './trackingJoinQueue.js';
+import { isTrackingSocketReady } from './trackingSocketReady.js';
 
 /**
  * In-memory tracking session registry (per browser tab).
@@ -157,8 +158,9 @@ export function clearTrackingSessions() {
   clearTrackingJoinQueue();
 }
 
-export function emitTrackingJoin(socket, primaryRef, aliasRefs = []) {
-  if (!socket || !primaryRef || !socket.connected) return;  const key = primaryKey(primaryRef);
+export function emitTrackingJoin(socket, primaryRef, aliasRefs = [], { socketStatus = 'connected' } = {}) {
+  if (!socket || !primaryRef || !isTrackingSocketReady(socketStatus, socket)) return;
+  const key = primaryKey(primaryRef);
   if (!shouldSocketJoin(key)) return;
 
   const row = sessions.get(key);

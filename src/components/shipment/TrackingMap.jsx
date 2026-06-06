@@ -14,7 +14,8 @@ const TrackingMap = ({
   originName = '',
   destinationName = '',
   liveDriver = false,
-  geoError = null
+  geoError = null,
+  trackingActive = false
 }) => {
   const { t, isUrdu } = useLanguage();
 
@@ -107,6 +108,8 @@ const TrackingMap = ({
         pickupLabel={t('pages.trackingMap.pickup')}
         deliveryLabel={t('pages.trackingMap.delivery')}
         driverLabel={t('pages.trackingMap.driver')}
+        forceInvalidate={trackingActive}
+        invalidateKey={mapInvalidateKey}
       />
     </Card>
   );

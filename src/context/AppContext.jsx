@@ -423,6 +423,9 @@ export const AppProvider = ({ children }) => {
         if (connected) {
           socketLostRef.current = false;
           setSocketStatus('connected');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('tp:socket-ready', { detail: { status: 'ready' } }));
+          }
           return;
         }
         if (meta?.exhausted) {

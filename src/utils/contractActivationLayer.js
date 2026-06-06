@@ -25,18 +25,27 @@ function refKey(ref) {
   return String(ref || '').trim();
 }
 
+function notifyListeners() {
+  listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      /* ignore */
+    }
+  });
+}
+
+/** Synchronous — trackingActive must flip in the same tick as activation emit. */
 function notify() {
+  notifyListeners();
+}
+
+function notifyDeferred() {
   if (notifyScheduled) return;
   notifyScheduled = true;
   const flush = () => {
     notifyScheduled = false;
-    listeners.forEach((fn) => {
-      try {
-        fn();
-      } catch {
-        /* ignore */
-      }
-    });
+    notifyListeners();
   };
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
   else setTimeout(flush, 0);
@@ -68,9 +77,14 @@ export function emitScopedRefresh(scopes, meta = {}) {
   else setTimeout(flush, 0);
 }
 
-/** After contract activation — targeted refresh for bids + shipments + tracking. */
+/** After contract activation — synchronous scoped refresh (same tick as activation). */
 export function emitActivationScopedRefresh(ref, meta = {}) {
-  emitScopedRefresh(['bids', 'shipments', 'tracking'], { ref, ...meta });
+  if (typeof window === 'undefined') return;
+  for (const scope of ['bids', 'shipments', 'tracking']) {
+    const eventName = SCOPED_REFRESH_EVENTS[scope];
+    if (!eventName) continue;
+    window.dispatchEvent(new CustomEvent(eventName, { detail: { scope, ref, ...meta } }));
+  }
 }
 
 /** Canonical tracking ref: loadCode > bridgeRef > shipmentRef (never UUID). */
@@ -295,7 +309,7 @@ export function commitOptimisticBidSuggest(bidId, amount, extras = {}) {
     );
   }
   emitScopedRefresh('bids');
-  notify();
+  notifyDeferred();
   return optimisticBidById.get(id);
 }
 
@@ -544,6 +558,11 @@ export function buildOptimisticTrackingRow(ref, { userId = null, role = null, en
 export function subscribeOptimisticActivation(listener) {
   if (typeof listener !== 'function') return () => {};
   listeners.add(listener);
+  try {
+    listener();
+  } catch {
+    /* ignore */
+  }
   return () => listeners.delete(listener);
 }
 

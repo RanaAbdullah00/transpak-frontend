@@ -29,7 +29,8 @@ function MapResizeObserver() {
 
     const invalidate = () => {
       window.requestAnimationFrame(() => {
-        map.invalidateSize({ animate: false });
+        map.invalidateSize({ animate: false, pan: false });
+        if (typeof map.redraw === 'function') map.redraw();
       });
     };
 
@@ -47,6 +48,34 @@ function MapResizeObserver() {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [map]);
+  return null;
+}
+
+function MapForceInvalidate({ active = false, invalidateKey = 0 }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!active) return undefined;
+    const container = map.getContainer()?.parentElement;
+    const run = () => {
+      map.invalidateSize({ animate: false, pan: false });
+      if (typeof map.redraw === 'function') map.redraw();
+      window.dispatchEvent(new Event('resize'));
+    };
+    requestAnimationFrame(run);
+    const t1 = window.setTimeout(run, 0);
+    const t2 = window.setTimeout(run, 120);
+    if (container) {
+      try {
+        container.dispatchEvent(new Event('resize'));
+      } catch {
+        /* ignore */
+      }
+    }
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [map, active, invalidateKey]);
   return null;
 }
 
@@ -77,7 +106,9 @@ const Map = ({
   deliveryLabel = 'Delivery',
   driverLabel = 'Driver',
   loading = false,
-  errorMessage = ''
+  errorMessage = '',
+  forceInvalidate = false,
+  invalidateKey = 0
 }) => {
   const { t } = useLanguage();
   const pickupPos = toLatLngPair(pickup);
@@ -146,6 +177,7 @@ const Map = ({
         />
         <FitBounds points={allPoints} />
         <MapResizeObserver />
+        <MapForceInvalidate active={forceInvalidate} invalidateKey={invalidateKey} />
         {showRoute ? (
           <Polyline positions={routeCoords} color="#16a34a" weight={4} opacity={0.85} />
         ) : null}
