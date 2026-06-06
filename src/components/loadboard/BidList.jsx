@@ -10,6 +10,7 @@ import {
   collectSnapshotBids,
   getUnifiedShipmentSnapshot
 } from '../../utils/shipmentUIState.js';
+import { mergeOptimisticBid } from '../../utils/contractActivationLayer.js';
 
 // List of bids. mode: 'shipper' | 'carrier' controls which actions are shown.
 const BidList = memo(({
@@ -62,7 +63,9 @@ const BidList = memo(({
   const bidSnapshot = useMemo(
     () =>
       assertIsSnapshotConsumer(
-        getUnifiedShipmentSnapshot({ bids: Array.isArray(bids) ? bids : [] }),
+        getUnifiedShipmentSnapshot({
+          bids: (Array.isArray(bids) ? bids : []).map((b) => mergeOptimisticBid(b || {}))
+        }),
         'BidList'
       ),
     [bids, bidUiTick]

@@ -64,11 +64,17 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
       if (e?.detail?.atomicSync) return;
       bootstrap({ silent: hasLoadedRef.current });
     };
+    const onShipmentsRefresh = () => bootstrap({ silent: hasLoadedRef.current });
+    const onContractActivated = () => bootstrap({ silent: true });
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    window.addEventListener('tp:contract-activated', onContractActivated);
     return () => {
       window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
       window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
+      window.removeEventListener('tp:contract-activated', onContractActivated);
     };
   }, [bootstrap]);
 

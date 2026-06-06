@@ -8,6 +8,7 @@ import Loader from '../../components/ui/Loader.jsx';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
+import { commitOptimisticBidSuggest } from '../../utils/contractActivationLayer.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
@@ -116,7 +117,13 @@ const AvailableLoads = ({ embedded = false }) => {
   const handleCarrierCounter = async (load, amount) => {
     setOfferBusyId(load.id);
     try {
-      await submitCounterOffer(request, load, amount);
+      const updated = await submitCounterOffer(request, load, amount);
+      if (updated?.id) {
+        commitOptimisticBidSuggest(updated.id, amount, {
+          suggestedBy: 'carrier',
+          loadCode: load?.code
+        });
+      }
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
       await fetchAvailableLoads();
     } catch (err) {

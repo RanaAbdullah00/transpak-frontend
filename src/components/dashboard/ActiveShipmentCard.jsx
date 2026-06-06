@@ -11,6 +11,10 @@ import {
   isSnapshotConsumer,
   withShipmentUILabels
 } from '../../utils/shipmentUIState.js';
+import {
+  getOptimisticActivation,
+  subscribeOptimisticActivation
+} from '../../utils/contractActivationLayer.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
@@ -25,6 +29,7 @@ import { FLOW_STATUS, FLOW_TYPE } from '../../utils/flowSession.js';
  * Unified active shipment card — only rendered from GET /shipments/active rows.
  */
 const ActiveShipmentCard = ({
+  snapshot: snapshotProp = null,
   trackRef,
   label,
   assignedCarrierId = null,
@@ -51,6 +56,11 @@ const ActiveShipmentCard = ({
   const workspaceRole = stableRoleRef.current;
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [advancingStatus, setAdvancingStatus] = useState(false);
+  const [, bumpOptimistic] = useState(0);
+
+  useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
+
+  const optimisticTs = trackRef ? getOptimisticActivation(trackRef)?.ts : 0;
 
   const snapshot = useMemo(() => {
     if (snapshotProp && isSnapshotConsumer(snapshotProp)) {
@@ -80,7 +90,8 @@ const ActiveShipmentCard = ({
     shipmentStatus,
     flowType,
     trackingEnabledProp,
-    workspaceRole
+    workspaceRole,
+    optimisticTs
   ]);
 
   const resolvedTrackRef = snapshot.ref || trackRef;
@@ -90,7 +101,8 @@ const ActiveShipmentCard = ({
     snapshot.contractFields?.assignedCarrierId ??
     assignedCarrierId;
   const resolvedFlowType = snapshot.activeRow?.flowType ?? snapshot.contractFields?.flowType ?? flowType;
-  const trackingEnabled = Boolean(snapshot.tracking?.enabled);
+  const contractActivated = Boolean(snapshot.contractActivated);
+  const trackingEnabled = Boolean(snapshot.tracking?.enabled) || contractActivated;
 
   const { trackingData, uiState, loading, livePos, geoError } = useShipmentTracking({
     trackRef: resolvedTrackRef,
@@ -98,7 +110,7 @@ const ActiveShipmentCard = ({
     shipmentStatus: resolvedStatus,
     trackingEnabled,
     shareLive: shareLive && Boolean(resolvedCarrierId),
-    enabled: Boolean(resolvedTrackRef),
+    enabled: Boolean(resolvedTrackRef) && (trackingEnabled || contractActivated),
     role: workspaceRole,
     flowType: resolvedFlowType
   });
@@ -107,7 +119,9 @@ const ActiveShipmentCard = ({
     () => withShipmentUILabels(snapshot.uiState ?? uiState, t),
     [snapshot.uiState, uiState, t]
   );
-  const liveTrackingActive = Boolean(snapshot.tracking?.gate ?? ui.canTrack);
+  const liveTrackingActive = Boolean(
+    contractActivated || snapshot.tracking?.gate || snapshot.tracking?.enabled || ui.canTrack
+  );
   const canRenderAdvanceButton =
     carrierMode &&
     isValidShipmentTrackRef(resolvedTrackRef) &&
@@ -119,7 +133,7 @@ const ActiveShipmentCard = ({
   }, [liveTrackingActive, defaultExpanded, carrierMode]);
 
   const href =
-    liveTrackingActive && isValidShipmentTrackRef(resolvedTrackRef)
+    (contractActivated || liveTrackingActive) && isValidShipmentTrackRef(resolvedTrackRef)
       ? `/shipments/tracking/${encodeURIComponent(resolvedTrackRef)}`
       : null;
 
@@ -197,7 +211,7 @@ const ActiveShipmentCard = ({
         <div className="px-3 pb-3 border-top">
           <ActiveShipmentPanel
             trackingData={trackingData}
-            loadingTracking={loading}
+            loadingTracking={loading && !contractActivated}
             liveDriver={liveTrackingActive && shareLive && expanded}
             liveLocation={livePos}
             geoError={geoError}

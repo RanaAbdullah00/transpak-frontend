@@ -15,7 +15,8 @@ import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
 import {
   commitOptimisticBidAccept,
   commitOptimisticBidReject,
-  commitOptimisticBidSuggest
+  commitOptimisticBidSuggest,
+  emitScopedRefresh
 } from '../../utils/contractActivationLayer.js';
 
 import { isTruckMatchingEligible } from '../../utils/fleetApi.js';
@@ -174,7 +175,7 @@ const MyBids = () => {
     try {
       await request({ method: 'PUT', url: `/bids/${bid.id}/reject-suggestion` });
       notifySuccess(t('pages.bids.suggestionRejected'));
-      emitRealtimeRefresh('bids');
+      emitScopedRefresh('bids');
       fetchBidsData();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectSuggestionFailed') }));
