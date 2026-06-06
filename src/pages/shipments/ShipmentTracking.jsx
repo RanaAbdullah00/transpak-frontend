@@ -16,6 +16,14 @@ import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import {
+  commitOptimisticStatusAdvance,
+  emitShipmentStatusUpdated,
+  getOptimisticStatusTimeline,
+  resolveEffectiveShipmentStatus,
+  resolveUpcomingShipmentStatus,
+  subscribeOptimisticShipmentStatus
+} from '../../utils/shipmentStatusOptimistic.js';
+import {
   assertIsSnapshotConsumer,
   EMPTY_UNIFIED_SNAPSHOT,
   getUnifiedShipmentSnapshot,
@@ -172,16 +180,36 @@ const ShipmentTracking = () => {
 
   useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
 
+  useEffect(() => subscribeOptimisticShipmentStatus(() => bumpOptimistic((n) => n + 1)), []);
+
   useEffect(() => {
     const onActivated = (e) => {
       const ref = String(e?.detail?.ref || '').trim();
-      if (ref && ref === id) bumpOptimistic((n) => n + 1);
+      if (ref && ref === id) {
+        bumpOptimistic((n) => n + 1);
+        refreshActiveRow({ silent: true });
+      }
+    };
+    const onStatusUpdated = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      if (ref && ref === id) {
+        bumpOptimistic((n) => n + 1);
+        refreshActiveRow({ silent: true });
+      }
     };
     window.addEventListener('tp:contract-activated', onActivated);
-    return () => window.removeEventListener('tp:contract-activated', onActivated);
-  }, [id]);
+    window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
+    return () => {
+      window.removeEventListener('tp:contract-activated', onActivated);
+      window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
+    };
+  }, [id, refreshActiveRow]);
 
   const hasOptimistic = hasOptimisticActivation(id);
+  const storeRow = useMemo(
+    () => (id ? findActiveShipmentRow(getActiveShipmentList(), id) : null),
+    [id, activeRow, hasOptimistic]
+  );
   const isHydrating = (activeLoading || backgroundHydrating) && !hasOptimistic;
 
   const pageSnapshot = useMemo(() => {
@@ -230,15 +258,29 @@ const ShipmentTracking = () => {
     () => withShipmentUILabels(pageSnapshot.uiState ?? uiState ?? {}, t),
     [pageSnapshot.uiState, uiState, t]
   );
-  const upcomingStatus = ui.upcomingStatus;
+
+  const baseShipmentStatus =
+    payload?.tracking?.status ??
+    rowForTracking?.shipmentStatus ??
+    pageSnapshot.shipmentStatus ??
+    'booked';
+  const effectiveStatus = resolveEffectiveShipmentStatus(id, baseShipmentStatus);
+  const upcomingStatus =
+    workspaceRole === 'carrier'
+      ? resolveUpcomingShipmentStatus(id, baseShipmentStatus)
+      : ui.upcomingStatus;
   const canRenderAdvanceButton =
     workspaceRole === 'carrier' &&
     isValidShipmentTrackRef(id) &&
-    Boolean(pageSnapshot.permissions?.canUpdateStatus ?? ui.canUpdateStatus);
+    (Boolean(pageSnapshot.contractActivated) ||
+      hasOptimistic ||
+      Boolean(pageSnapshot.permissions?.canUpdateStatus ?? ui.canUpdateStatus));
   const canEnableButton = canRenderAdvanceButton && upcomingStatus != null;
 
   const handleAdvanceStatus = useCallback(async () => {
     if (!upcomingStatus || !id || !canEnableButton) return;
+    const label = t(advanceStatusLabelKey(upcomingStatus));
+    commitOptimisticStatusAdvance(id, upcomingStatus, { label });
     setAdvancing(true);
     try {
       await request({
@@ -258,6 +300,7 @@ const ShipmentTracking = () => {
         priority: 'medium',
       });
       await triggerStatusActivationSync(id);
+      emitShipmentStatusUpdated(id, upcomingStatus, { source: 'api' });
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.tracking.loadFailed') }));
     } finally {
@@ -266,16 +309,41 @@ const ShipmentTracking = () => {
   }, [id, upcomingStatus, canEnableButton, request, t, workspaceRole]);
 
   const tracking = payload?.tracking;
-  const originName = payload?.origin || '';
-  const destinationName = payload?.destination || '';
+  const originName =
+    payload?.origin ||
+    activeRow?.origin ||
+    storeRow?.origin ||
+    rowForTracking?.origin ||
+    pageSnapshot.activeRow?.origin ||
+    '';
+  const destinationName =
+    payload?.destination ||
+    activeRow?.destination ||
+    storeRow?.destination ||
+    rowForTracking?.destination ||
+    pageSnapshot.activeRow?.destination ||
+    '';
+
+  const routeEstimate = useMemo(() => {
+    if (!originName || !destinationName) return null;
+    return estimateLocalFare(originName, destinationName);
+  }, [originName, destinationName]);
 
   const routeDistanceKm = useMemo(() => {
     const fromApi = payload?.distanceKm;
     if (Number(fromApi) > 0) return Number(fromApi);
+    if (routeEstimate?.distanceKm > 0) return routeEstimate.distanceKm;
     if (!originName || !destinationName) return null;
-    const est = estimateLocalFare(originName, destinationName);
-    return est?.distanceKm > 0 ? est.distanceKm : null;
-  }, [payload?.distanceKm, originName, destinationName]);
+    return null;
+  }, [payload?.distanceKm, routeEstimate?.distanceKm, originName, destinationName]);
+
+  const estimatedTravelHours = useMemo(() => {
+    if (routeEstimate?.estimatedTravelHours > 0) return routeEstimate.estimatedTravelHours;
+    if (routeDistanceKm > 0) {
+      return Math.max(0.5, Math.round((routeDistanceKm / 65) * 10) / 10);
+    }
+    return null;
+  }, [routeEstimate?.estimatedTravelHours, routeDistanceKm]);
 
   const coords = useMemo(() => {
     const raw = payload?.liveTrackingMap?.coordinates || [];
@@ -291,7 +359,9 @@ const ShipmentTracking = () => {
   }, [payload?.liveTrackingMap?.coordinates]);
 
   const showTracking = Boolean(
-    ui.contractActivated ||
+    hasOptimistic ||
+      pageSnapshot.contractActivated ||
+      ui.contractActivated ||
       ui.trackingEnabled ||
       ui.unifiedContract?.trackingEnabled ||
       trackingEnabled
@@ -317,24 +387,27 @@ const ShipmentTracking = () => {
       code: payload?.refKey ? `#${payload.refKey}` : `#${id}`,
       origin: originName || t('common.emDash'),
       destination: destinationName || t('common.emDash'),
-      status: tracking?.status || rowForTracking?.shipmentStatus || 'booked',
+      status: effectiveStatus,
       driverName: t('common.emDash'),
       vehicleReg: t('common.emDash'),
       eta: tracking?.eta || t('common.emDash'),
       lastUpdate: tracking?.locationUpdatedAt || payload?.history?.[0]?.time || t('common.emDash')
     }),
-    [id, payload?.refKey, tracking, payload?.history, originName, destinationName, t]
+    [id, payload?.refKey, tracking, payload?.history, originName, destinationName, effectiveStatus, t]
   );
 
   const timelineEvents = useMemo(() => {
     const h = Array.isArray(payload?.history) ? payload.history : [];
-    return h.map((ev) => ({
+    const optimisticLog = getOptimisticStatusTimeline(id);
+    const merged = [...h, ...optimisticLog];
+    if (!merged.length) return [];
+    return merged.map((ev) => ({
       label: ev.event || ev.label || t('pages.tracking.timelineUpdate'),
       time: ev.time || '',
       done: true,
       note: ev.location
     }));
-  }, [payload?.history, t]);
+  }, [payload?.history, id, effectiveStatus, t]);
 
   const checkpoints = useMemo(() => {
     if (coords.length >= 2)
@@ -350,14 +423,14 @@ const ShipmentTracking = () => {
       destination: destinationName,
       tracking: {
         ...tracking,
-        status: tracking?.status,
+        status: effectiveStatus,
         eta: tracking?.eta,
         currentLocation,
-        locationUnavailable: !currentLocation && !loading && !ui.contractActivated
+        locationUnavailable: !currentLocation && !loading && !ui.contractActivated && !hasOptimistic
       },
       liveTrackingMap: payload?.liveTrackingMap || { coordinates: coords }
     }),
-    [tracking, currentLocation, payload, coords, originName, destinationName, loading, ui.contractActivated]
+    [tracking, currentLocation, payload, coords, originName, destinationName, loading, ui.contractActivated, hasOptimistic, effectiveStatus]
   );
 
   if (!id || !isValidShipmentTrackRef(id)) {
@@ -482,13 +555,14 @@ const ShipmentTracking = () => {
             currentLocation={currentLocation}
             originName={originName}
             destinationName={destinationName}
-            liveDriver={Boolean(shareLive && livePos)}
+            liveDriver={Boolean(shareLive && (livePos || hasOptimistic))}
             geoError={geoError}
           />
         </div>
       ) : null}
-      <StatusTimeline uiState={ui} events={timelineEvents} />
-      {workspaceRole === 'carrier' && rowForTracking ? (
+      <StatusTimeline uiState={{ ...ui, status: effectiveStatus }} events={timelineEvents} />
+      {workspaceRole === 'carrier' &&
+      (rowForTracking || hasOptimistic || pageSnapshot.contractActivated) ? (
         <div className="mt-3 mb-3">
           <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>
           {!canRenderAdvanceButton ? (
@@ -508,7 +582,11 @@ const ShipmentTracking = () => {
           </Button>
         </div>
       ) : null}
-      <RouteInfo distance={routeDistanceKm} duration={null} checkpoints={checkpoints} />
+      <RouteInfo
+        distance={routeDistanceKm}
+        estimatedHours={estimatedTravelHours}
+        checkpoints={checkpoints}
+      />
     </div>
   );
 };

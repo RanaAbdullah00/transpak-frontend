@@ -45,6 +45,7 @@ export const normalizeLoad = (raw) => {
         ? Number(raw.deadlineMinutes)
         : (raw.deadlineHours != null ? Number(raw.deadlineHours) * 60 : 120),
     biddingEndsAt: raw.biddingEndsAt ?? raw.bidding_ends_at ?? null,
+    bidCount: Number(raw.bidCount ?? raw.bid_count ?? 0),
     deadline:
       raw.deadline ??
       raw.biddingEndsAt ??

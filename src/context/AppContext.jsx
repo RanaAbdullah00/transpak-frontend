@@ -28,6 +28,7 @@ import {
 } from '../utils/notificationEventRegistry.js';
 import { emitRealtimeRefresh } from '../utils/realtimeRefresh.js';
 import { pruneWorkspaceQueryCaches } from '../utils/workspaceQueryCache.js';
+import { emitShipmentStatusUpdated } from '../utils/shipmentStatusOptimistic.js';
 
 export const AppContext = createContext(null);
 
@@ -470,6 +471,11 @@ export const AppProvider = ({ children }) => {
           return;
         }
         lastTrackingSig.current = { sig, t: now };
+        const status = p?.tracking?.status;
+        const statusRef = String(p?.refKey || p?.loadId || '').trim();
+        if (statusRef && status) {
+          emitShipmentStatusUpdated(statusRef, status, { source: 'socket' });
+        }
         trackingHandlers.current.forEach((fn) => {
           try {
             fn(p);

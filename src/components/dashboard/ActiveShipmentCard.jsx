@@ -20,6 +20,12 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
+import {
+  commitOptimisticStatusAdvance,
+  resolveEffectiveShipmentStatus,
+  resolveUpcomingShipmentStatus,
+  subscribeOptimisticShipmentStatus
+} from '../../utils/shipmentStatusOptimistic.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import FlowSessionBanner from '../flow/FlowSessionBanner.jsx';
@@ -59,6 +65,7 @@ const ActiveShipmentCard = ({
   const [, bumpOptimistic] = useState(0);
 
   useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
+  useEffect(() => subscribeOptimisticShipmentStatus(() => bumpOptimistic((n) => n + 1)), []);
 
   const optimisticTs = trackRef ? getOptimisticActivation(trackRef)?.ts : 0;
 
@@ -122,11 +129,17 @@ const ActiveShipmentCard = ({
   const liveTrackingActive = Boolean(
     contractActivated || snapshot.tracking?.gate || snapshot.tracking?.enabled || ui.canTrack
   );
+  const baseStatus = resolvedStatus ?? snapshot.shipmentStatus ?? 'booked';
+  const effectiveStatus = resolveEffectiveShipmentStatus(resolvedTrackRef, baseStatus);
+  const upcomingForCarrier = resolveUpcomingShipmentStatus(resolvedTrackRef, baseStatus);
   const canRenderAdvanceButton =
     carrierMode &&
     isValidShipmentTrackRef(resolvedTrackRef) &&
-    Boolean(snapshot.permissions?.canUpdateStatus ?? ui.canUpdateStatus);
-  const canEnableAdvance = canRenderAdvanceButton && ui.upcomingStatus != null;
+    (contractActivated ||
+      Boolean(snapshot.permissions?.canUpdateStatus ?? ui.canUpdateStatus));
+  const canEnableAdvance =
+    canRenderAdvanceButton && (carrierMode ? upcomingForCarrier : ui.upcomingStatus) != null;
+  const nextAdvanceStatus = carrierMode ? upcomingForCarrier : ui.upcomingStatus;
 
   useEffect(() => {
     if (contractActivated || (liveTrackingActive && (defaultExpanded || carrierMode))) {
@@ -140,20 +153,24 @@ const ActiveShipmentCard = ({
       : null;
 
   const handleAdvanceStatus = async (next) => {
-    if (!next || !resolvedTrackRef || !canEnableAdvance) return;
+    const step = next || nextAdvanceStatus;
+    if (!step || !resolvedTrackRef || !canEnableAdvance) return;
+    commitOptimisticStatusAdvance(resolvedTrackRef, step, {
+      label: t(advanceStatusLabelKey(step))
+    });
     setAdvancingStatus(true);
     try {
       await request({
         method: 'PUT',
         url: `/shipments/${encodeURIComponent(resolvedTrackRef)}/status`,
-        data: { status: next }
+        data: { status: step }
       });
       notifySystem(SystemNotifyType.SUCCESS, t('pages.tracking.statusUpdated'));
       ingestFlowNotification({
         kind: NOTIFICATION_KIND.STATUS_UPDATE,
         dispatchType: 'STATUS_UPDATED',
         title: t('pages.tracking.statusUpdated'),
-        message: `${resolvedTrackRef}: ${next}`,
+        message: `${resolvedTrackRef}: ${step}`,
         shipmentRef: resolvedTrackRef,
         roleType: carrierMode ? 'carrier' : 'shipper',
         soundType: 'status',
@@ -224,10 +241,10 @@ const ActiveShipmentCard = ({
               carrierMode && isValidShipmentTrackRef(resolvedTrackRef)
                 ? {
                     title: t('pages.tracking.updateStatus'),
-                    upcoming: canEnableAdvance ? ui.upcomingStatus : null,
+                    upcoming: canEnableAdvance ? nextAdvanceStatus : null,
                     loadingStatus: advancingStatus,
-                    buttonLabel: ui.upcomingStatus
-                      ? t(advanceStatusLabelKey(ui.upcomingStatus))
+                    buttonLabel: nextAdvanceStatus
+                      ? t(advanceStatusLabelKey(nextAdvanceStatus))
                       : t('pages.tracking.updateStatus'),
                     statusLine: t('pages.tracking.advanceStatus'),
                     onAdvance: handleAdvanceStatus

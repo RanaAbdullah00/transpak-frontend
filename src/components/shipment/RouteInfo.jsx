@@ -3,9 +3,10 @@ import Card from '../ui/Card.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { formatDistanceKm } from '../../utils/formatDistance.js';
 
-const RouteInfo = ({ distance, duration, checkpoints }) => {
+const RouteInfo = ({ distance, duration, estimatedHours, checkpoints }) => {
   const { t } = useLanguage();
   const dist = formatDistanceKm(distance, t);
+  const hours = estimatedHours ?? duration;
 
   return (
     <Card>
@@ -13,8 +14,8 @@ const RouteInfo = ({ distance, duration, checkpoints }) => {
       <div className="d-flex justify-content-between small mb-2 gap-2 flex-wrap">
         <span>Distance: {dist.display}</span>
         <span>
-          Duration:{' '}
-          {duration != null && duration !== '' ? `${duration} hrs` : t('common.emDash')}
+          Estimated Time:{' '}
+          {hours != null && hours !== '' ? `${hours} hrs` : t('common.emDash')}
         </span>
       </div>
       <ol className="small ps-3 mb-0">

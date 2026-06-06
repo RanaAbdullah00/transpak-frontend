@@ -6,6 +6,7 @@ import {
   buildNotificationEventId,
   hasNotificationEventId
 } from './notificationEventRegistry.js';
+import { emitShipmentStatusUpdated } from './shipmentStatusOptimistic.js';
 
 /** @deprecated internal — scopes handled in notificationPipeline */
 export const SCOPE_REFRESH = {
@@ -49,12 +50,51 @@ export const SCOPE_REFRESH = {
   TRUCK_PENDING: 'all'
 };
 
+const STATUS_DISPATCH_TYPES = new Set([
+  'SHIPMENT_PICKED_UP',
+  'SHIPMENT_IN_TRANSIT',
+  'DELIVERY_COMPLETED',
+  'DELIVERED',
+  'SHIPMENT_STATUS',
+  'STATUS_UPDATED'
+]);
+
+const STATUS_FROM_DISPATCH_TYPE = Object.freeze({
+  SHIPMENT_PICKED_UP: 'pickedup',
+  SHIPMENT_IN_TRANSIT: 'intransit',
+  DELIVERY_COMPLETED: 'delivered',
+  DELIVERED: 'delivered'
+});
+
+function emitShipmentStatusUpdatedFromDispatch(dispatch, type) {
+  if (!STATUS_DISPATCH_TYPES.has(type)) return;
+  const ref = String(
+    dispatch.payload?.loadCode ||
+      dispatch.payload?.ref ||
+      dispatch.notification?.shipmentRef ||
+      dispatch.notification?.refKey ||
+      dispatch.refKey ||
+      ''
+  ).trim();
+  if (!ref) return;
+  const status =
+    dispatch.payload?.status ||
+    dispatch.notification?.status ||
+    STATUS_FROM_DISPATCH_TYPE[type] ||
+    null;
+  if (status) {
+    emitShipmentStatusUpdated(ref, status, { source: 'dispatch' });
+  }
+}
+
 /**
  * Socket dispatch entry — shipment refresh runs before dedupe; notifications may be deduped, UI refresh is not.
  */
 export function handleDispatchEvent(dispatch, { onNotification } = {}) {
   if (!dispatch || typeof dispatch !== 'object') return;
   const type = String(dispatch.type || '').toUpperCase();
+
+  emitShipmentStatusUpdatedFromDispatch(dispatch, type);
 
   if (!bridgeDispatchToShipmentStore(dispatch)) {
     runShipmentSyncFromDispatch(dispatch, type);

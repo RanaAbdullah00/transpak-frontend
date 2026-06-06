@@ -90,9 +90,13 @@ const LoadDetails = () => {
       }
     };
     window.addEventListener('tp:bids-refresh', onBidsRefresh);
+    window.addEventListener('tp:bid-updated', onBidsRefresh);
+    window.addEventListener('tp:contract-activated', onBidsRefresh);
     window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
     return () => {
       window.removeEventListener('tp:bids-refresh', onBidsRefresh);
+      window.removeEventListener('tp:bid-updated', onBidsRefresh);
+      window.removeEventListener('tp:contract-activated', onBidsRefresh);
       window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
     };
   }, [fetchData]);
@@ -184,6 +188,15 @@ const LoadDetails = () => {
         <h5 className="mb-0">
           {t('pages.loads.loadDetails')} {load.code}
         </h5>
+        {isOwner ? (
+          <span className="badge text-bg-primary align-self-center">
+            {t('pages.bids.bidManagementTitle')} · {bids.length}
+          </span>
+        ) : Number(load?.bidCount ?? 0) > 0 ? (
+          <span className="badge text-bg-secondary align-self-center">
+            {load.bidCount} bids
+          </span>
+        ) : null}
         {isOwner && isOpen && (
           <div className="d-flex gap-2 flex-wrap">
             <Link to={`/loads/${load.id}/edit`}>
@@ -197,7 +210,12 @@ const LoadDetails = () => {
           </div>
         )}
       </div>
-      <LoadCard load={load} />
+      <LoadCard
+        load={{
+          ...load,
+          bidCount: isOwner ? (bids?.length ?? 0) : Number(load?.bidCount ?? load?.bid_count ?? 0)
+        }}
+      />
       <Card className="p-3 mt-3 tp-pipeline-card">
         <h6 className="small text-muted text-uppercase mb-2">{t('bidTimeline.title')}</h6>
         <BidTimeline

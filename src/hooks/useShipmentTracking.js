@@ -33,7 +33,8 @@ import {
   sanitizeTrackingPayload,
   trackingPayloadEqual
 } from '../utils/trackingPayloadSanitizer.js';
-import { isActiveShipmentTrackable } from '../utils/activeShipmentModel.js';
+import { findActiveShipmentRow, isActiveShipmentTrackable } from '../utils/activeShipmentModel.js';
+import { getActiveShipmentList } from '../utils/activeShipmentStore.js';
 import {
   scheduleThrottledTrackingFetch,
   bumpTrackingFetchGeneration
@@ -43,6 +44,10 @@ import {
   getTrackingRef,
   subscribeOptimisticActivation
 } from '../utils/contractActivationLayer.js';
+import {
+  getOptimisticShipmentStatus,
+  subscribeOptimisticShipmentStatus
+} from '../utils/shipmentStatusOptimistic.js';
 
 /**
  * Coordinates + live GPS only. State gates come exclusively from GET /shipments/active row.
@@ -72,6 +77,7 @@ export function useShipmentTracking({
 
   const [, bumpOptimistic] = useState(0);
   useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
+  useEffect(() => subscribeOptimisticShipmentStatus(() => bumpOptimistic((n) => n + 1)), []);
 
   const unifiedSnapshot = useMemo(
     () =>
@@ -116,7 +122,11 @@ export function useShipmentTracking({
   const trackingFlags = unifiedSnapshot.tracking ?? EMPTY_UNIFIED_SNAPSHOT.tracking;
   const permissions = unifiedSnapshot.permissions ?? EMPTY_UNIFIED_SNAPSHOT.permissions;
   const effectiveShipmentStatus =
-    shipmentStatus ?? unifiedSnapshot.shipmentStatus ?? optimistic?.shipmentStatus ?? null;
+    getOptimisticShipmentStatus(localRef) ??
+    shipmentStatus ??
+    unifiedSnapshot.shipmentStatus ??
+    optimistic?.shipmentStatus ??
+    null;
   const effectiveTrackingEnabled = Boolean(trackingFlags.enabled) || trackingEnabled;
   const hasActiveRow = Boolean(trackingFlags.isHydrated);
 
@@ -305,15 +315,22 @@ export function useShipmentTracking({
       if (!ref || (ref !== localRef && ref !== socketKey)) return;
       runThrottledFetch({ reconnectSnapshot: e?.detail?.source === 'fallback' });
     };
+    const onStatusUpdated = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      if (!ref || (ref !== localRef && ref !== socketKey)) return;
+      runThrottledFetch();
+    };
     window.addEventListener('tp:tracking-refresh', onTrackingRefresh);
     window.addEventListener('tp:shipments-refresh', onTrackingRefresh);
     window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
     window.addEventListener('tp:contract-sync', onContractSync);
+    window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
     return () => {
       window.removeEventListener('tp:tracking-refresh', onTrackingRefresh);
       window.removeEventListener('tp:shipments-refresh', onTrackingRefresh);
       window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
       window.removeEventListener('tp:contract-sync', onContractSync);
+      window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
     };
   }, [enabled, localRef, socketKey, fetchTrack]);
 
@@ -408,32 +425,40 @@ export function useShipmentTracking({
   }, [gpsAllowed, liveLat, liveLng, localRef, publishLocation, applyUpdate]);
 
   const displayPayload = useMemo(() => {
+    const storeRow = localRef ? findActiveShipmentRow(getActiveShipmentList(), localRef) : null;
+    const shellOrigin = storeRow?.origin || '';
+    const shellDestination = storeRow?.destination || '';
     const base =
       payload ||
       (contractActivated && localRef ? getCachedTrackingPayload(localRef) : null);
     if (base) {
+      const enriched = {
+        ...base,
+        origin: base.origin || shellOrigin,
+        destination: base.destination || shellDestination
+      };
       if (
         contractActivated &&
         livePos &&
-        !base?.tracking?.currentLocation &&
-        !base?.tracking?.location
+        !enriched?.tracking?.currentLocation &&
+        !enriched?.tracking?.location
       ) {
         return {
-          ...base,
+          ...enriched,
           tracking: {
-            ...(base.tracking || {}),
-            status: base.tracking?.status || effectiveShipmentStatus || 'booked',
+            ...(enriched.tracking || {}),
+            status: enriched.tracking?.status || effectiveShipmentStatus || 'booked',
             currentLocation: livePos
           }
         };
       }
-      return base;
+      return enriched;
     }
     if (!contractActivated || !localRef) return null;
     return {
       refKey: localRef,
-      origin: '',
-      destination: '',
+      origin: shellOrigin,
+      destination: shellDestination,
       tracking: {
         status: effectiveShipmentStatus || 'booked',
         currentLocation: livePos || undefined,
