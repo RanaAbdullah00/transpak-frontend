@@ -20,9 +20,7 @@ import { commitOptimisticBidSuggest, emitScopedRefresh } from '../../utils/contr
 import DemoVehicleMismatchPanel from '../../components/demo/DemoVehicleMismatchPanel.jsx';
 import {
   applyDemoPresentationContract,
-  isDemoPresentationMode,
-  isVehicleTypeMismatchError,
-  logDemoMismatchSilently
+  captureDemoVehicleMismatch
 } from '../../utils/demoBidLayer.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { isActiveBidStatus, normalizeBidStatus } from '../../utils/bidStatus.js';
@@ -104,11 +102,7 @@ const CarrierDashboard = () => {
       notifySystem(SystemNotifyType.SUCCESS, t('pages.loads.carrierAcceptSuccess'));
       await refreshBoard();
     } catch (err) {
-      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
-        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
-        setDemoMismatchLoad(load);
-        return;
-      }
+      if (captureDemoVehicleMismatch(err, load, setDemoMismatchLoad)) return;
       notifyApiError(err);
     } finally {
       setOfferBusyId(null);
@@ -147,11 +141,7 @@ const CarrierDashboard = () => {
       emitScopedRefresh('bids');
       await refreshBoard();
     } catch (err) {
-      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
-        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
-        setDemoMismatchLoad(load);
-        return;
-      }
+      if (captureDemoVehicleMismatch(err, load, setDemoMismatchLoad)) return;
       notifyApiError(err);
     } finally {
       setOfferBusyId(null);

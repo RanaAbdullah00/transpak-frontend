@@ -1,6 +1,7 @@
 import { normalizeCoordList } from './mapCoords.js';
 import { normalizeShipmentStatus } from './shipmentStatus.js';
 import { advanceStatusLabelKey } from './shipmentAdvance.js';
+import { isDemoPresentationMode } from './demoBidLayer.js';
 
 /** Presentation-only driver interpolation when real GPS/socket coords are unavailable. */
 const phaseByRef = new Map();
@@ -78,16 +79,33 @@ export function shouldUseDemoTracking({ trackingActive, hasLiveDriver, routeCoor
   return normalizeCoordList(routeCoords).length >= 1;
 }
 
+function demoPresentationStepIndex(status) {
+  const s = normalizeShipmentStatus(status) || 'booked';
+  const rank = { booked: 1, pickedup: 2, intransit: 3, delivered: 4, closed: 4 };
+  return rank[s] ?? 1;
+}
+
+function presentationStepLabel(step, t) {
+  if (step === 'accepted') {
+    return typeof t === 'function' ? t('demo.timelineAccepted') : 'Accepted';
+  }
+  return typeof t === 'function' ? t(advanceStatusLabelKey(step)) : step;
+}
+
 /** Default status steps for dashboard timeline when API history is empty. */
 export function buildPresentationStatusTimeline(status, t) {
   try {
     const current = normalizeShipmentStatus(status) || 'booked';
-    const steps = ['booked', 'pickedup', 'intransit', 'delivered'];
-    const currentIdx = Math.max(0, steps.indexOf(current));
+    const steps = isDemoPresentationMode()
+      ? ['booked', 'accepted', 'pickedup', 'intransit', 'delivered']
+      : ['booked', 'pickedup', 'intransit', 'delivered'];
+    const currentIdx = isDemoPresentationMode()
+      ? demoPresentationStepIndex(current)
+      : Math.max(0, steps.indexOf(current));
     const nowLabel = typeof t === 'function' ? t('pages.tracking.timelineUpdate') : 'Update';
 
     return steps.map((step, idx) => ({
-      label: typeof t === 'function' ? t(advanceStatusLabelKey(step)) : step,
+      label: presentationStepLabel(step, t),
       time: idx <= currentIdx ? nowLabel : '',
       done: idx <= currentIdx,
       note: null

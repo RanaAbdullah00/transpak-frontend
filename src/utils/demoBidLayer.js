@@ -4,14 +4,24 @@
  */
 import { unwrapErrorCode } from './unwrapApi.js';
 import {
+  commitOptimisticActivation,
   commitOptimisticBidAccept,
   emitScopedRefresh
 } from './contractActivationLayer.js';
+import { commitOptimisticStatusAdvance } from './shipmentStatusOptimistic.js';
 
+const truthy = (v) => {
+  const s = String(v || '').toLowerCase();
+  return s === 'true' || s === '1' || s === 'yes';
+};
+
+/** Demo / presentation / FYP jury mode — fully disabled in production builds without these flags. */
 export function isDemoPresentationMode() {
-  const demo = String(import.meta.env.VITE_DEMO_MODE || '').toLowerCase();
-  const presentation = String(import.meta.env.VITE_PRESENTATION_MODE || '').toLowerCase();
-  return demo === 'true' || demo === '1' || presentation === 'true' || presentation === '1';
+  return (
+    truthy(import.meta.env.VITE_DEMO_MODE) ||
+    truthy(import.meta.env.VITE_PRESENTATION_MODE) ||
+    truthy(import.meta.env.VITE_FYP_MODE)
+  );
 }
 
 export function isVehicleTypeMismatchError(err) {
@@ -32,15 +42,31 @@ export function logDemoMismatchSilently(err, context = {}) {
   }
 }
 
+/** Seed presentation timeline: Booked → Accepted → Picked → In Transit (Delivered shown as next). */
+function seedDemoPresentationTimeline(loadCode) {
+  const ref = String(loadCode || '').trim();
+  if (!ref) return false;
+  const steps = [
+    { status: 'booked', label: 'Booked' },
+    { status: 'booked', label: 'Accepted' },
+    { status: 'pickedup', label: 'Picked' },
+    { status: 'intransit', label: 'In Transit' }
+  ];
+  for (const step of steps) {
+    commitOptimisticStatusAdvance(ref, step.status, { label: step.label });
+  }
+  return true;
+}
+
 /**
  * Simulate successful contract activation locally for jury presentation.
- * Uses existing optimistic activation + tracking pipeline only.
+ * Uses existing optimistic activation + tracking pipeline only — no backend retry.
  */
 export function applyDemoPresentationContract(load, extras = {}) {
   const loadCode = String(load?.code ?? load?.loadCode ?? extras.loadCode ?? '').trim();
   if (!loadCode) return false;
 
-  const payload = {
+  const activationPayload = {
     loadCode,
     loadId: load?.id ?? extras.loadId ?? null,
     origin: load?.origin ?? extras.origin ?? null,
@@ -49,20 +75,37 @@ export function applyDemoPresentationContract(load, extras = {}) {
     demoOverride: true
   };
 
-  const bidId = String(extras.bidId || `demo-bid-${load?.id || loadCode}`).trim();
-  commitOptimisticBidAccept(bidId, payload, {
+  const activationExtras = {
     loadCode,
-    origin: payload.origin,
-    destination: payload.destination,
+    origin: activationPayload.origin,
+    destination: activationPayload.destination,
     carrierId: extras.carrierId ?? extras.userId ?? null,
     shipperId: extras.shipperId ?? null,
     userId: extras.userId ?? null,
     role: extras.role ?? null
-  });
+  };
+
+  commitOptimisticActivation(activationPayload, activationExtras);
+
+  const bidId = String(extras.bidId || `demo-bid-${load?.id || loadCode}`).trim();
+  commitOptimisticBidAccept(bidId, activationPayload, activationExtras);
+
+  seedDemoPresentationTimeline(loadCode);
 
   emitScopedRefresh('bids');
   emitScopedRefresh('shipments');
   emitScopedRefresh('tracking');
 
+  return true;
+}
+
+/**
+ * Soft-capture VEHICLE_TYPE_MISMATCH in demo mode — never throws, never blocks UI.
+ * Returns true when the error was handled as a demo soft-failure.
+ */
+export function captureDemoVehicleMismatch(err, load, onCapture) {
+  if (!isDemoPresentationMode() || !isVehicleTypeMismatchError(err)) return false;
+  logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
+  if (typeof onCapture === 'function') onCapture(load);
   return true;
 }

@@ -13,7 +13,8 @@ export async function acceptLoadAtListedFare(request, load) {
   const bid = await request({
     method: 'POST',
     url: '/bids',
-    data: { loadId: load.id, amount }
+    data: { loadId: load.id, amount },
+    skipGlobalErrorToast: true
   });
   emitRealtimeRefresh('bids');
   emitRealtimeRefresh('loads');
@@ -30,14 +31,16 @@ export async function submitCounterOffer(request, load, counterAmount) {
   const bid = await request({
     method: 'POST',
     url: '/bids',
-    data: { loadId: load.id, amount }
+    data: { loadId: load.id, amount },
+    skipGlobalErrorToast: true
   });
   const bidId = bid?.id;
   if (!bidId) return bid;
   const updated = await request({
     method: 'PUT',
     url: `/bids/${bidId}/suggest-carrier`,
-    data: { amount }
+    data: { amount },
+    skipGlobalErrorToast: true
   });
   emitRealtimeRefresh('bids');
   emitRealtimeRefresh('loads');

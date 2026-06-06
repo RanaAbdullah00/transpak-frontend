@@ -283,6 +283,8 @@ export const translations = {
       vehicleMismatchBodyWithLoad:
         'Load {load}: fleet type does not match. Use demo preview to continue the presentation flow.',
       proceedDemoPreview: 'Proceed for demo preview',
+      forceAcceptDemoOnly: 'Force Accept (Demo Only)',
+      timelineAccepted: 'Accepted',
       overrideSuccess: 'Demo contract activated — tracking preview is ready.'
     },
     deploy: {
@@ -1751,6 +1753,8 @@ export const translations = {
       vehicleMismatchBodyWithLoad:
         'لوڈ {load}: بیڑے کی قسم مماثل نہیں۔ پریزنٹیشن فلو کے لیے ڈیمو پیش نظارہ استعمال کریں۔',
       proceedDemoPreview: 'ڈیمو پیش نظارہ جاری رکھیں',
+      forceAcceptDemoOnly: 'زبردستی قبول (صرف ڈیمو)',
+      timelineAccepted: 'قبول شدہ',
       overrideSuccess: 'ڈیمو معاہدہ فعال — ٹریکنگ پیش نظارہ تیار ہے۔'
     },
     deploy: {

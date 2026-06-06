@@ -12,9 +12,7 @@ import { commitOptimisticBidSuggest } from '../../utils/contractActivationLayer.
 import DemoVehicleMismatchPanel from '../../components/demo/DemoVehicleMismatchPanel.jsx';
 import {
   applyDemoPresentationContract,
-  isDemoPresentationMode,
-  isVehicleTypeMismatchError,
-  logDemoMismatchSilently
+  captureDemoVehicleMismatch
 } from '../../utils/demoBidLayer.js';
 import { notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
@@ -104,11 +102,7 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
-      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
-        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
-        setDemoMismatchLoad(load);
-        return;
-      }
+      if (captureDemoVehicleMismatch(err, load, setDemoMismatchLoad)) return;
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
     } finally {
       setOfferBusyId(null);
@@ -159,11 +153,7 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
-      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
-        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
-        setDemoMismatchLoad(load);
-        return;
-      }
+      if (captureDemoVehicleMismatch(err, load, setDemoMismatchLoad)) return;
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
     } finally {
       setOfferBusyId(null);

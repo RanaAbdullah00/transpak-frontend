@@ -28,7 +28,7 @@ const DemoVehicleMismatchPanel = ({ loadLabel = '', onProceed, onDismiss, busy =
           </Button>
         ) : null}
         <Button variant="warning" size="sm" onClick={onProceed} disabled={busy}>
-          {t('demo.proceedDemoPreview')}
+          {t('demo.forceAcceptDemoOnly')}
         </Button>
       </div>
     </div>

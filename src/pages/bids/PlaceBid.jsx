@@ -14,9 +14,7 @@ import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import DemoVehicleMismatchPanel from '../../components/demo/DemoVehicleMismatchPanel.jsx';
 import {
   applyDemoPresentationContract,
-  isDemoPresentationMode,
-  isVehicleTypeMismatchError,
-  logDemoMismatchSilently
+  captureDemoVehicleMismatch
 } from '../../utils/demoBidLayer.js';
 
 // Carrier bid placement page. Expects "load" object from AvailableLoads route state.
@@ -93,11 +91,7 @@ const PlaceBid = () => {
       emitRealtimeRefresh('bids');
       navigate('/loads');
     } catch (error) {
-      if (isDemoPresentationMode() && isVehicleTypeMismatchError(error)) {
-        logDemoMismatchSilently(error, { loadId: load.id, loadCode: load.code });
-        setDemoMismatch(true);
-        return;
-      }
+      if (captureDemoVehicleMismatch(error, load, () => setDemoMismatch(true))) return;
       notifyError(formatUserError(error, t, { fallback: t('pages.placeBid.bidFailed') }));
     }
   };
