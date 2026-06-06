@@ -17,6 +17,13 @@ import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { commitOptimisticBidSuggest, emitScopedRefresh } from '../../utils/contractActivationLayer.js';
+import DemoVehicleMismatchPanel from '../../components/demo/DemoVehicleMismatchPanel.jsx';
+import {
+  applyDemoPresentationContract,
+  isDemoPresentationMode,
+  isVehicleTypeMismatchError,
+  logDemoMismatchSilently
+} from '../../utils/demoBidLayer.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { isActiveBidStatus, normalizeBidStatus } from '../../utils/bidStatus.js';
 const CarrierDashboard = () => {
@@ -30,6 +37,7 @@ const CarrierDashboard = () => {
   const [fleetCount, setFleetCount] = useState(0);
   const [loadingBoard, setLoadingBoard] = useState(true);
   const [offerBusyId, setOfferBusyId] = useState(null);
+  const [demoMismatchLoad, setDemoMismatchLoad] = useState(null);
   const { request } = useApi();
 
   const refreshBoard = useCallback(async () => {
@@ -96,7 +104,30 @@ const CarrierDashboard = () => {
       notifySystem(SystemNotifyType.SUCCESS, t('pages.loads.carrierAcceptSuccess'));
       await refreshBoard();
     } catch (err) {
+      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
+        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
+        setDemoMismatchLoad(load);
+        return;
+      }
       notifyApiError(err);
+    } finally {
+      setOfferBusyId(null);
+    }
+  };
+
+  const handleDemoProceed = async () => {
+    const load = demoMismatchLoad;
+    if (!load) return;
+    setOfferBusyId(load.id);
+    try {
+      applyDemoPresentationContract(load, {
+        userId: user?.id,
+        role: user?.activeRole,
+        carrierId: user?.id
+      });
+      notifySystem(SystemNotifyType.SUCCESS, t('demo.overrideSuccess'));
+      setDemoMismatchLoad(null);
+      await refreshBoard();
     } finally {
       setOfferBusyId(null);
     }
@@ -116,6 +147,11 @@ const CarrierDashboard = () => {
       emitScopedRefresh('bids');
       await refreshBoard();
     } catch (err) {
+      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
+        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
+        setDemoMismatchLoad(load);
+        return;
+      }
       notifyApiError(err);
     } finally {
       setOfferBusyId(null);
@@ -177,6 +213,14 @@ const CarrierDashboard = () => {
 
       <div className="mt-3 row g-3">
         <div className="col-12 col-lg-7">
+          {demoMismatchLoad ? (
+            <DemoVehicleMismatchPanel
+              loadLabel={demoMismatchLoad.code}
+              onProceed={handleDemoProceed}
+              onDismiss={() => setDemoMismatchLoad(null)}
+              busy={offerBusyId === demoMismatchLoad.id}
+            />
+          ) : null}
           <div className="d-flex justify-content-between align-items-center mb-2">
             <h6 className="mb-0">{t('pages.dashboard.recommendedLoads')}</h6>
             <Link to="/loads/manage?tab=freight" className="small text-decoration-none">

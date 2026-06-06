@@ -9,6 +9,14 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { formatUserError } from '../../utils/userErrors.js';
 import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { commitOptimisticBidSuggest } from '../../utils/contractActivationLayer.js';
+import DemoVehicleMismatchPanel from '../../components/demo/DemoVehicleMismatchPanel.jsx';
+import {
+  applyDemoPresentationContract,
+  isDemoPresentationMode,
+  isVehicleTypeMismatchError,
+  logDemoMismatchSilently
+} from '../../utils/demoBidLayer.js';
+import { notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
@@ -35,6 +43,7 @@ const AvailableLoads = ({ embedded = false }) => {
   });
   const [loads, setLoads] = useState([]);
   const [offerBusyId, setOfferBusyId] = useState(null);
+  const [demoMismatchLoad, setDemoMismatchLoad] = useState(null);
   const debouncedFilters = useDebouncedValue(filters, 400);
 
   const { request, loading: apiLoading } = useApi();
@@ -95,7 +104,30 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
+      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
+        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
+        setDemoMismatchLoad(load);
+        return;
+      }
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
+    } finally {
+      setOfferBusyId(null);
+    }
+  };
+
+  const handleDemoProceed = async () => {
+    const load = demoMismatchLoad;
+    if (!load) return;
+    setOfferBusyId(load.id);
+    try {
+      applyDemoPresentationContract(load, {
+        userId: user?.id,
+        role: user?.activeRole,
+        carrierId: user?.id
+      });
+      notifySystem(SystemNotifyType.SUCCESS, t('demo.overrideSuccess'));
+      setDemoMismatchLoad(null);
+      await fetchAvailableLoads();
     } finally {
       setOfferBusyId(null);
     }
@@ -127,6 +159,11 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
+      if (isDemoPresentationMode() && isVehicleTypeMismatchError(err)) {
+        logDemoMismatchSilently(err, { loadId: load?.id, loadCode: load?.code });
+        setDemoMismatchLoad(load);
+        return;
+      }
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
     } finally {
       setOfferBusyId(null);
@@ -243,6 +280,14 @@ const AvailableLoads = ({ embedded = false }) => {
           </div>
         </div>
       </div>
+      {demoMismatchLoad ? (
+        <DemoVehicleMismatchPanel
+          loadLabel={demoMismatchLoad.code}
+          onProceed={handleDemoProceed}
+          onDismiss={() => setDemoMismatchLoad(null)}
+          busy={offerBusyId === demoMismatchLoad.id}
+        />
+      ) : null}
       {apiLoading ? (
         <div className="d-flex justify-content-center py-5">
           <Loader />

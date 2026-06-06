@@ -276,6 +276,15 @@ export const translations = {
       statAdminReviews: 'Reviews stored',
       activityNoCommercialHint: 'Sign in with a shipper or carrier role to see your personal activity metrics.'
     },
+    demo: {
+      vehicleMismatchTitle: 'Vehicle mismatch detected (demo override available)',
+      vehicleMismatchBody:
+        'Your fleet type does not match this load. In presentation mode you can preview the tracking flow without changing server rules.',
+      vehicleMismatchBodyWithLoad:
+        'Load {load}: fleet type does not match. Use demo preview to continue the presentation flow.',
+      proceedDemoPreview: 'Proceed for demo preview',
+      overrideSuccess: 'Demo contract activated — tracking preview is ready.'
+    },
     deploy: {
       mismatchTitle: 'System updated',
       mismatchBody: 'Please refresh the page to continue.'
@@ -1734,6 +1743,15 @@ export const translations = {
       statAdminReviews: 'محفوظ جائزے',
       activityNoCommercialHint:
         'ذاتی سرگرمی کے اعداد و شمار کے لیے شپر یا کیریئر کردار سے سائن ان کریں۔'
+    },
+    demo: {
+      vehicleMismatchTitle: 'گاڑی کی قسم مماثل نہیں (ڈیمو اووررائیڈ دستیاب)',
+      vehicleMismatchBody:
+        'آپ کا بیڑا اس لوڈ سے میل نہیں کھاتا۔ پریزنٹیشن موڈ میں سرور قوانین بدلے بغیر ٹریکنگ فلو دیکھ سکتے ہیں۔',
+      vehicleMismatchBodyWithLoad:
+        'لوڈ {load}: بیڑے کی قسم مماثل نہیں۔ پریزنٹیشن فلو کے لیے ڈیمو پیش نظارہ استعمال کریں۔',
+      proceedDemoPreview: 'ڈیمو پیش نظارہ جاری رکھیں',
+      overrideSuccess: 'ڈیمو معاہدہ فعال — ٹریکنگ پیش نظارہ تیار ہے۔'
     },
     deploy: {
       mismatchTitle: 'سسٹم اپ ڈیٹ ہو گیا',
