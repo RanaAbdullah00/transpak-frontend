@@ -32,6 +32,7 @@ import {
   flushTrackingJoinQueue
 } from '../utils/trackingJoinQueue.js';
 import {
+  emptyTrackingPayload,
   sanitizeTrackingPayload,
   trackingPayloadEqual
 } from '../utils/trackingPayloadSanitizer.js';
@@ -207,7 +208,15 @@ export function useShipmentTracking({
     });
   const gpsAllowed = shareLive && trackingGate && uiState.allowGpsPublish;
 
-  const { position: livePos, error: geoError } = useLiveLocation(gpsAllowed && Boolean(localRef));
+  const lastKnownCoords = useMemo(
+    () => getLastKnownCoordinates(localRef) ?? null,
+    [localRef, payload, reactiveTick]
+  );
+
+  const { position: livePos, error: geoError } = useLiveLocation(gpsAllowed && Boolean(localRef), {
+    fallbackCoords: lastKnownCoords ?? null,
+    timeoutMs: 2000
+  });
 
   const applyPipeline = useCallback(
     (prev, incoming, source, allowCatchUp = false) => {
@@ -455,19 +464,24 @@ export function useShipmentTracking({
   const displayPayload = useMemo(() => {
     if (!trackingGate || !localRef) return null;
 
-    const storeRow = findActiveShipmentRow(storeRows, localRef);
-    const cached =
-      payload || (trackingGate && localRef ? getCachedTrackingPayload(localRef) : null);
-    const { trackingData } = resolveMapDisplayFields({
-      livePayload: cached,
-      livePos,
-      lastKnownLocation: lastKnownCoords,
-      shipmentRow: unifiedSnapshot.activeRow,
-      storeRow,
-      status: effectiveShipmentStatus || 'booked',
-      refKey: localRef
-    });
-    return trackingData;
+    try {
+      const storeRow = findActiveShipmentRow(storeRows ?? [], localRef);
+      const cached =
+        payload || (trackingGate && localRef ? getCachedTrackingPayload(localRef) : null);
+      const cachedLastKnown = getLastKnownCoordinates(localRef) ?? lastKnownCoords ?? null;
+      const { trackingData } = resolveMapDisplayFields({
+        livePayload: cached,
+        livePos: livePos ?? null,
+        lastKnownLocation: cachedLastKnown ?? null,
+        shipmentRow: unifiedSnapshot?.activeRow ?? null,
+        storeRow: storeRow ?? null,
+        status: effectiveShipmentStatus || 'booked',
+        refKey: localRef
+      });
+      return trackingData ?? emptyTrackingPayload(localRef);
+    } catch {
+      return emptyTrackingPayload(localRef);
+    }
   }, [
     payload,
     trackingGate,

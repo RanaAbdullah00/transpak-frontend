@@ -116,7 +116,6 @@ const ActiveShipmentCard = ({
     role: workspaceRole,
     userId: user?.id ?? null
   });
-
   const { trackingData, uiState, loading, livePos, geoError } = useShipmentTracking({
     trackRef: resolvedTrackRef,
     assignedCarrierId: resolvedCarrierId,
@@ -137,9 +136,9 @@ const ActiveShipmentCard = ({
   const upcomingForCarrier = resolveUpcomingShipmentStatus(resolvedTrackRef, baseStatus);
   const canRenderAdvanceButton =
     carrierMode && isValidShipmentTrackRef(resolvedTrackRef) && trackingActive;
-  const canEnableAdvance =
-    canRenderAdvanceButton && (carrierMode ? upcomingForCarrier : ui.upcomingStatus) != null;
   const nextAdvanceStatus = carrierMode ? upcomingForCarrier : ui.upcomingStatus;
+  const canEnableAdvance =
+    canRenderAdvanceButton && nextAdvanceStatus != null;
 
   useEffect(() => {
     if (trackingActive && (defaultExpanded || carrierMode || contractActivated)) {

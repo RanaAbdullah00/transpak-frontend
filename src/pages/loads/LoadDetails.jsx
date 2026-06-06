@@ -109,6 +109,8 @@ const LoadDetails = () => {
       commitOptimisticBidAccept(bid.id, payload, {
         loadCode,
         carrierId: bid.carrierId,
+        origin: load?.origin || bid.origin || null,
+        destination: load?.destination || bid.destination || null,
         userId: user?.id,
         role: user?.activeRole
       });

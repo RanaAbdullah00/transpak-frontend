@@ -5,7 +5,7 @@ import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeCoordList, routeFromCityNames, toLatLngPair } from '../../utils/mapCoords.js';
 import { useMapRoute } from '../../hooks/useMapRoute.js';
-import { isLocationFresh } from '../../utils/logisticsLifecycle.js';
+import { useDemoTrackingPosition } from '../../hooks/useDemoTrackingPosition.js';
 
 const TrackingMap = ({
   route = [],
@@ -19,7 +19,10 @@ const TrackingMap = ({
 }) => {
   const { t, isUrdu } = useLanguage();
 
-  if (!trackingData && !originName && !destinationName && !route?.length) {
+  const resolvedOrigin = originName || trackingData?.origin || '';
+  const resolvedDestination = destinationName || trackingData?.destination || '';
+
+  if (!trackingData && !resolvedOrigin && !resolvedDestination && !route?.length) {
     return (
       <div className="tp-map-card tp-map-card--empty rounded-3 border p-3 text-muted small" role="status">
         {t('pages.tracking.noCoords')}
@@ -32,23 +35,47 @@ const TrackingMap = ({
     normalizeCoordList(route).length > 0;
 
   const {
-    coordinates: orsCoords,
-    loading: orsLoading,
-    usedFallback: orsFallback
+    coordinates: orsCoords = [],
+    loading: orsLoading = false,
+    usedFallback: orsFallback = false
   } = useMapRoute({
-    origin: originName,
-    destination: destinationName,
-    enabled: Boolean(originName && destinationName && !hasLiveRoute)
+    origin: resolvedOrigin,
+    destination: resolvedDestination,
+    enabled: Boolean(resolvedOrigin && resolvedDestination && !hasLiveRoute)
   });
 
   const coords = useMemo(() => {
-    const fromData = normalizeCoordList(trackingData?.liveTrackingMap?.coordinates);
-    if (fromData.length > 0) return fromData;
-    const fromRoute = normalizeCoordList(route);
-    if (fromRoute.length > 0) return fromRoute;
-    if (orsCoords.length >= 2) return orsCoords;
-    return routeFromCityNames(originName, destinationName);
-  }, [trackingData?.liveTrackingMap?.coordinates, route, originName, destinationName, orsCoords]);
+    try {
+      const fromData = normalizeCoordList(trackingData?.liveTrackingMap?.coordinates);
+      if (fromData.length > 0) return fromData;
+      const fromRoute = normalizeCoordList(route);
+      if (fromRoute.length > 0) return fromRoute;
+      const ors = normalizeCoordList(orsCoords);
+      if (ors.length >= 2) return ors;
+      return routeFromCityNames(resolvedOrigin, resolvedDestination);
+    } catch {
+      return [];
+    }
+  }, [
+    trackingData?.liveTrackingMap?.coordinates,
+    route,
+    resolvedOrigin,
+    resolvedDestination,
+    orsCoords
+  ]);
+
+  const mapInvalidateKey = useMemo(
+    () =>
+      [
+        trackingActive ? '1' : '0',
+        resolvedOrigin,
+        resolvedDestination,
+        coords.length,
+        currentLocation?.[0],
+        currentLocation?.[1]
+      ].join('|'),
+    [trackingActive, resolvedOrigin, resolvedDestination, coords.length, currentLocation]
+  );
 
   const hasRenderableCoords = coords.length >= 1;
   const pickup = coords.length >= 1 ? coords[0] : null;
@@ -58,14 +85,22 @@ const TrackingMap = ({
   const driverLat = driverCoords?.[0];
   const driverLng = driverCoords?.[1];
   const hasDriverCoords = driverLat != null && driverLng != null;
+  const demoDriver = useDemoTrackingPosition({
+    enabled: trackingActive,
+    refKey: trackingData?.refKey || `${resolvedOrigin}-${resolvedDestination}`,
+    routeCoords: coords,
+    status: trackingData?.tracking?.status || 'booked',
+    hasLiveDriver: hasDriverCoords
+  });
   const driver = useMemo(() => {
-    if (!hasDriverCoords) return null;
-    return [driverLat, driverLng];
-  }, [hasDriverCoords, driverLat, driverLng]);
+    if (hasDriverCoords) return [driverLat, driverLng];
+    if (demoDriver) return demoDriver;
+    return null;
+  }, [hasDriverCoords, driverLat, driverLng, demoDriver]);
   const locationUnavailable =
     Boolean(trackingData?.tracking?.locationUnavailable) && !driver && !hasDriverCoords;
 
-  if (!hasRenderableCoords && !orsLoading) {
+  if (!hasRenderableCoords && !orsLoading && !trackingActive) {
     return (
       <Card className={`tp-map-card h-100 ${isUrdu ? 'tp-rtl' : ''}`}>
         <h6 className="mb-2">{t('pages.trackingMap.title')}</h6>

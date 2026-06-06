@@ -45,6 +45,8 @@ const BidManagement = () => {
       commitOptimisticBidAccept(bid.id, payload, {
         loadCode,
         carrierId: bid.carrierId,
+        origin: bid.origin || bid.loadOrigin || null,
+        destination: bid.destination || bid.loadDestination || null,
         userId: user?.id,
         role: user?.activeRole
       });

@@ -4,8 +4,9 @@ import StatusBadge from './StatusBadge.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 
-const StatusTimeline = ({ currentStatus, uiState = null, events }) => {
+const StatusTimeline = ({ currentStatus, uiState = null, events = [] }) => {
   const { t } = useLanguage();
+  const safeEvents = Array.isArray(events) ? events : [];
 
   return (
     <Card>
@@ -14,15 +15,15 @@ const StatusTimeline = ({ currentStatus, uiState = null, events }) => {
         <StatusBadge uiState={uiState} status={currentStatus} />
       </div>
       <ul className="list-unstyled small mb-0 tp-timeline">
-        {events.map((e, idx) => (
-          <li key={`${e.label}-${idx}`} className="tp-timeline-item">
+        {safeEvents.map((e, idx) => (
+          <li key={`${e?.label ?? 'step'}-${idx}`} className="tp-timeline-item">
             <div className={`tp-timeline-dot ${e.done ? 'done' : ''}`} />
             <div className="tp-timeline-content">
               <div className="fw-semibold text-body">
-                <TranslatedText text={e.label} as="span" />
+                <TranslatedText text={e?.label ?? ''} as="span" />
               </div>
-              <div className="tp-timeline-meta">{e.time}</div>
-              {e.note ? (
+              <div className="tp-timeline-meta">{e?.time ?? ''}</div>
+              {e?.note ? (
                 <div className="tp-timeline-meta">
                   <TranslatedText text={e.note} as="span" />
                 </div>

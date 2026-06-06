@@ -152,6 +152,8 @@ export function commitOptimisticActivation(response = {}, extras = {}) {
     bidStatus: isSpace ? null : 'accepted',
     spaceRequestStatus: isSpace ? 'accepted' : null,
     flowType,
+    origin: response.origin ?? extras.origin ?? null,
+    destination: response.destination ?? extras.destination ?? null,
     carrierId:
       response.carrierId ??
       response.carrier_id ??
@@ -546,6 +548,8 @@ export function buildOptimisticTrackingRow(ref, { userId = null, role = null, en
     trackRef: key,
     code: key,
     loadCode: key,
+    origin: opt.origin ?? null,
+    destination: opt.destination ?? null,
     shipmentStatus: opt.shipmentStatus ?? 'booked',
     status: opt.shipmentStatus ?? 'booked',
     trackingEnabled: true,

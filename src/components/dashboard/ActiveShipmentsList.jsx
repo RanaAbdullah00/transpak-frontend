@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ActiveShipmentCard from './ActiveShipmentCard.jsx';
 import Loader from '../ui/Loader.jsx';
-import ErrorBoundary from '../ui/ErrorBoundary.jsx';
+import TrackingSafeBoundary from '../tracking/TrackingSafeBoundary.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { mergeActiveShipmentRows } from '../../utils/activeShipmentModel.js';
@@ -133,14 +133,14 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
           {t('pages.dashboard.activeShipmentsCount', { count: rows.length })}
         </p>
       ) : null}
-      {rowSnapshots.map((snapshot, idx, arr) => {
-        const row = snapshot?.activeRow ?? {};
-        const trackRef = snapshot?.ref || row?.trackRef || row?.code || '';
+      {rowSnapshots.filter(Boolean).map((snapshot, idx, arr) => {
+        const row = snapshot?.activeRow && typeof snapshot.activeRow === 'object' ? snapshot.activeRow : {};
+        const trackRef = String(snapshot?.ref || row?.trackRef || row?.code || '').trim();
         if (!trackRef && !snapshot?.contractActivated) return null;
         const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
         const cardKey = trackRef || `active-${idx}`;
         return (
-          <ErrorBoundary key={cardKey} compact resetKey={cardKey}>
+          <TrackingSafeBoundary key={cardKey} trackRef={trackRef} role={carrierMode ? 'carrier' : 'shipper'}>
             <ActiveShipmentCard
               snapshot={snapshot}
               trackRef={trackRef}
@@ -153,7 +153,7 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
               shareLive={carrierMode}
               defaultExpanded={idx === 0 && arr.length === 1}
             />
-          </ErrorBoundary>
+          </TrackingSafeBoundary>
         );
       })}
     </div>

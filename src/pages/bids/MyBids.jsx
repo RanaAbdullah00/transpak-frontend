@@ -116,6 +116,8 @@ const MyBids = () => {
               next[lid] = {
                 shipperId: String(load.shipperId),
                 code: load.code || '',
+                origin: load.origin || normalized?.origin || null,
+                destination: load.destination || normalized?.destination || null,
                 distanceKm: normalized?.distanceKm ?? normalized?.distance ?? null
               };
             }
@@ -161,6 +163,8 @@ const MyBids = () => {
       commitOptimisticBidAccept(bid.id, payload, {
         loadCode,
         carrierId: user?.id,
+        origin: loadMetaByLoad[String(bid.loadId)]?.origin || null,
+        destination: loadMetaByLoad[String(bid.loadId)]?.destination || null,
         userId: user?.id,
         role: 'carrier'
       });

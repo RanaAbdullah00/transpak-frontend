@@ -1,4 +1,6 @@
 import { runShipmentSyncFromDispatch } from './contractActivation.js';
+import { commitOptimisticActivation } from './contractActivationLayer.js';
+import { isValidShipmentTrackRef } from './shipmentStatus.js';
 import { bridgeDispatchToShipmentStore } from './shipmentEventBridge.js';
 import { ingestRealtimeDispatch } from './notificationPipeline.js';
 import { reconcileContractUpdate, shouldTriggerContractSync } from './contractSyncGuarantee.js';
@@ -87,6 +89,36 @@ function emitShipmentStatusUpdatedFromDispatch(dispatch, type) {
   }
 }
 
+const SOCKET_CONTRACT_ACTIVATION_TYPES = new Set(['BID_ACCEPTED', 'CONTRACT_STARTED', 'SPACE_ACCEPTED']);
+
+function applySocketContractActivation(dispatch, type) {
+  try {
+    if (!SOCKET_CONTRACT_ACTIVATION_TYPES.has(type)) return;
+    const payload =
+      (dispatch?.payload && typeof dispatch.payload === 'object' ? dispatch.payload : null) ||
+      (dispatch?.notification && typeof dispatch.notification === 'object'
+        ? dispatch.notification
+        : {}) ||
+      {};
+    const loadCode = String(
+      payload.loadCode ?? payload.code ?? payload.ref ?? payload.shipmentRef ?? ''
+    ).trim();
+    if (!loadCode || !isValidShipmentTrackRef(loadCode)) return;
+    commitOptimisticActivation(
+      {
+        loadCode,
+        origin: payload.origin ?? null,
+        destination: payload.destination ?? null,
+        shipmentStatus: payload.shipmentStatus ?? payload.status ?? 'booked',
+        flowType: payload.flowType ?? null
+      },
+      { ref: loadCode }
+    );
+  } catch {
+    /* socket activation must never crash UI */
+  }
+}
+
 /**
  * Socket dispatch entry — shipment refresh runs before dedupe; notifications may be deduped, UI refresh is not.
  */
@@ -94,6 +126,7 @@ export function handleDispatchEvent(dispatch, { onNotification } = {}) {
   if (!dispatch || typeof dispatch !== 'object') return;
   const type = String(dispatch.type || '').toUpperCase();
 
+  applySocketContractActivation(dispatch, type);
   emitShipmentStatusUpdatedFromDispatch(dispatch, type);
 
   if (!bridgeDispatchToShipmentStore(dispatch)) {

@@ -18,21 +18,27 @@ export function getCachedTrackingPayload(shipmentRef) {
 }
 
 export function getLastKnownCoordinates(shipmentRef) {
-  const row = cacheByRef.get(refKey(shipmentRef));
-  if (!row) return null;
-  if (Array.isArray(row.lastValidCoordinates) && row.lastValidCoordinates.length >= 2) {
-    return [Number(row.lastValidCoordinates[0]), Number(row.lastValidCoordinates[1])];
+  try {
+    const row = cacheByRef.get(refKey(shipmentRef));
+    if (!row) return null;
+    if (Array.isArray(row.lastValidCoordinates) && row.lastValidCoordinates.length >= 2) {
+      const lat = Number(row.lastValidCoordinates[0]);
+      const lng = Number(row.lastValidCoordinates[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
+    }
+    const loc = row.payload?.tracking?.currentLocation ?? row.payload?.tracking?.location;
+    if (
+      Array.isArray(loc) &&
+      loc.length >= 2 &&
+      Number.isFinite(Number(loc[0])) &&
+      Number.isFinite(Number(loc[1]))
+    ) {
+      return [Number(loc[0]), Number(loc[1])];
+    }
+    return null;
+  } catch {
+    return null;
   }
-  const loc = row.payload?.tracking?.currentLocation ?? row.payload?.tracking?.location;
-  if (
-    Array.isArray(loc) &&
-    loc.length >= 2 &&
-    Number.isFinite(Number(loc[0])) &&
-    Number.isFinite(Number(loc[1]))
-  ) {
-    return [Number(loc[0]), Number(loc[1])];
-  }
-  return null;
 }
 
 export function getCacheMeta(shipmentRef) {
@@ -53,8 +59,9 @@ export function getCacheMeta(shipmentRef) {
  */
 export function updateTrackingCache(shipmentRef, payload, source = 'socket') {
   const key = refKey(shipmentRef);
-  if (!key || !payload) return;
+  if (!key || !payload || typeof payload !== 'object') return;
 
+  try {
   const loc = payload?.tracking?.currentLocation ?? payload?.tracking?.location;
   const hasCoords =
     Array.isArray(loc) &&
@@ -70,6 +77,9 @@ export function updateTrackingCache(shipmentRef, payload, source = 'socket') {
     lastUpdatedFromSocket: source === 'socket',
     updatedAt: Date.now()
   });
+  } catch {
+    /* ignore corrupt cache writes */
+  }
 }
 
 export function clearTrackingCache(shipmentRef) {

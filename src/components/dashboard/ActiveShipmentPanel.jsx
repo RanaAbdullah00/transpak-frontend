@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import TrackingMap from '../shipment/TrackingMap.jsx';
 import ShipmentProgressBox from '../shipment/ShipmentProgressBox.jsx';
@@ -9,6 +9,9 @@ import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
+import { buildPresentationStatusTimeline } from '../../utils/demoTrackingFallback.js';
+import { getOptimisticStatusTimeline } from '../../utils/shipmentStatusOptimistic.js';
+import { normalizeCoordList, safeStringField } from '../../utils/mapCoords.js';
 
 /**
  * Single tracking UI for shipper + carrier dashboards.
@@ -32,6 +35,53 @@ const ActiveShipmentPanel = ({
   const { t } = useLanguage();
   const trackingActive = Boolean(trackingEnabled);
 
+  const raw = trackingData && typeof trackingData === 'object' ? trackingData : null;
+  const data = {
+    refKey: safeStringField(raw?.refKey),
+    origin: safeStringField(raw?.origin ?? originName),
+    destination: safeStringField(raw?.destination ?? destinationName),
+    lifecycleStage: raw?.lifecycleStage ?? null,
+    tracking: {
+      status: raw?.tracking?.status ?? uiState?.status ?? 'booked',
+      currentLocation: raw?.tracking?.currentLocation ?? raw?.tracking?.location ?? null,
+      locationUnavailable: raw?.tracking?.locationUnavailable ?? true,
+      eta: raw?.tracking?.eta ?? null
+    },
+    history: Array.isArray(raw?.history) ? raw.history : [],
+    liveTrackingMap: {
+      coordinates: normalizeCoordList(raw?.liveTrackingMap?.coordinates)
+    }
+  };
+
+  const ui = uiState;
+  const timelineEvents = useMemo(() => {
+    try {
+      const historyEvents = Array.isArray(data.history)
+        ? data.history
+            .filter((h) => h && typeof h === 'object')
+            .map((h) => ({
+              label: h.event ?? h.label ?? '',
+              time: h.time ?? '',
+              note: h.location ?? null,
+              done: true
+            }))
+        : [];
+      if (historyEvents.length) return historyEvents;
+      const optimistic = getOptimisticStatusTimeline(data.refKey || trackHref || '');
+      if (optimistic.length) {
+        return optimistic.map((ev) => ({
+          label: ev?.event || ev?.label || '',
+          time: ev?.time || '',
+          note: ev?.location ?? null,
+          done: true
+        }));
+      }
+      return buildPresentationStatusTimeline(ui?.status || data?.tracking?.status || 'booked', t);
+    } catch {
+      return buildPresentationStatusTimeline('booked', t);
+    }
+  }, [data, trackHref, ui?.status, t]);
+
   if (!trackingActive) {
     return (
       emptyState ?? (
@@ -40,19 +90,6 @@ const ActiveShipmentPanel = ({
     );
   }
 
-  const data = trackingData || {
-    refKey: '',
-    origin: originName,
-    destination: destinationName,
-    tracking: {
-      status: uiState?.status || 'booked',
-      locationUnavailable: true
-    },
-    history: [],
-    liveTrackingMap: { coordinates: [] }
-  };
-
-  const ui = uiState;
   const lifecycle = data.lifecycleStage;
   const href = trackHref || null;
   const reportedLoc = data?.tracking?.currentLocation ?? data?.tracking?.location;
@@ -97,10 +134,11 @@ const ActiveShipmentPanel = ({
             origin: mapOrigin,
             destination: mapDestination,
             tracking: {
-              ...data.tracking,
-              currentLocation: mapLocation,
+              ...(data.tracking || {}),
+              currentLocation: mapLocation ?? null,
               locationUnavailable: !mapLocation
-            }
+            },
+            liveTrackingMap: data.liveTrackingMap ?? { coordinates: [] }
           }}
           originName={mapOrigin}
           destinationName={mapDestination}
@@ -129,19 +167,7 @@ const ActiveShipmentPanel = ({
         </div>
       ) : null}
       <div className="mt-3">
-        {data.history?.length > 0 ? (
-          <StatusTimeline
-            uiState={ui}
-            events={data.history.map((h) => ({
-              label: h.event,
-              time: h.time,
-              note: h.location,
-              done: true
-            }))}
-          />
-        ) : (
-          <div className="text-muted small text-center py-3">{t('pages.trackingMap.noHistory')}</div>
-        )}
+        <StatusTimeline uiState={ui} currentStatus={ui?.status || data?.tracking?.status} events={timelineEvents} />
       </div>
     </div>
   );

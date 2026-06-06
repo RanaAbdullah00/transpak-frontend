@@ -44,6 +44,7 @@ import {
 } from '../../utils/contractActivationLayer.js';
 import { resolveMapDisplayFields } from '../../utils/trackingActiveGate.js';
 import { getLastKnownCoordinates } from '../../utils/trackingCache.js';
+import { normalizeCoordList } from '../../utils/mapCoords.js';
 import { useTrackingActive } from '../../hooks/useTrackingActive.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
@@ -51,6 +52,7 @@ import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.js
 import { formatUserError } from '../../utils/userErrors.js';
 import TranslatedText from '../../components/ui/TranslatedText.jsx';
 import Loader from '../../components/ui/Loader.jsx';
+import TrackingSafeBoundary from '../../components/tracking/TrackingSafeBoundary.jsx';
 
 const ShipmentTracking = () => {
   const { trackId } = useParams();
@@ -301,19 +303,21 @@ const ShipmentTracking = () => {
   }, [id, upcomingStatus, canEnableButton, request, t, workspaceRole]);
 
   const tracking = payload?.tracking;
-  const mapFields = useMemo(
-    () =>
-      resolveMapDisplayFields({
-        livePayload: payload,
-        livePos: shareLive && trackingActive ? livePos : null,
-        lastKnownLocation: getLastKnownCoordinates(id),
-        shipmentRow: rowForTracking,
-        storeRow,
-        status: effectiveStatus,
+  const mapFields = useMemo(() => {
+    try {
+      return resolveMapDisplayFields({
+        livePayload: payload ?? null,
+        livePos: shareLive && trackingActive ? livePos ?? null : null,
+        lastKnownLocation: getLastKnownCoordinates(id) ?? null,
+        shipmentRow: rowForTracking ?? null,
+        storeRow: storeRow ?? null,
+        status: effectiveStatus || 'booked',
         refKey: id
-      }),
-    [payload, livePos, rowForTracking, storeRow, effectiveStatus, id, shareLive, trackingActive]
-  );
+      });
+    } catch {
+      return resolveMapDisplayFields({ refKey: id, status: 'booked' });
+    }
+  }, [payload, livePos, rowForTracking, storeRow, effectiveStatus, id, shareLive, trackingActive]);
   const originName = mapFields.origin;
   const destinationName = mapFields.destination;
 
@@ -338,18 +342,10 @@ const ShipmentTracking = () => {
     return null;
   }, [routeEstimate?.estimatedTravelHours, routeDistanceKm]);
 
-  const coords = useMemo(() => {
-    const raw = payload?.liveTrackingMap?.coordinates || [];
-    return raw
-      .filter(
-        (c) =>
-          Array.isArray(c) &&
-          c.length >= 2 &&
-          Number.isFinite(Number(c[0])) &&
-          Number.isFinite(Number(c[1]))
-      )
-      .map((c) => [Number(c[0]), Number(c[1])]);
-  }, [payload?.liveTrackingMap?.coordinates]);
+  const coords = useMemo(
+    () => normalizeCoordList(payload?.liveTrackingMap?.coordinates),
+    [payload?.liveTrackingMap?.coordinates]
+  );
 
   const currentLocation = trackingActive ? mapFields.currentLocation : null;
 
@@ -368,16 +364,20 @@ const ShipmentTracking = () => {
   );
 
   const timelineEvents = useMemo(() => {
-    const h = Array.isArray(payload?.history) ? payload.history : [];
-    const optimisticLog = getOptimisticStatusTimeline(id);
-    const merged = [...h, ...optimisticLog];
-    if (!merged.length) return [];
-    return merged.map((ev) => ({
-      label: ev.event || ev.label || t('pages.tracking.timelineUpdate'),
-      time: ev.time || '',
-      done: true,
-      note: ev.location
-    }));
+    try {
+      const h = Array.isArray(payload?.history) ? payload.history : [];
+      const optimisticLog = getOptimisticStatusTimeline(id);
+      const merged = [...h, ...optimisticLog].filter((ev) => ev && typeof ev === 'object');
+      if (!merged.length) return [];
+      return merged.map((ev) => ({
+        label: ev.event || ev.label || t('pages.tracking.timelineUpdate'),
+        time: ev.time || '',
+        done: true,
+        note: ev.location ?? null
+      }));
+    } catch {
+      return [];
+    }
   }, [payload?.history, id, effectiveStatus, t]);
 
   const checkpoints = useMemo(() => {
@@ -482,6 +482,7 @@ const ShipmentTracking = () => {
   }
 
   return (
+    <TrackingSafeBoundary trackRef={id} role={workspaceRole}>
     <div className="container-fluid px-2 px-md-3 py-3 tp-tracking-page tp-tracking-page--live">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h5 className="mb-0">{t('pages.tracking.title')}</h5>
@@ -538,6 +539,7 @@ const ShipmentTracking = () => {
         checkpoints={checkpoints}
       />
     </div>
+    </TrackingSafeBoundary>
   );
 };
 
