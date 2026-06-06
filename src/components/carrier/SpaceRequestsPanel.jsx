@@ -2,6 +2,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import Card from '../ui/Card.jsx';
 import { AppContext } from '../../context/AppContext.jsx';
 import { useApi } from '../../hooks/useApi.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
@@ -13,6 +14,7 @@ import { isCapacityFlowPending } from '../../utils/flowSession.js';
 
 const SpaceRequestsPanel = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { request } = useApi();
   const { getSocket } = useContext(AppContext) || {};
   const [rows, setRows] = useState([]);
@@ -51,8 +53,16 @@ const SpaceRequestsPanel = () => {
       if (scope && scope !== 'all' && scope !== 'space' && scope !== 'loads') return;
       refresh();
     };
+    const onContractActivated = () => refresh();
+    const onShipmentsRefresh = () => refresh();
     window.addEventListener('tp:realtime-refresh', h);
-    return () => window.removeEventListener('tp:realtime-refresh', h);
+    window.addEventListener('tp:contract-activated', onContractActivated);
+    window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', h);
+      window.removeEventListener('tp:contract-activated', onContractActivated);
+      window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    };
   }, [refresh]);
 
   const respond = async (id, action) => {
@@ -60,8 +70,15 @@ const SpaceRequestsPanel = () => {
       const res = await request({ method: 'PUT', url: `/carrier-space/requests/${id}/${action}` });
       notifySuccess(action === 'accept' ? t('loadsHub.requestAccepted') : t('loadsHub.requestRejected'));
       if (action === 'accept') {
-        commitOptimisticSpaceAccept(id, res);
-        await triggerAcceptActivationSync(res);
+        commitOptimisticSpaceAccept(id, res, {
+          userId: user?.id,
+          role: 'carrier',
+          carrierId: user?.id
+        });
+        await triggerAcceptActivationSync(res, {
+          userId: user?.id,
+          role: 'carrier'
+        });
       } else {
         emitRealtimeRefresh('space');
       }

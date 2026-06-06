@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import SegmentTabs from '../ui/SegmentTabs.jsx';
 import ActiveShipmentsList from './ActiveShipmentsList.jsx';
 import ShipmentHistoryPanel from './ShipmentHistoryPanel.jsx';
+import ErrorBoundary from '../ui/ErrorBoundary.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 
 const TAB_ACTIVE = 'active';
@@ -31,9 +32,13 @@ const DashboardShipmentTabs = ({ carrierMode = false, activeEmptyState = null, h
         ) : null}
       </div>
       {tab === TAB_ACTIVE ? (
-        <ActiveShipmentsList carrierMode={carrierMode} emptyState={activeEmptyState} />
+        <ErrorBoundary compact>
+          <ActiveShipmentsList carrierMode={carrierMode} emptyState={activeEmptyState} />
+        </ErrorBoundary>
       ) : (
-        <ShipmentHistoryPanel carrierMode={carrierMode} limit={historyLimit} />
+        <ErrorBoundary compact>
+          <ShipmentHistoryPanel carrierMode={carrierMode} limit={historyLimit} />
+        </ErrorBoundary>
       )}
     </div>
   );

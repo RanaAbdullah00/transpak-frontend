@@ -44,15 +44,31 @@ const ActiveShipmentPanel = ({
     );
   }
 
-  if (!trackingData) {
-    return emptyState;
+  const showTracking = Boolean(trackingEnabled);
+  const activationShell =
+    showTracking && !trackingData
+      ? {
+          refKey: '',
+          origin: '',
+          destination: '',
+          tracking: { status: uiState?.status || 'booked' },
+          history: []
+        }
+      : null;
+  const data = trackingData || activationShell;
+
+  if (!data) {
+    return (
+      emptyState ?? (
+        <div className="text-muted small py-3 text-center">{t('pages.tracking.waitingForData')}</div>
+      )
+    );
   }
 
   const ui = uiState;
-  const lifecycle = trackingData.lifecycleStage;
-  const showTracking = Boolean(trackingEnabled);
+  const lifecycle = data.lifecycleStage;
   const href = showTracking && trackHref ? trackHref : null;
-  const reportedLoc = trackingData?.tracking?.currentLocation ?? trackingData?.tracking?.location;
+  const reportedLoc = data?.tracking?.currentLocation ?? data?.tracking?.location;
   const showDriver =
     showTracking &&
     (liveDriver ||
@@ -83,13 +99,13 @@ const ActiveShipmentPanel = ({
       {!showTracking ? (
         <p className="small text-muted mb-2">{t('pages.tracking.trackingNotActiveYet')}</p>
       ) : null}
-      <ShipmentProgressBox uiState={ui} eta={trackingData.tracking?.eta} />
+      <ShipmentProgressBox uiState={ui} eta={data.tracking?.eta} />
       {showTracking ? (
         <div className="mt-3 tp-dashboard-map-preview">
           <TrackingMap
-            trackingData={trackingData}
-            originName={trackingData?.origin}
-            destinationName={trackingData?.destination}
+            trackingData={data}
+            originName={data?.origin}
+            destinationName={data?.destination}
             currentLocation={mapLocation}
             liveDriver={liveDriver}
             geoError={geoError}
@@ -115,10 +131,10 @@ const ActiveShipmentPanel = ({
         </div>
       ) : null}
       <div className="mt-3">
-        {trackingData.history?.length > 0 ? (
+        {data.history?.length > 0 ? (
           <StatusTimeline
             uiState={ui}
-            events={trackingData.history.map((h) => ({
+            events={data.history.map((h) => ({
               label: h.event,
               time: h.time,
               note: h.location,

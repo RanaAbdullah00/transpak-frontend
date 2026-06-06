@@ -50,8 +50,20 @@ const ShipperDashboard = () => {
         refreshBids();
       }
     };
+    const onContractActivated = () => {
+      refreshBids();
+    };
+    const onShipmentsRefresh = () => {
+      refreshBids();
+    };
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:contract-activated', onContractActivated);
+    window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:contract-activated', onContractActivated);
+      window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    };
   }, [refreshLoads, refreshBids]);
 
   const earnings = useMemo(

@@ -11,7 +11,7 @@ import { translateBidStatus } from '../../utils/i18nLabels.js';
 import { isAwaitingShipper, isCounterOffered, isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import { deriveBidType } from '../../utils/flowSession.js';
 import { formatDistanceKm } from '../../utils/formatDistance.js';
-import { getTrackingRef } from '../../utils/contractActivationLayer.js';
+import { getTrackingRef, mergeOptimisticBid } from '../../utils/contractActivationLayer.js';
 import {
   assertIsSnapshotConsumer,
   getUnifiedShipmentSnapshot,
@@ -70,8 +70,9 @@ const BidCard = ({
   }, [bid.id, bid.loadCode, bid.load_code]);
 
   const resolvedBid = useMemo(() => {
+    const mergedBid = mergeOptimisticBid(bid && typeof bid === 'object' ? bid : {});
     const snapshot = assertIsSnapshotConsumer(
-      getUnifiedShipmentSnapshot({ bid: bid && typeof bid === 'object' ? bid : {} }),
+      getUnifiedShipmentSnapshot({ bid: mergedBid }),
       'BidCard'
     );
     return resolveBidFromSnapshot(snapshot, bid?.id, 'BidCard');

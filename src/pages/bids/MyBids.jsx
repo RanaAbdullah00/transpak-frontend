@@ -74,9 +74,13 @@ const MyBids = () => {
       if (scope === 'bids') reconcile();
     };
     window.addEventListener('tp:bids-refresh', onBidsRefresh);
+    window.addEventListener('tp:bid-updated', onBidsRefresh);
+    window.addEventListener('tp:contract-activated', onBidsRefresh);
     window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
     return () => {
       window.removeEventListener('tp:bids-refresh', onBidsRefresh);
+      window.removeEventListener('tp:bid-updated', onBidsRefresh);
+      window.removeEventListener('tp:contract-activated', onBidsRefresh);
       window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
     };
   }, [fetchBidsData]);

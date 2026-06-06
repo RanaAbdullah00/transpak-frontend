@@ -3,12 +3,24 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { isDebugErrorsEnabled } from '../../utils/mapError.js';
 import { sanitizeProductText } from '../../utils/userErrors.js';
 
-function ErrorBoundaryFallback({ error, onReset }) {
+function ErrorBoundaryFallback({ error, onReset, compact = false }) {
   const { t } = useLanguage();
   const showDetail = isDebugErrorsEnabled();
   const friendly =
     sanitizeProductText(error?.message) ||
     t('common.errorBoundaryBody');
+
+  if (compact) {
+    return (
+      <div className="tp-section-error rounded-3 border p-3 mb-2" role="alert">
+        <p className="small fw-semibold mb-1">{t('common.errorBoundaryTitle')}</p>
+        <p className="small text-muted mb-2">{friendly}</p>
+        <button type="button" className="btn btn-outline-primary btn-sm rounded-lg" onClick={onReset}>
+          {t('common.errorBoundaryRetry')}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-4">
@@ -58,7 +70,13 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return <ErrorBoundaryFallback error={this.state.error} onReset={this.handleReset} />;
+      return (
+        <ErrorBoundaryFallback
+          error={this.state.error}
+          onReset={this.handleReset}
+          compact={Boolean(this.props.compact)}
+        />
+      );
     }
     return this.props.children;
   }

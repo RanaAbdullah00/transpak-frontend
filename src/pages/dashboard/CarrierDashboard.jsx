@@ -61,8 +61,20 @@ const CarrierDashboard = () => {
       if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments' && scope !== 'space') return;
       refreshBoard().catch(() => {});
     };
+    const onContractActivated = () => {
+      refreshBoard().catch(() => {});
+    };
+    const onShipmentsRefresh = () => {
+      refreshBoard().catch(() => {});
+    };
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:contract-activated', onContractActivated);
+    window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:contract-activated', onContractActivated);
+      window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    };
   }, [refreshBoard]);
 
   const stats = useMemo(() => {

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ActiveShipmentCard from './ActiveShipmentCard.jsx';
 import Loader from '../ui/Loader.jsx';
+import ErrorBoundary from '../ui/ErrorBoundary.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { mergeActiveShipmentRows } from '../../utils/activeShipmentModel.js';
@@ -10,7 +11,12 @@ import {
   upsertActiveShipmentRows
 } from '../../utils/activeShipmentStore.js';
 import { useActiveShipmentStore } from '../../hooks/useActiveShipmentStore.js';
-import { assertIsSnapshotConsumer, getUnifiedShipmentSnapshot } from '../../utils/shipmentUIState.js';
+import {
+  assertIsSnapshotConsumer,
+  EMPTY_UNIFIED_SNAPSHOT,
+  getUnifiedShipmentSnapshot
+} from '../../utils/shipmentUIState.js';
+import { subscribeOptimisticActivation } from '../../utils/contractActivationLayer.js';
 
 /**
  * Active shipments — read model: ActiveShipmentStore.
@@ -22,7 +28,10 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
   const { request } = useApi();
   const { rows } = useActiveShipmentStore();
   const [bootLoading, setBootLoading] = useState(true);
+  const [activationTick, bumpActivation] = useState(0);
   const hasLoadedRef = useRef(false);
+
+  useEffect(() => subscribeOptimisticActivation(() => bumpActivation((n) => n + 1)), []);
 
   const bootstrap = useCallback(
     async ({ silent = false } = {}) => {
@@ -65,7 +74,7 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
       bootstrap({ silent: hasLoadedRef.current });
     };
     const onShipmentsRefresh = () => bootstrap({ silent: hasLoadedRef.current });
-    const onContractActivated = () => bootstrap({ silent: true });
+    const onContractActivated = () => bumpActivation((n) => n + 1);
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:realtime-refresh', onRefresh);
     window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
@@ -80,17 +89,25 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
 
   const rowSnapshots = useMemo(
     () =>
-      rows.map((row) =>
-        assertIsSnapshotConsumer(
-          getUnifiedShipmentSnapshot({
-            restRow: row,
-            ref: row?.trackRef,
-            role: carrierMode ? 'carrier' : 'shipper'
-          }),
-          'ActiveShipmentsList'
-        )
-      ),
-    [rows, carrierMode]
+      rows.map((row) => {
+        try {
+          return assertIsSnapshotConsumer(
+            getUnifiedShipmentSnapshot({
+              restRow: row,
+              ref: row?.trackRef,
+              role: carrierMode ? 'carrier' : 'shipper'
+            }),
+            'ActiveShipmentsList'
+          );
+        } catch (err) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.warn('[ActiveShipmentsList] snapshot failed', err);
+          }
+          return EMPTY_UNIFIED_SNAPSHOT;
+        }
+      }),
+    [rows, carrierMode, activationTick]
   );
 
   const loading = bootLoading && !hasLoadedRef.current;
@@ -117,22 +134,26 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
         </p>
       ) : null}
       {rowSnapshots.map((snapshot, idx, arr) => {
-        const row = snapshot.activeRow ?? {};
+        const row = snapshot?.activeRow ?? {};
+        const trackRef = snapshot?.ref || row?.trackRef || row?.code || '';
+        if (!trackRef && !snapshot?.contractActivated) return null;
         const label = `${row.origin || ''} → ${row.destination || ''}`.trim();
+        const cardKey = trackRef || `active-${idx}`;
         return (
-          <ActiveShipmentCard
-            key={snapshot.ref || row.trackRef || row.id}
-            snapshot={snapshot}
-            trackRef={snapshot.ref || row.trackRef}
-            label={label || snapshot.ref || row.trackRef}
-            assignedCarrierId={row.assignedCarrierId ?? snapshot.contractFields?.assignedCarrierId}
-            shipmentStatus={snapshot.shipmentStatus ?? row.shipmentStatus}
-            flowType={row.flowType ?? snapshot.contractFields?.flowType}
-            trackingEnabled={snapshot.tracking?.enabled ?? row.trackingEnabled}
-            carrierMode={carrierMode}
-            shareLive={carrierMode}
-            defaultExpanded={idx === 0 && arr.length === 1}
-          />
+          <ErrorBoundary key={cardKey} compact resetKey={cardKey}>
+            <ActiveShipmentCard
+              snapshot={snapshot}
+              trackRef={trackRef}
+              label={label || trackRef}
+              assignedCarrierId={row.assignedCarrierId ?? snapshot?.contractFields?.assignedCarrierId}
+              shipmentStatus={snapshot?.shipmentStatus ?? row.shipmentStatus}
+              flowType={row.flowType ?? snapshot?.contractFields?.flowType}
+              trackingEnabled={snapshot?.tracking?.enabled ?? row.trackingEnabled}
+              carrierMode={carrierMode}
+              shareLive={carrierMode}
+              defaultExpanded={idx === 0 && arr.length === 1}
+            />
+          </ErrorBoundary>
         );
       })}
     </div>

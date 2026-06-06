@@ -109,7 +109,7 @@ const ActiveShipmentCard = ({
     assignedCarrierId: resolvedCarrierId,
     shipmentStatus: resolvedStatus,
     trackingEnabled,
-    shareLive: shareLive && Boolean(resolvedCarrierId),
+    shareLive: shareLive && (Boolean(resolvedCarrierId) || contractActivated),
     enabled: Boolean(resolvedTrackRef) && (trackingEnabled || contractActivated),
     role: workspaceRole,
     flowType: resolvedFlowType
@@ -129,8 +129,10 @@ const ActiveShipmentCard = ({
   const canEnableAdvance = canRenderAdvanceButton && ui.upcomingStatus != null;
 
   useEffect(() => {
-    if (liveTrackingActive && (defaultExpanded || carrierMode)) setExpanded(true);
-  }, [liveTrackingActive, defaultExpanded, carrierMode]);
+    if (contractActivated || (liveTrackingActive && (defaultExpanded || carrierMode))) {
+      setExpanded(true);
+    }
+  }, [contractActivated, liveTrackingActive, defaultExpanded, carrierMode]);
 
   const href =
     (contractActivated || liveTrackingActive) && isValidShipmentTrackRef(resolvedTrackRef)
@@ -173,9 +175,9 @@ const ActiveShipmentCard = ({
     <div className="tp-active-shipment-card border rounded-3 mb-3 overflow-hidden tp-animate-fade-in">
       <div className="px-3 pt-3">
         <FlowSessionBanner
-          flowType={flowType}
+          flowType={resolvedFlowType}
           status={
-            flowType === FLOW_TYPE.CAPACITY
+            resolvedFlowType === FLOW_TYPE.CAPACITY
               ? FLOW_STATUS.ACTIVE_CAPACITY_MATCH
               : FLOW_STATUS.ACTIVE
           }
