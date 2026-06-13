@@ -11,6 +11,17 @@ import api from '../../services/api.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import TranslatedText from '../../components/ui/TranslatedText.jsx';
 import { translateRoleLabel } from '../../utils/i18nLabels.js';
+import ProfileAccessLayer from '../../components/profile/ProfileAccessLayer.jsx';
+
+function resolveThreadPeerId(thread, uid) {
+  if (!thread || uid == null) return null;
+  const me = String(uid);
+  const a = thread.userAId != null ? String(thread.userAId) : '';
+  const b = thread.userBId != null ? String(thread.userBId) : '';
+  if (a && a === me && thread.userBId != null) return thread.userBId;
+  if (b && b === me && thread.userAId != null) return thread.userAId;
+  return thread.peerId ?? null;
+}
 
 const SEEN_DEBOUNCE_MS = 800;
 const CHAT_FILE_PREVIEW = '__TP_FILE__';
@@ -330,22 +341,38 @@ const Messages = () => {
               <div className="small text-muted">{t('pages.messagesPage.emptyList')}</div>
             ) : (
               <div className="list-group list-group-flush">
-                {threads.map((th) => (
-                  <button
-                    key={th.id}
-                    type="button"
-                    className={`list-group-item list-group-item-action border-0 px-0 ${
-                      th.id === activeId ? 'fw-semibold' : ''
-                    }`}
-                    onClick={() => setActiveId(th.id)}
-                  >
-                    <div className="d-flex justify-content-between">
-                      <span>{th.peerName || t('common.userFallback')}</span>
-                      <small className="text-muted">{formatTime(th.lastMessageAt)}</small>
+                {threads.map((th) => {
+                  const peerId = resolveThreadPeerId(th, uid);
+                  return (
+                    <div
+                      key={th.id}
+                      role="button"
+                      tabIndex={0}
+                      className={`list-group-item list-group-item-action border-0 px-0 ${
+                        th.id === activeId ? 'fw-semibold' : ''
+                      }`}
+                      onClick={() => setActiveId(th.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setActiveId(th.id);
+                        }
+                      }}
+                    >
+                      <div className="d-flex justify-content-between align-items-center gap-2">
+                        <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                          <ProfileAccessLayer
+                            userId={peerId}
+                            name={th.peerName || t('common.userFallback')}
+                            avatarSrc={th.peerAvatar}
+                          />
+                        </span>
+                        <small className="text-muted flex-shrink-0">{formatTime(th.lastMessageAt)}</small>
+                      </div>
+                      <div className="small text-muted text-truncate">{renderPreviewLine(th.lastPreview)}</div>
                     </div>
-                    <div className="small text-muted text-truncate">{renderPreviewLine(th.lastPreview)}</div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
@@ -355,7 +382,16 @@ const Messages = () => {
           <Card>
             <div className="d-flex justify-content-between align-items-center mb-2">
               <div>
-                <div className="fw-semibold">{active?.peerName || (activeId ? '…' : t('common.emDash'))}</div>
+                {activeId && active ? (
+                  <ProfileAccessLayer
+                    userId={resolveThreadPeerId(active, uid)}
+                    name={active.peerName || t('common.userFallback')}
+                    avatarSrc={active.peerAvatar}
+                    className="fw-semibold"
+                  />
+                ) : (
+                  <div className="fw-semibold">{t('common.emDash')}</div>
+                )}
                 <div className="small text-muted">{translateRoleLabel(t, activeRole)}</div>
               </div>
             </div>
