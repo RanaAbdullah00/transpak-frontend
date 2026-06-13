@@ -6,28 +6,12 @@ import { hasCommercialRole } from '../../utils/authSession.js';
 import { isCommercialSession } from '../../utils/rbac.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
 import ReviewPromptModal from './ReviewPromptModal.jsx';
-
-function dismissedKey(userId) {
-  return userId ? `tp:${userId}:review_dismissed` : 'tp_review_dismissed';
-}
-
-function loadDismissed(userId) {
-  try {
-    const raw = sessionStorage.getItem(dismissedKey(userId));
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-function saveDismissed(userId, set) {
-  if (!userId) return;
-  try {
-    sessionStorage.setItem(dismissedKey(userId), JSON.stringify([...set]));
-  } catch {
-    /* ignore */
-  }
-}
+import {
+  loadReviewDismissed,
+  markReviewDismissed,
+  reviewDismissKeyFromPrompt
+} from '../../utils/reviewDismissStore.js';
+import { reviewRenderGuard, canRenderReview } from '../../utils/reviewRenderGuard.js';
 
 const ReviewPromptHost = () => {
   const { user } = useAuth();
@@ -36,25 +20,30 @@ const ReviewPromptHost = () => {
   const [prompt, setPrompt] = useState(null);
   const dismissedRef = useRef(new Set());
   const queueRef = useRef([]);
+  const activeGuardRef = useRef(null);
 
   useEffect(() => {
-    dismissedRef.current = user?.id ? loadDismissed(user.id) : new Set();
+    dismissedRef.current = user?.id ? loadReviewDismissed(user.id) : new Set();
     queueRef.current = [];
     setPrompt(null);
   }, [user?.id]);
 
-  const dismissKey = (p) =>
-    p?.kind === 'space'
-      ? `space:${p.spaceRequestId}`
-      : p?.loadId
-        ? `load:${p.loadId}`
-        : null;
+  const dismissKey = reviewDismissKeyFromPrompt;
 
   const showNext = useCallback(() => {
+    if (activeGuardRef.current) {
+      activeGuardRef.current.release();
+      activeGuardRef.current = null;
+    }
     while (queueRef.current.length) {
       const next = queueRef.current.shift();
       const key = dismissKey(next);
       if (key && dismissedRef.current.has(key)) continue;
+      if (key) {
+        const guard = reviewRenderGuard(key);
+        if (!guard.allowed) continue;
+        activeGuardRef.current = guard;
+      }
       setPrompt(next);
       return;
     }
@@ -68,6 +57,7 @@ const ReviewPromptHost = () => {
         if (!item?.toUserId) continue;
         const key = dismissKey(item);
         if (key && dismissedRef.current.has(key)) continue;
+        if (key && !canRenderReview(key)) continue;
         if (queueRef.current.some((q) => dismissKey(q) === key) || dismissKey(prompt) === key) continue;
         queueRef.current.push(item);
       }
@@ -105,21 +95,29 @@ const ReviewPromptHost = () => {
   }, [enqueue, fetchPending]);
 
   const handleClose = () => {
-    const key = dismissKey(prompt);
-    if (key) {
-      dismissedRef.current.add(key);
-      saveDismissed(user?.id, dismissedRef.current);
+    if (prompt) {
+      const key = dismissKey(prompt);
+      if (key) reviewRenderGuard(key).lock();
+      markReviewDismissed(user?.id, prompt);
     }
+    if (activeGuardRef.current) {
+      activeGuardRef.current.release();
+      activeGuardRef.current = null;
+    }
+    if (user?.id) dismissedRef.current = loadReviewDismissed(user.id);
     setPrompt(null);
     setTimeout(showNext, 300);
   };
 
   const handleSubmitted = (p) => {
     const key = dismissKey(p);
-    if (key) {
-      dismissedRef.current.add(key);
-      saveDismissed(user?.id, dismissedRef.current);
+    if (key) reviewRenderGuard(key).lock();
+    markReviewDismissed(user?.id, p);
+    if (activeGuardRef.current) {
+      activeGuardRef.current.release();
+      activeGuardRef.current = null;
     }
+    if (user?.id) dismissedRef.current = loadReviewDismissed(user.id);
   };
 
   if (resolveAdminShell(user, location.pathname)) return null;

@@ -129,6 +129,8 @@ export const translations = {
       spaceCompletedHint: 'Contract completed — leave a review from your profile.',
       maxCapacityKg: 'Max available (tons)',
       availableFrom: 'Need space by',
+      availabilitySlots: 'Availability time windows',
+      addTimeSlot: 'Add time slot',
       sortCapacity: 'Most capacity',
       sortRate: 'Lowest rate/ton',
       resetFilters: 'Reset filters',
@@ -730,7 +732,7 @@ export const translations = {
         advanceInTransit: 'Mark in transit',
         advancePickedup: 'Mark in transit',
         advanceIntransit: 'Mark delivered',
-        advanceDelivered: 'Close shipment',
+        advanceDelivered: 'Mark delivered',
         advanceClosed: 'Close shipment',
         statusUpdated: 'Shipment status updated',
         trackingNotActiveYet:
@@ -2165,7 +2167,7 @@ export const translations = {
         advanceInTransit: 'راستے میں نشان لگائیں',
         advancePickedup: 'راستے میں نشان لگائیں',
         advanceIntransit: 'ڈیلیور نشان لگائیں',
-        advanceDelivered: 'شپمنٹ بند کریں',
+        advanceDelivered: 'ڈیلیور نشان لگائیں',
         advanceClosed: 'شپمنٹ بند کریں',
         statusUpdated: 'شپمنٹ کی حیثیت اپ ڈیٹ ہو گئی',
         trackingNotActiveYet:

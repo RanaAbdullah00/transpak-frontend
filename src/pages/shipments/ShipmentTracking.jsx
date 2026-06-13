@@ -13,14 +13,13 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
-import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
+import { getNextAllowedActions } from '../../utils/stateNormalizationEngine.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import {
   commitOptimisticStatusAdvance,
   emitShipmentStatusUpdated,
   getOptimisticStatusTimeline,
   resolveEffectiveShipmentStatus,
-  resolveUpcomingShipmentStatus,
   subscribeOptimisticShipmentStatus
 } from '../../utils/shipmentStatusOptimistic.js';
 import {
@@ -264,17 +263,22 @@ const ShipmentTracking = () => {
     pageSnapshot.shipmentStatus ??
     'booked';
   const effectiveStatus = resolveEffectiveShipmentStatus(id, baseShipmentStatus);
-  const upcomingStatus =
-    workspaceRole === 'carrier'
-      ? resolveUpcomingShipmentStatus(id, baseShipmentStatus)
-      : ui.upcomingStatus;
+  const advanceActions = useMemo(
+    () =>
+      workspaceRole === 'carrier'
+        ? getNextAllowedActions(effectiveStatus, { role: 'carrier' })
+        : [],
+    [workspaceRole, effectiveStatus]
+  );
+  const primaryAction = advanceActions[0] ?? null;
   const canRenderAdvanceButton =
     workspaceRole === 'carrier' && isValidShipmentTrackRef(id) && trackingActive;
-  const canEnableButton = canRenderAdvanceButton && upcomingStatus != null;
+  const canEnableButton = canRenderAdvanceButton && primaryAction != null;
 
   const handleAdvanceStatus = useCallback(async () => {
+    const upcomingStatus = primaryAction?.nextBackendStatus;
     if (!upcomingStatus || !id || !canEnableButton) return;
-    const label = t(advanceStatusLabelKey(upcomingStatus));
+    const label = t(primaryAction.labelKey);
     commitOptimisticStatusAdvance(id, upcomingStatus, { label });
     setAdvancing(true);
     try {
@@ -301,7 +305,7 @@ const ShipmentTracking = () => {
     } finally {
       setAdvancing(false);
     }
-  }, [id, upcomingStatus, canEnableButton, request, t, workspaceRole]);
+  }, [id, primaryAction, canEnableButton, request, t, workspaceRole]);
 
   const tracking = payload?.tracking;
   const mapFields = useMemo(() => {
@@ -541,8 +545,8 @@ const ShipmentTracking = () => {
           >
             {advancing
               ? t('common.loading')
-              : upcomingStatus
-                ? t(advanceStatusLabelKey(upcomingStatus))
+              : primaryAction
+                ? t(primaryAction.labelKey)
                 : t('pages.tracking.updateStatus')}
           </Button>
         </div>

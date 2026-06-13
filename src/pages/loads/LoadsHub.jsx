@@ -114,8 +114,17 @@ const LoadsHub = () => {
       {tab === 'posted' ? <ManageLoads embedded /> : null}
       {tab === 'market' ? (
         <>
-          <SpaceSentRequestsPanel />
-          <CapacityMarketplace />
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <p className="text-muted small mb-0">{t('loadsHub.subtitle')}</p>
+            <a href="#my-capacity-requests" className="btn btn-sm btn-outline-primary">
+              {t('loadsHub.mySpaceRequests')}
+            </a>
+          </div>
+          <CapacityMarketplace hubLayout>
+            <div id="my-capacity-requests">
+              <SpaceSentRequestsPanel embedded />
+            </div>
+          </CapacityMarketplace>
         </>
       ) : null}
     </div>

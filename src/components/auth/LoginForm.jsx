@@ -11,6 +11,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapErrorCode } from '../../utils/unwrapApi.js';
 import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
 import { canAccessAdminRoutes, clearAuthStorage } from '../../utils/authSession.js';
+import { isAdminSmartLoginEmail } from '../../utils/adminSmartLogin.js';
 import { FaEnvelope } from 'react-icons/fa';
 
 const LoginForm = () => {
@@ -46,10 +47,11 @@ const LoginForm = () => {
   };
 
   const emailNorm = form.email.trim().toLowerCase();
+  const smartAdmin = isAdminSmartLoginEmail(emailNorm);
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
-    if (!uiRolePref) {
+    if (!smartAdmin && !uiRolePref) {
       const msg = t('errors.roleRequired');
       setFormError(msg);
       notifyUserError(msg);
@@ -62,7 +64,7 @@ const LoginForm = () => {
       const res = await loginApi({
         email: form.email,
         password: form.password,
-        roleHint: uiRolePref
+        roleHint: smartAdmin ? 'admin' : uiRolePref
       });
       const payload = safeUnwrapAuthResponse(res);
       const { token, user } = payload;
@@ -110,6 +112,10 @@ const LoginForm = () => {
       }
 
       login({ ...session, token: sessionToken, user: sessionUser });
+      if (smartAdmin && canAccessAdminRoutes(sessionUser)) {
+        navigate('/admin/dashboard', { replace: true });
+        return;
+      }
       const activeRole =
         sessionUser.activeRole ??
         session?.currentRole ??
@@ -139,7 +145,7 @@ const LoginForm = () => {
 
   return (
     <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-login-form mt-3">
-      <RoleSelector value={uiRolePref} onChange={handleRoleChange} />
+      {!smartAdmin ? <RoleSelector value={uiRolePref} onChange={handleRoleChange} /> : null}
       {formError ? (
         <div className="alert alert-danger py-2 small mb-3" role="alert">
           {formError}

@@ -15,6 +15,13 @@ import VehicleTypeLabel from '../../components/loadboard/VehicleTypeLabel.jsx';
 import { normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import { normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 import { normalizeShipmentHistoryList } from '../../utils/normalizeShipmentHistory.js';
+import {
+  fetchCompletedShipmentRows,
+  loadHistoryCache,
+  saveHistoryCache
+} from '../../utils/shipmentHistoryFetch.js';
+import ProfileAccessLayer from '../../components/profile/ProfileAccessLayer.jsx';
+import Button from '../../components/ui/Button.jsx';
 import { sanitizeBadgeVariant } from '../../utils/badgeVariants.js';
 import { translateBidStatus } from '../../utils/i18nLabels.js';
 
@@ -26,22 +33,9 @@ const TAB_CANCELLED = 'cancelled';
 const COMPLETED_STATUSES = new Set(['closed', 'delivered']);
 
 async function fetchCompletedShipments(request, roles) {
-  try {
-    const data = await request({ url: '/shipments/completed', skipGlobalErrorToast: true });
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    const status = err?.response?.status;
-    const notFound =
-      status === 404 || String(err?.response?.data?.code || '').toUpperCase() === 'NOT_FOUND';
-    if (!notFound) throw err;
-    if (roles.includes('shipper')) {
-      const mine = await request({ url: '/loads/mine', skipGlobalErrorToast: true });
-      return (Array.isArray(mine) ? mine : []).filter((l) =>
-        COMPLETED_STATUSES.has(String(l.status || '').toLowerCase())
-      );
-    }
-    return [];
-  }
+  const result = await fetchCompletedShipmentRows(request, { roles });
+  if (result.error) throw new Error(result.error.message);
+  return result.rows;
 }
 
 function historyBadgeVariant(status, tab) {
@@ -62,11 +56,13 @@ const ShipmentHistory = () => {
   const [acceptedRows, setAcceptedRows] = useState([]);
   const [rejectedRows, setRejectedRows] = useState([]);
   const [cancelledRows, setCancelledRows] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
   const roles = Array.isArray(user?.roles) ? user.roles : [];
   const activeRole = user?.activeRole ?? roles[0];
   const carrierMode = activeRole === 'carrier';
 
   const refreshHistory = useCallback(async () => {
+    setFetchError(null);
     try {
       const [completed, bidsRaw, spaceSent] = await Promise.all([
         fetchCompletedShipments(request, roles),
@@ -138,19 +134,26 @@ const ShipmentHistory = () => {
       }
 
       setCompletedRows(normalizeShipmentHistoryList(completed, { carrierMode }));
+      saveHistoryCache(user?.id, completed);
       setAcceptedRows(normalizeShipmentHistoryList(acceptedBids, { carrierMode }));
       setRejectedRows(
         normalizeShipmentHistoryList([...rejectedBids, ...rejectedSpace], { carrierMode })
       );
       setCancelledRows(normalizeShipmentHistoryList(cancelled, { carrierMode }));
     } catch (err) {
-      setCompletedRows([]);
+      const cached = loadHistoryCache(user?.id);
+      setCompletedRows(
+        Array.isArray(cached) && cached.length
+          ? normalizeShipmentHistoryList(cached, { carrierMode })
+          : []
+      );
       setAcceptedRows([]);
       setRejectedRows([]);
       setCancelledRows([]);
+      setFetchError({ retryable: true, message: err?.message || 'history_failed' });
       notifyError(formatUserError(err, t, { fallback: t('pages.shipments.historyLoadFailed') }));
     }
-  }, [request, roles, carrierMode, t]);
+  }, [request, roles, carrierMode, t, user?.id]);
 
   useEffect(() => {
     refreshHistory();
@@ -195,6 +198,14 @@ const ShipmentHistory = () => {
       <p className="small text-muted mb-2">{roleHint}</p>
       <p className="small text-muted mb-3">{t('pages.shipments.historyLead')}</p>
       <SegmentTabs tabs={tabs} active={tab} onChange={setTab} className="mb-3" />
+      {fetchError ? (
+        <Card className="p-3 mb-3 text-center">
+          <p className="small text-danger mb-2">{t('pages.shipments.historyLoadFailed')}</p>
+          <Button variant="outline-primary" size="sm" onClick={refreshHistory}>
+            {t('pages.admin.tryAgain')}
+          </Button>
+        </Card>
+      ) : null}
       {loading ? (
         <>
           <SkeletonCard rows={2} />
@@ -223,10 +234,23 @@ const ShipmentHistory = () => {
               <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                   <div className="fw-semibold">{row.cargo || code}</div>
-                  <div className="small text-muted">
-                    {code}
-                    {row.counterpartyName ? ` · ${row.counterpartyName}` : ''}
-                    {row.origin && row.destination ? ` · ${row.origin} → ${row.destination}` : ''}
+                  <div className="small text-muted d-flex flex-wrap align-items-center gap-1">
+                    <span>{code}</span>
+                    {row.counterpartyId ? (
+                      <ProfileAccessLayer
+                        userId={row.counterpartyId}
+                        name={row.counterpartyName}
+                        avatarSrc={row.counterpartyAvatar}
+                        className="small"
+                      />
+                    ) : row.counterpartyName ? (
+                      <span>· {row.counterpartyName}</span>
+                    ) : null}
+                    {row.origin && row.destination ? (
+                      <span>
+                        · {row.origin} → {row.destination}
+                      </span>
+                    ) : null}
                   </div>
                   {row._raw?.vehicleType ? (
                     <div className="small text-muted mt-1">

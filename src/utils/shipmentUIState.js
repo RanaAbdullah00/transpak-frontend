@@ -1,4 +1,5 @@
 import { normalizeShipmentStatus, nextShipmentStatus } from './shipmentStatus.js';
+import { getBackendBadgeVariant } from './stateNormalizationEngine.js';
 import { translateShipmentOrLoadStatus } from './i18nLabels.js';
 import { normalizeContractFields } from './contractFieldNormalizer.js';
 import { getTrackingRef } from './trackingRefResolver.js';
@@ -363,7 +364,7 @@ function contractTrackFlags(input = {}) {
 const STATUS_COLOR_VARIANT = Object.freeze({
   booked: 'primary',
   pickedup: 'info',
-  intransit: 'warning',
+  intransit: 'primary',
   delivered: 'success',
   closed: 'secondary',
   posted: 'secondary',
@@ -437,6 +438,7 @@ export function deriveShipmentUIState(snapshot = {}) {
 
   const colorVariant =
     getContractUIColor(contractPhase, status) ||
+    getBackendBadgeVariant(status) ||
     STATUS_COLOR_VARIANT[status] ||
     'secondary';
 

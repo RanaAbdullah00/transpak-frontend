@@ -5,7 +5,7 @@ import Badge from '../ui/Badge.jsx';
 import Button from '../ui/Button.jsx';
 import ConfirmActionModal from '../ui/ConfirmActionModal.jsx';
 import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
-import ProfileLink from '../profile/ProfileLink.jsx';
+import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { translateBidStatus } from '../../utils/i18nLabels.js';
 import { isAwaitingShipper, isCounterOffered, isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
@@ -193,11 +193,10 @@ const BidCard = ({
           <div className="d-flex align-items-center gap-2 flex-wrap">
             {profileId ? (
               <h6 className="mb-0">
-                <ProfileLink
+                <ProfileAccessLayer
                   userId={profileId}
                   name={primaryName}
                   avatarSrc={profileAvatar}
-                  showAvatar
                   showBadge
                   role={profileRole}
                 />

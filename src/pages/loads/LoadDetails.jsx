@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import LoadCard from '../../components/loadboard/LoadCard.jsx';
-import ProfileLink from '../../components/profile/ProfileLink.jsx';
 import BidTimeline from '../../components/bids/BidTimeline.jsx';
 import BidList from '../../components/loadboard/BidList.jsx';
 import { SkeletonCard } from '../../components/ui/Skeleton.jsx';

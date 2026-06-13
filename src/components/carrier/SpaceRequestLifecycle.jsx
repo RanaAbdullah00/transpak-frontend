@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../ui/Button.jsx';
 import FlowTimeline, { SPACE_STEPS, SPACE_STEPS_REJECTED } from '../ui/FlowTimeline.jsx';
-import ProfileLink from '../profile/ProfileLink.jsx';
+import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import { spaceStepId, proposedSpacePrice } from '../../utils/spaceFlow.js';
 import { translateSpaceRequestStatus } from '../../utils/i18nLabels.js';
+import { formatSlotsSummary } from './AvailabilitySlotPicker.jsx';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { getTrackingRef, hasOptimisticActivation } from '../../utils/contractActivationLayer.js';
 import { formatTons } from '../../utils/weightUnits.js';
@@ -83,9 +84,21 @@ const SpaceRequestLifecycle = ({
       <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">
         <div className="fw-semibold">
           {showCarrierActions ? (
-            <ProfileLink userId={row?.shipperId} name={row?.shipperName} showBadge role={t('auth.shipper')} />
+            <ProfileAccessLayer
+              userId={row?.shipperId}
+              name={row?.shipperName}
+              avatarSrc={row?.shipperAvatar}
+              showBadge
+              role={t('auth.shipper')}
+            />
           ) : (
-            <ProfileLink userId={row?.carrierId} name={row?.carrierName} showBadge role={t('auth.carrier')} />
+            <ProfileAccessLayer
+              userId={row?.carrierId}
+              name={row?.carrierName}
+              avatarSrc={row?.carrierAvatar}
+              showBadge
+              role={t('auth.carrier')}
+            />
           )}{' '}
           · {formatTons(row?.requestedKg)} t
         </div>
@@ -97,6 +110,9 @@ const SpaceRequestLifecycle = ({
           <span className="ms-2">
             · {t('loadsHub.availableFrom')}: {String(row.availableFrom).slice(0, 10)}
           </span>
+        ) : null}
+        {formatSlotsSummary(row.availabilitySlots, t) ? (
+          <span className="ms-2">· {formatSlotsSummary(row.availabilitySlots, t)}</span>
         ) : null}
       </div>
       {proposed != null ? (

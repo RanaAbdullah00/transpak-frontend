@@ -28,7 +28,7 @@ function filterCityParam(value) {
   return resolved && isKnownCity(resolved) ? resolved : undefined;
 }
 
-const CapacityMarketplace = () => {
+const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
   const { t } = useLanguage();
   const { request, loading } = useApi();
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS }));
@@ -128,9 +128,12 @@ const CapacityMarketplace = () => {
     }
   };
 
-  return (
-    <div>
-      <div className="tp-filter-card mb-2">
+  const scrollToListings = () => {
+    document.getElementById('tp-capacity-listings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const filterBlock = (
+    <div className="tp-filter-card mb-2">
         <div className="row g-2">
           <div className="col-6 col-md-3">
             <CitySelect
@@ -195,6 +198,10 @@ const CapacityMarketplace = () => {
           </div>
         ) : null}
       </div>
+  );
+
+  const listingsBlock = (
+    <div id="tp-capacity-listings">
       {listError ? (
         <Card className="p-4 text-center">
           <p className="text-danger small mb-3">
@@ -226,6 +233,23 @@ const CapacityMarketplace = () => {
           ))}
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div>
+      {filterBlock}
+      {hubLayout ? (
+        <>
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <Button variant="primary" size="sm" onClick={scrollToListings}>
+              {t('loadsHub.requestCapacity')}
+            </Button>
+          </div>
+          {children}
+        </>
+      ) : null}
+      {listingsBlock}
 
       <Modal
         open={Boolean(detailsTarget)}

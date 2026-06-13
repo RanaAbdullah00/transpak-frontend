@@ -145,6 +145,11 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
               trackRef={trackRef}
               label={label || trackRef}
               assignedCarrierId={row.assignedCarrierId ?? snapshot?.contractFields?.assignedCarrierId}
+              shipperId={row.shipperId ?? snapshot?.contractFields?.shipperId}
+              shipperName={row.shipperName}
+              carrierName={row.carrierName}
+              shipperAvatar={row.shipperAvatar}
+              carrierAvatar={row.carrierAvatar}
               shipmentStatus={snapshot?.shipmentStatus ?? row.shipmentStatus}
               flowType={row.flowType ?? snapshot?.contractFields?.flowType}
               trackingEnabled={snapshot?.tracking?.enabled ?? row.trackingEnabled}

@@ -4,7 +4,7 @@ import ActiveShipmentPanel from './ActiveShipmentPanel.jsx';
 import StatusBadge from '../shipment/StatusBadge.jsx';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { advanceStatusLabelKey } from '../../utils/shipmentAdvance.js';
+import { getNextAllowedActions } from '../../utils/stateNormalizationEngine.js';
 import {
   assertIsSnapshotConsumer,
   getUnifiedShipmentSnapshot,
@@ -24,13 +24,13 @@ import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
 import {
   commitOptimisticStatusAdvance,
   resolveEffectiveShipmentStatus,
-  resolveUpcomingShipmentStatus,
   subscribeOptimisticShipmentStatus
 } from '../../utils/shipmentStatusOptimistic.js';
 import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import FlowSessionBanner from '../flow/FlowSessionBanner.jsx';
 import { FLOW_STATUS, FLOW_TYPE } from '../../utils/flowSession.js';
+import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 
 /**
  * Unified active shipment card — only rendered from GET /shipments/active rows.
@@ -40,6 +40,11 @@ const ActiveShipmentCard = ({
   trackRef,
   label,
   assignedCarrierId = null,
+  shipperId = null,
+  shipperName = null,
+  carrierName = null,
+  shipperAvatar = null,
+  carrierAvatar = null,
   shipmentStatus = 'booked',
   flowType = FLOW_TYPE.BID,
   trackingEnabled: trackingEnabledProp = false,
@@ -133,14 +138,16 @@ const ActiveShipmentCard = ({
     () => withShipmentUILabels({ ...(snapshot.uiState ?? uiState), status: effectiveStatus }, t),
     [snapshot.uiState, uiState, effectiveStatus, t]
   );
-  const upcomingForCarrier = resolveUpcomingShipmentStatus(resolvedTrackRef, baseStatus);
+  const advanceActions = useMemo(
+    () => (carrierMode ? getNextAllowedActions(effectiveStatus, { role: 'carrier' }) : []),
+    [carrierMode, effectiveStatus]
+  );
+  const primaryAction = advanceActions[0] ?? null;
   const canRenderAdvanceButton =
     carrierMode &&
     isValidShipmentTrackRef(resolvedTrackRef) &&
     (trackingActive || Boolean(snapshot.activeRow || shipmentRow));
-  const nextAdvanceStatus = carrierMode ? upcomingForCarrier : ui.upcomingStatus;
-  const canEnableAdvance =
-    canRenderAdvanceButton && nextAdvanceStatus != null;
+  const canEnableAdvance = canRenderAdvanceButton && primaryAction != null;
 
   useEffect(() => {
     if (trackingActive && (defaultExpanded || carrierMode || contractActivated)) {
@@ -153,11 +160,11 @@ const ActiveShipmentCard = ({
       ? `/shipments/tracking/${encodeURIComponent(resolvedTrackRef)}`
       : null;
 
-  const handleAdvanceStatus = async (next) => {
-    const step = next || nextAdvanceStatus;
+  const handleAdvanceStatus = async () => {
+    const step = primaryAction?.nextBackendStatus;
     if (!step || !resolvedTrackRef || !canEnableAdvance) return;
     commitOptimisticStatusAdvance(resolvedTrackRef, step, {
-      label: t(advanceStatusLabelKey(step))
+      label: t(primaryAction.labelKey)
     });
     setAdvancingStatus(true);
     try {
@@ -211,7 +218,25 @@ const ActiveShipmentCard = ({
       >
         <div className="min-w-0">
           <div className="fw-semibold text-truncate">{summary || resolvedTrackRef}</div>
-          <div className="small text-muted">{resolvedTrackRef}</div>
+          <div className="small text-muted d-flex flex-wrap align-items-center gap-1">
+            <span>{resolvedTrackRef}</span>
+            {carrierMode && shipperId ? (
+              <ProfileAccessLayer
+                userId={shipperId}
+                name={shipperName}
+                avatarSrc={shipperAvatar}
+                className="small"
+              />
+            ) : null}
+            {!carrierMode && assignedCarrierId ? (
+              <ProfileAccessLayer
+                userId={assignedCarrierId}
+                name={carrierName}
+                avatarSrc={carrierAvatar}
+                className="small"
+              />
+            ) : null}
+          </div>
         </div>
         <div className="d-flex align-items-center gap-2 flex-shrink-0">
           {ui.label ? <StatusBadge uiState={ui} /> : null}
@@ -248,10 +273,10 @@ const ActiveShipmentCard = ({
               carrierMode && trackingActive && isValidShipmentTrackRef(resolvedTrackRef)
                 ? {
                     title: t('pages.tracking.updateStatus'),
-                    upcoming: canEnableAdvance ? nextAdvanceStatus : null,
+                    upcoming: canEnableAdvance ? primaryAction?.nextBackendStatus : null,
                     loadingStatus: advancingStatus,
-                    buttonLabel: nextAdvanceStatus
-                      ? t(advanceStatusLabelKey(nextAdvanceStatus))
+                    buttonLabel: primaryAction
+                      ? t(primaryAction.labelKey)
                       : t('pages.tracking.updateStatus'),
                     statusLine: t('pages.tracking.advanceStatus'),
                     onAdvance: handleAdvanceStatus

@@ -178,16 +178,6 @@ const AvailableLoads = ({ embedded = false }) => {
             />
           </div>
           <div className="col-6 col-md-3">
-            <input
-              name="pickupTo"
-              type="date"
-              className="form-control form-control-sm rounded-3"
-              aria-label={t('pages.loads.pickupTo')}
-              value={filters.pickupTo}
-              onChange={handleFilterChange}
-            />
-          </div>
-          <div className="col-6 col-md-3">
             <VehicleTypeDropdown
               name="vehicleType"
               value={filters.vehicleType}
@@ -195,46 +185,60 @@ const AvailableLoads = ({ embedded = false }) => {
               includeAllOption
             />
           </div>
-          <div className="col-6 col-md-3">
-            <input
-              name="minWeight"
-              type="number"
-              className="form-control form-control-sm rounded-3"
-              placeholder={t('pages.loads.minWeight')}
-              value={filters.minWeight}
-              onChange={handleFilterChange}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <input
-              name="maxWeight"
-              type="number"
-              className="form-control form-control-sm rounded-3"
-              placeholder={t('pages.loads.maxWeight')}
-              value={filters.maxWeight}
-              onChange={handleFilterChange}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <input
-              name="minPrice"
-              type="number"
-              className="form-control form-control-sm rounded-3"
-              placeholder={t('pages.loads.minFare')}
-              value={filters.minPrice}
-              onChange={handleFilterChange}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <input
-              name="maxPrice"
-              type="number"
-              className="form-control form-control-sm rounded-3"
-              placeholder={t('pages.loads.maxFare')}
-              value={filters.maxPrice}
-              onChange={handleFilterChange}
-            />
-          </div>
+          {!embedded ? (
+            <>
+              <div className="col-6 col-md-3">
+                <input
+                  name="pickupTo"
+                  type="date"
+                  className="form-control form-control-sm rounded-3"
+                  aria-label={t('pages.loads.pickupTo')}
+                  value={filters.pickupTo}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div className="col-6 col-md-3">
+                <input
+                  name="minWeight"
+                  type="number"
+                  className="form-control form-control-sm rounded-3"
+                  placeholder={t('pages.loads.minWeight')}
+                  value={filters.minWeight}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div className="col-6 col-md-3">
+                <input
+                  name="maxWeight"
+                  type="number"
+                  className="form-control form-control-sm rounded-3"
+                  placeholder={t('pages.loads.maxWeight')}
+                  value={filters.maxWeight}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div className="col-6 col-md-3">
+                <input
+                  name="minPrice"
+                  type="number"
+                  className="form-control form-control-sm rounded-3"
+                  placeholder={t('pages.loads.minFare')}
+                  value={filters.minPrice}
+                  onChange={handleFilterChange}
+                />
+              </div>
+              <div className="col-6 col-md-3">
+                <input
+                  name="maxPrice"
+                  type="number"
+                  className="form-control form-control-sm rounded-3"
+                  placeholder={t('pages.loads.maxFare')}
+                  value={filters.maxPrice}
+                  onChange={handleFilterChange}
+                />
+              </div>
+            </>
+          ) : null}
           <div className="col-12 col-md-4">
             <select
               name="sort"

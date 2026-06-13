@@ -70,6 +70,10 @@ const Sidebar = () => {
               <FaListUl />
               {t('pages.dashboard.statOpenMarketplace')}
             </NavLink>
+            <NavLink to="/loads/manage?tab=capacity" className={navLinkClass}>
+              <FaTruck />
+              {t('loadsHub.navCapacityHub')}
+            </NavLink>
             <NavLink to="/bids/mine" className={navLinkClass}>
               <FaGavel />
               {t('pages.bids.management')}

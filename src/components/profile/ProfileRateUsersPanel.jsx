@@ -10,6 +10,9 @@ import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { invalidateRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import StarPicker from '../reviews/StarPicker.jsx';
+import { isReviewDismissed, markReviewDismissed } from '../../utils/reviewDismissStore.js';
+import { canRenderReview, reviewRenderGuard } from '../../utils/reviewRenderGuard.js';
 
 /** Post-delivery / closure only (InDrive-style). */
 function loadAllowsRating(load) {
@@ -32,34 +35,19 @@ function loadStatusLabel(t, status) {
   return tr === key ? status || '—' : tr;
 }
 
-function StarPicker({ value, onChange, disabled }) {
-  const { t } = useLanguage();
-  return (
-    <div className="d-flex gap-1 flex-wrap tp-star-row" role="group" aria-label={t('reviews.starLabel')}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          className={`btn btn-sm tp-star-btn ${Number(value) >= n ? 'tp-star-on' : 'btn-outline-secondary'}`}
-          onClick={() => onChange(n)}
-          disabled={disabled}
-          aria-pressed={Number(value) >= n}
-        >
-          ★
-        </button>
-      ))}
-    </div>
-  );
+function StarPickerLocal({ value, onChange, disabled }) {
+  return <StarPicker value={value} onChange={onChange} disabled={disabled} />;
 }
 
-function RateCard({ item, onSubmitted }) {
+function RateCard({ item, onSubmitted, userId }) {
   const { t } = useLanguage();
   const { request } = useApi();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  const canSubmit = item.rateEnabled === true;
+  const canSubmit = item.rateEnabled === true && !submitted;
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -78,6 +66,9 @@ function RateCard({ item, onSubmitted }) {
       notifySuccess(t('reviews.submitted'));
       invalidateRatingSummary(item.toUserId);
       emitRealtimeRefresh('all');
+      markReviewDismissed(userId, { loadId: item.loadId });
+      reviewRenderGuard(`load:${item.loadId}`).lock();
+      setSubmitted(true);
       onSubmitted?.();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('reviews.submitFailed') }));
@@ -105,15 +96,19 @@ function RateCard({ item, onSubmitted }) {
       <div className="small text-muted mb-2 text-break">
         {t('reviews.loadContext')}: <span className="text-body">{item.loadCode || item.loadId?.slice(0, 8) || '—'}</span>
       </div>
-      {!canSubmit ? (
+      {!submitted && !item.rateEnabled ? (
         <div className="alert alert-secondary border-0 rounded-3 small py-2 mb-0" role="status">
           {t('reviews.rateUnlockAfterDelivery')}
+        </div>
+      ) : submitted ? (
+        <div className="alert alert-success border-0 rounded-3 small py-2 mb-0" role="status">
+          {t('reviews.submitted')}
         </div>
       ) : (
         <>
           <div className="mb-2">
             <span className="small fw-semibold d-block mb-1">{t('reviews.yourRating')}</span>
-            <StarPicker value={rating} onChange={setRating} disabled={busy} />
+            <StarPickerLocal value={rating} onChange={setRating} disabled={busy} />
           </div>
           <label className="form-label small mb-1">{t('reviews.optionalComment')}</label>
           <textarea
@@ -183,7 +178,15 @@ const ProfileRateUsersPanel = () => {
               rateEnabled
             });
           }
-          if (!cancelled) setItems(next);
+          if (!cancelled) {
+            setItems(
+              next.filter(
+                (item) =>
+                  !isReviewDismissed(uid, { loadId: item.loadId }) &&
+                  canRenderReview(`load:${item.loadId}`)
+              )
+            );
+          }
         } else if (role === 'carrier') {
           const data = await request({ method: 'GET', url: '/bids/mine' });
           const bids = normalizeBids(data).filter((b) => b.status === 'accepted' && b.loadId);
@@ -214,7 +217,15 @@ const ProfileRateUsersPanel = () => {
               rateEnabled
             });
           }
-          if (!cancelled) setItems(next);
+          if (!cancelled) {
+            setItems(
+              next.filter(
+                (item) =>
+                  !isReviewDismissed(uid, { loadId: item.loadId }) &&
+                  canRenderReview(`load:${item.loadId}`)
+              )
+            );
+          }
         } else if (!cancelled) {
           setItems([]);
         }
@@ -258,7 +269,7 @@ const ProfileRateUsersPanel = () => {
     <div className="d-flex flex-column gap-3">
       <p className="small text-muted mb-0">{t('reviews.rateUsersHintStrict')}</p>
       {items.map((item) => (
-        <RateCard key={item.key} item={item} onSubmitted={() => setTick((x) => x + 1)} />
+        <RateCard key={item.key} item={item} userId={uid} onSubmitted={() => setTick((x) => x + 1)} />
       ))}
     </div>
   );

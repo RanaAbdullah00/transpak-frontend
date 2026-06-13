@@ -5,11 +5,16 @@ import Loader from '../ui/Loader.jsx';
 import Badge from '../ui/Badge.jsx';
 import Card from '../ui/Card.jsx';
 import { useApi } from '../../hooks/useApi.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 import { sanitizeBadgeVariant } from '../../utils/badgeVariants.js';
 import { normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import { normalizeShipmentHistoryList } from '../../utils/normalizeShipmentHistory.js';
+import { fetchCompletedShipmentRows, loadHistoryCache, saveHistoryCache } from '../../utils/shipmentHistoryFetch.js';
+import EmptyState from '../ui/EmptyState.jsx';
+import Button from '../ui/Button.jsx';
+import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 
 const TAB_COMPLETED = 'completed';
 const TAB_CLOSED = 'closed';
@@ -23,19 +28,9 @@ function historyBadgeVariant(status) {
   return 'secondary';
 }
 
-async function fetchCompletedRows(request) {
-  try {
-    const history = await request({ url: '/shipments/history', skipGlobalErrorToast: true });
-    if (Array.isArray(history) && history.length > 0) return history;
-  } catch {
-    /* optional endpoint — fall through */
-  }
-  try {
-    const data = await request({ url: '/shipments/completed', skipGlobalErrorToast: true });
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
+async function fetchCompletedRows(request, roles) {
+  const result = await fetchCompletedShipmentRows(request, { roles });
+  return result;
 }
 
 async function fetchCancelledRows(request, carrierMode) {
@@ -43,7 +38,7 @@ async function fetchCancelledRows(request, carrierMode) {
     if (carrierMode) {
       const bids = await request({ url: '/bids/mine', skipGlobalErrorToast: true });
       return (Array.isArray(bids) ? bids : [])
-        .filter((b) => normalizeBidStatus(b.status) === BID_STATUS.REJECTED)
+        .filter((b) => normalizeBidStatus(b.status) === BID_STATUS.CANCELLED)
         .map((b) => ({
           id: b.id,
           code: b.loadCode || b.loadId,
@@ -51,7 +46,9 @@ async function fetchCancelledRows(request, carrierMode) {
           origin: '',
           destination: '',
           shipmentStatus: 'cancelled',
-          status: 'cancelled'
+          status: 'cancelled',
+          shipperId: b.shipperId,
+          shipperName: b.shipperName
         }));
     }
     const mine = await request({ url: '/loads/mine', skipGlobalErrorToast: true });
@@ -69,20 +66,32 @@ async function fetchCancelledRows(request, carrierMode) {
 const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
   const { t } = useLanguage();
   const { request } = useApi();
+  const { user } = useAuth();
   const [tab, setTab] = useState(TAB_COMPLETED);
   const [search, setSearch] = useState('');
   const [completedRows, setCompletedRows] = useState([]);
   const [cancelledRows, setCancelledRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
-      const [completed, cancelled] = await Promise.all([
-        fetchCompletedRows(request),
-        fetchCancelledRows(request, carrierMode)
-      ]);
-      setCompletedRows(normalizeShipmentHistoryList(completed, { carrierMode }));
+      const completedResult = await fetchCompletedRows(request, carrierMode ? ['carrier'] : ['shipper']);
+      const cancelled = await fetchCancelledRows(request, carrierMode);
+      if (completedResult.error) {
+        setFetchError(completedResult.error);
+        const cached = loadHistoryCache(user?.id);
+        if (Array.isArray(cached) && cached.length) {
+          setCompletedRows(normalizeShipmentHistoryList(cached, { carrierMode }));
+        }
+      } else {
+        saveHistoryCache(user?.id, completedResult.rows);
+      }
+      if (!completedResult.error) {
+        setCompletedRows(normalizeShipmentHistoryList(completedResult.rows, { carrierMode }));
+      }
       setCancelledRows(
         normalizeShipmentHistoryList(
           cancelled.map((r) => ({
@@ -93,12 +102,18 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
         )
       );
     } catch {
-      setCompletedRows([]);
+      const cached = loadHistoryCache(user?.id);
+      setCompletedRows(
+        Array.isArray(cached) && cached.length
+          ? normalizeShipmentHistoryList(cached, { carrierMode })
+          : []
+      );
       setCancelledRows([]);
+      setFetchError({ retryable: true, message: 'history_failed' });
     } finally {
       setLoading(false);
     }
-  }, [request, carrierMode, t]);
+  }, [request, carrierMode, t, user?.id]);
 
   useEffect(() => {
     refresh();
@@ -171,8 +186,16 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
         aria-label={t('pages.shipments.historySearchPlaceholder')}
       />
       <SegmentTabs tabs={tabs} active={tab} onChange={setTab} className="mb-3" />
+      {fetchError ? (
+        <Card className="p-3 mb-2 text-center">
+          <p className="small text-danger mb-2">{t('pages.shipments.historyLoadFailed')}</p>
+          <Button variant="outline-primary" size="sm" onClick={refresh}>
+            {t('pages.admin.tryAgain')}
+          </Button>
+        </Card>
+      ) : null}
       {visible.length === 0 ? (
-        <p className="small text-muted mb-0">{t('pages.shipments.historyEmptyTitle')}</p>
+        <EmptyState title={t('pages.shipments.historyEmptyTitle')} body={t('empty.shipmentsBody')} />
       ) : (
         visible.map((row) => {
           const code = row.shipmentRef || row.code || row.id;
@@ -183,10 +206,23 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
               <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                 <div className="min-w-0">
                   <div className="fw-semibold small text-truncate">{row.cargo || code}</div>
-                  <div className="text-muted small">
-                    {code}
-                    {row.counterpartyName ? ` · ${row.counterpartyName}` : ''}
-                    {row.origin && row.destination ? ` · ${row.origin} → ${row.destination}` : ''}
+                  <div className="text-muted small d-flex flex-wrap align-items-center gap-1">
+                    <span>{code}</span>
+                    {row.counterpartyId ? (
+                      <ProfileAccessLayer
+                        userId={row.counterpartyId}
+                        name={row.counterpartyName}
+                        avatarSrc={row.counterpartyAvatar}
+                        className="small"
+                      />
+                    ) : row.counterpartyName ? (
+                      <span>· {row.counterpartyName}</span>
+                    ) : null}
+                    {row.origin && row.destination ? (
+                      <span>
+                        · {row.origin} → {row.destination}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <Badge variant={sanitizeBadgeVariant(historyBadgeVariant(status))}>

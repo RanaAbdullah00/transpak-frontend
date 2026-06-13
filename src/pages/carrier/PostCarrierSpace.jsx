@@ -11,6 +11,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
 import { ratePerTonToKg, tonsToKg } from '../../utils/weightUnits.js';
+import AvailabilitySlotPicker, { normalizeSlotList } from '../../components/carrier/AvailabilitySlotPicker.jsx';
 
 const emptyForm = () => ({
   origin: '',
@@ -19,6 +20,7 @@ const emptyForm = () => ({
   remainingSpaceTons: '',
   vehicleType: 'Truck',
   ratePerTon: '',
+  availableFrom: '',
   notes: ''
 });
 
@@ -27,6 +29,7 @@ const PostCarrierSpace = ({ embedded = false }) => {
   const { request } = useApi();
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyForm);
+  const [availabilitySlots, setAvailabilitySlots] = useState([{ start: '08:00', end: '12:00' }]);
   const [loading, setLoading] = useState(false);
 
   const onChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -63,6 +66,8 @@ const PostCarrierSpace = ({ embedded = false }) => {
           remainingSpaceKg: tonsToKg(remainingSpaceTons),
           vehicleType: form.vehicleType,
           ratePerKg: form.ratePerTon ? ratePerTonToKg(Number(form.ratePerTon)) : null,
+          availableFrom: form.availableFrom || null,
+          availabilitySlots: normalizeSlotList(availabilitySlots),
           notes: form.notes.trim() || null
         },
         skipGlobalErrorToast: true
@@ -72,9 +77,10 @@ const PostCarrierSpace = ({ embedded = false }) => {
       }
       notifySuccess(t('loadsHub.spaceListed'));
       setForm(emptyForm());
+      setAvailabilitySlots([{ start: '08:00', end: '12:00' }]);
       emitRealtimeRefresh('loads');
       if (!embedded) {
-        navigate('/dashboard/carrier', { replace: true });
+        navigate('/loads/manage?tab=capacity', { replace: true });
       }
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('loadsHub.spaceListFailed') }));
@@ -152,6 +158,19 @@ const PostCarrierSpace = ({ embedded = false }) => {
             />
           </div>
         </div>
+        <div className="row g-2 mt-1">
+          <div className="col-md-6">
+            <label className="form-label small">{t('loadsHub.availableFrom')}</label>
+            <input
+              type="date"
+              name="availableFrom"
+              className="form-control form-control-sm rounded-3"
+              value={form.availableFrom}
+              onChange={onChange}
+            />
+          </div>
+        </div>
+        <AvailabilitySlotPicker slots={availabilitySlots} onChange={setAvailabilitySlots} />
         <div className="mt-2">
           <label className="form-label small">{t('loadsHub.notes')}</label>
           <textarea
