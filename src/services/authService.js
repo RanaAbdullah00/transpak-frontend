@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getAuthApiUrl } from '../config/apiConfig.js';
 import { unwrapBody } from '../utils/unwrapApi.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
+import { enrichAuthAxiosError, rejectAuthEnvelope } from '../utils/authApiError.js';
 
 /** Only these HTTP methods may be used from this module. */
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH']);
@@ -23,6 +24,7 @@ function authHeaders() {
 }
 
 function normalizeAuthError(err, method) {
+  enrichAuthAxiosError(err);
   const body = err?.response?.data;
   if (body && typeof body === 'object') {
     if (!body.code && typeof body.error === 'string') body.code = body.error;
@@ -39,13 +41,13 @@ function normalizeAuthError(err, method) {
   if (import.meta.env.DEV || import.meta.env.VITE_AUTH_API_DEBUG === 'true') {
     // eslint-disable-next-line no-console
     console.error('[auth-api] error', {
-    method: err?.config?.method?.toUpperCase() || method,
-    url: err?.config?.url,
-    status: err?.response?.status,
-    message: err?.message,
-    code: body?.code,
-    error: body?.error,
-    data: body
+      method: err?.config?.method?.toUpperCase() || method,
+      url: err?.config?.url,
+      status: err?.response?.status,
+      message: err?.message,
+      code: body?.code,
+      error: body?.error,
+      data: body
     });
   }
   return err;
@@ -92,6 +94,7 @@ async function authRequest(method, authPath, body = undefined) {
     }
 
     const res = await axios.request(config);
+    rejectAuthEnvelope(res?.data, res?.status);
     if (authDebug) {
       // eslint-disable-next-line no-console
       console.log('[auth-api] response', {

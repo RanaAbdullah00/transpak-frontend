@@ -404,7 +404,10 @@ export const translations = {
     },
     errors: {
       invalidCredentials: 'Invalid credentials',
-      wrongRoleForAccount: 'This account is not registered for the selected role. Choose the correct role and try again.',
+      invalidPassword: 'Invalid password',
+      invalidUsername: 'Invalid username',
+      wrongRoleForAccount: 'Invalid account type for selected role',
+      roleSelectionRequired: 'Select shipper or carrier to continue',
       wrongPasswordForRegister:
         'This email is already registered. Use the correct password for that account, or sign up with a different email.',
       invalidRole: 'Choose a valid role (shipper or carrier).',
@@ -1894,7 +1897,10 @@ export const translations = {
     },
     errors: {
       invalidCredentials: 'غلط معلومات',
-      wrongRoleForAccount: 'یہ اکاؤنٹ منتخب کردار کے لیے رجسٹرڈ نہیں۔ صحیح کردار منتخب کریں۔',
+      invalidPassword: 'غلط پاس ورڈ',
+      invalidUsername: 'غلط صارف نام',
+      wrongRoleForAccount: 'منتخب کردار کے لیے اکاؤنٹ کی قسم درست نہیں',
+      roleSelectionRequired: 'شپپر یا کیریئر منتخب کریں',
       wrongPasswordForRegister:
         'یہ ای میل پہلے سے رجسٹرڈ ہے۔ درست پاس ورڈ استعمال کریں یا دوسری ای میل سے نیا اکاؤنٹ بنائیں۔',
       invalidRole: 'درست کردار منتخب کریں (شپپر یا کیریئر)۔',

@@ -296,8 +296,18 @@ export function mapAuthError(err, t, flow = 'login') {
     if (code === 'OTP_COOLDOWN') return msg || t('errors.generic');
   }
 
-  if (code === 'INVALID_CREDENTIALS') return t('errors.invalidCredentials');
-  if (code === 'WRONG_ROLE') return t('errors.wrongRoleForAccount');
+  if (code === 'INVALID_CREDENTIALS') {
+    return sanitizeProductText(msg) || t('errors.invalidPassword');
+  }
+  if (code === 'USER_NOT_FOUND') {
+    return sanitizeProductText(msg) || t('errors.invalidUsername');
+  }
+  if (code === 'WRONG_ROLE') {
+    return sanitizeProductText(msg) || t('errors.wrongRoleForAccount');
+  }
+  if (code === 'ROLE_SELECTION_REQUIRED') {
+    return sanitizeProductText(msg) || t('errors.roleSelectionRequired');
+  }
   if (code === 'ACCOUNT_BLOCKED') return t('errors.accountBlocked');
   if (code === 'EMAIL_NOT_VERIFIED') return t('errors.emailNotVerified');
   if (code === 'INVALID_ROLE' || code === 'ROLE_NOT_AVAILABLE') return t('errors.invalidRole');
