@@ -1,9 +1,20 @@
 import { emitRealtimeRefresh } from '../utils/realtimeRefresh.js';
 
 /**
+ * Surface vehicle-type mismatch warning from bid API (when ALLOW_VEHICLE_TYPE_MISMATCH is on).
+ * @param {object|null} bid
+ * @param {(key: string) => string} t
+ * @param {(msg: string) => void} notifyWarn
+ */
+export function notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn) {
+  if (!bid?.vehicleTypeMismatchWarning || typeof notifyWarn !== 'function') return;
+  notifyWarn(t('pages.loads.vehicleTypeMismatchWarning'));
+}
+
+/**
  * Carrier responds to open loads (accept listed fare, counter-offer, or pass).
  */
-export async function acceptLoadAtListedFare(request, load) {
+export async function acceptLoadAtListedFare(request, load, { t, notifyWarn } = {}) {
   const amount = Number(load?.expectedPrice ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) {
     const err = new Error('This load has no listed fare to accept');
@@ -16,12 +27,13 @@ export async function acceptLoadAtListedFare(request, load) {
     data: { loadId: load.id, amount },
     skipGlobalErrorToast: true
   });
+  notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn);
   emitRealtimeRefresh('bids');
   emitRealtimeRefresh('loads');
   return bid;
 }
 
-export async function submitCounterOffer(request, load, counterAmount) {
+export async function submitCounterOffer(request, load, counterAmount, { t, notifyWarn } = {}) {
   const amount = Number(counterAmount);
   if (!Number.isFinite(amount) || amount <= 0) {
     const err = new Error('Enter a valid counter amount');
@@ -34,6 +46,7 @@ export async function submitCounterOffer(request, load, counterAmount) {
     data: { loadId: load.id, amount },
     skipGlobalErrorToast: true
   });
+  notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn);
   const bidId = bid?.id;
   if (!bidId) return bid;
   const updated = await request({

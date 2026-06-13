@@ -448,7 +448,8 @@ export function useShipmentTracking({
   useEffect(() => {
     const postRef = localRef;
     if (!gpsAllowed || liveLat == null || liveLng == null || !postRef) return;
-    if (!canEmitGps(postRef)) return;
+    const coords = [liveLat, liveLng];
+    if (!canEmitGps(postRef, undefined, coords)) return;
 
     publishLocation(liveLat, liveLng);
     api

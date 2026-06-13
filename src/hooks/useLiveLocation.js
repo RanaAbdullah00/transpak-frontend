@@ -83,7 +83,7 @@ export function useLiveLocation(enabled = false, opts = {}) {
           }
         }
       },
-      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 }
     );
 
     return () => {

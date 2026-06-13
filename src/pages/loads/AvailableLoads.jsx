@@ -6,15 +6,10 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import Loader from '../../components/ui/Loader.jsx';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { commitOptimisticBidSuggest } from '../../utils/contractActivationLayer.js';
-import DemoVehicleMismatchPanel from '../../components/demo/DemoVehicleMismatchPanel.jsx';
-import {
-  applyDemoPresentationContract,
-  captureDemoVehicleMismatch
-} from '../../utils/demoBidLayer.js';
-import { notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
@@ -41,7 +36,6 @@ const AvailableLoads = ({ embedded = false }) => {
   });
   const [loads, setLoads] = useState([]);
   const [offerBusyId, setOfferBusyId] = useState(null);
-  const [demoMismatchLoad, setDemoMismatchLoad] = useState(null);
   const debouncedFilters = useDebouncedValue(filters, 400);
 
   const { request, loading: apiLoading } = useApi();
@@ -98,30 +92,14 @@ const AvailableLoads = ({ embedded = false }) => {
   const handleCarrierAccept = async (load) => {
     setOfferBusyId(load.id);
     try {
-      await acceptLoadAtListedFare(request, load);
+      await acceptLoadAtListedFare(request, load, {
+        t,
+        notifyWarn: (msg) => notifySystem(SystemNotifyType.WARNING, msg)
+      });
       notifySuccess(t('pages.loads.carrierAcceptSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
-      if (captureDemoVehicleMismatch(err, load, setDemoMismatchLoad)) return;
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
-    } finally {
-      setOfferBusyId(null);
-    }
-  };
-
-  const handleDemoProceed = async () => {
-    const load = demoMismatchLoad;
-    if (!load) return;
-    setOfferBusyId(load.id);
-    try {
-      applyDemoPresentationContract(load, {
-        userId: user?.id,
-        role: user?.activeRole,
-        carrierId: user?.id
-      });
-      notifySystem(SystemNotifyType.SUCCESS, t('demo.overrideSuccess'));
-      setDemoMismatchLoad(null);
-      await fetchAvailableLoads();
     } finally {
       setOfferBusyId(null);
     }
@@ -143,7 +121,10 @@ const AvailableLoads = ({ embedded = false }) => {
   const handleCarrierCounter = async (load, amount) => {
     setOfferBusyId(load.id);
     try {
-      const updated = await submitCounterOffer(request, load, amount);
+      const updated = await submitCounterOffer(request, load, amount, {
+        t,
+        notifyWarn: (msg) => notifySystem(SystemNotifyType.WARNING, msg)
+      });
       if (updated?.id) {
         commitOptimisticBidSuggest(updated.id, amount, {
           suggestedBy: 'carrier',
@@ -153,7 +134,6 @@ const AvailableLoads = ({ embedded = false }) => {
       notifySuccess(t('pages.loads.carrierCounterSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
-      if (captureDemoVehicleMismatch(err, load, setDemoMismatchLoad)) return;
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
     } finally {
       setOfferBusyId(null);
@@ -270,14 +250,6 @@ const AvailableLoads = ({ embedded = false }) => {
           </div>
         </div>
       </div>
-      {demoMismatchLoad ? (
-        <DemoVehicleMismatchPanel
-          loadLabel={demoMismatchLoad.code}
-          onProceed={handleDemoProceed}
-          onDismiss={() => setDemoMismatchLoad(null)}
-          busy={offerBusyId === demoMismatchLoad.id}
-        />
-      ) : null}
       {apiLoading ? (
         <div className="d-flex justify-content-center py-5">
           <Loader />

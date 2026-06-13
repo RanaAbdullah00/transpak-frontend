@@ -10,7 +10,7 @@ import { notifyAuthError, notifyUserError } from '../../utils/notifySystem.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapErrorCode } from '../../utils/unwrapApi.js';
 import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
-import { applyDemoAdminSession, canAccessAdminRoutes, isDemoAdminEmail } from '../../utils/authSession.js';
+import { canAccessAdminRoutes } from '../../utils/authSession.js';
 import { FaEnvelope } from 'react-icons/fa';
 
 const LoginForm = () => {
@@ -39,15 +39,10 @@ const LoginForm = () => {
   };
 
   const emailNorm = form.email.trim().toLowerCase();
-  const isAdminLogin = isDemoAdminEmail(emailNorm);
-
-  React.useEffect(() => {
-    if (isAdminLogin) setUiRolePref('');
-  }, [isAdminLogin]);
 
   const handleSubmit = async (e) => {
     blockNativeFormSubmit(e);
-    if (!isAdminLogin && !uiRolePref) {
+    if (!uiRolePref) {
       notifyUserError(t('errors.roleRequired'));
       return;
     }
@@ -56,7 +51,7 @@ const LoginForm = () => {
       const res = await loginApi({
         email: form.email,
         password: form.password,
-        roleHint: isAdminLogin ? undefined : uiRolePref
+        roleHint: uiRolePref
       });
       const payload = safeUnwrapAuthResponse(res);
       const { token, user, currentRole } = payload;
@@ -91,11 +86,10 @@ const LoginForm = () => {
           /* backend forces admin regardless of roleHint */
         }
       }
-      const sessionToStore = applyDemoAdminSession(session, emailNorm);
-      if (sessionToStore?.user) login(sessionToStore);
+      if (session?.user) login(session);
       const activeRole =
-        sessionToStore?.user?.activeRole ??
-        sessionToStore?.currentRole ??
+        session?.user?.activeRole ??
+        session?.currentRole ??
         user?.activeRole ??
         currentRole;
       navigate(safeDashboardPath(activeRole), { replace: true });
@@ -117,7 +111,7 @@ const LoginForm = () => {
 
   return (
     <form action="#" method="post" noValidate onSubmit={handleSubmit} className="tp-auth-login-form mt-3">
-      {!isAdminLogin ? <RoleSelector value={uiRolePref} onChange={setUiRolePref} /> : null}
+      <RoleSelector value={uiRolePref} onChange={setUiRolePref} />
       <div className="mb-2">
         <label className="form-label small">{t('auth.email')}</label>
         <div className="input-group input-group-sm">

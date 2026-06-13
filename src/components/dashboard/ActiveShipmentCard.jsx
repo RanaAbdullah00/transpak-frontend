@@ -127,12 +127,12 @@ const ActiveShipmentCard = ({
     flowType: resolvedFlowType
   });
 
-  const ui = useMemo(
-    () => withShipmentUILabels(snapshot.uiState ?? uiState, t),
-    [snapshot.uiState, uiState, t]
-  );
   const baseStatus = resolvedStatus ?? snapshot.shipmentStatus ?? 'booked';
   const effectiveStatus = resolveEffectiveShipmentStatus(resolvedTrackRef, baseStatus);
+  const ui = useMemo(
+    () => withShipmentUILabels({ ...(snapshot.uiState ?? uiState), status: effectiveStatus }, t),
+    [snapshot.uiState, uiState, effectiveStatus, t]
+  );
   const upcomingForCarrier = resolveUpcomingShipmentStatus(resolvedTrackRef, baseStatus);
   const canRenderAdvanceButton =
     carrierMode && isValidShipmentTrackRef(resolvedTrackRef) && trackingActive;

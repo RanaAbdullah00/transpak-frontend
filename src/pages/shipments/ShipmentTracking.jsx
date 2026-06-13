@@ -381,11 +381,20 @@ const ShipmentTracking = () => {
   }, [payload?.history, id, effectiveStatus, t]);
 
   const checkpoints = useMemo(() => {
-    if (coords.length >= 2)
-      return coords.map((_, i) => t('pages.tracking.mapPoint', { n: String(i + 1) }));
+    const originLabel = originName?.trim() || '';
+    const destLabel = destinationName?.trim() || '';
+    if (originLabel && destLabel) {
+      return [t('pages.tracking.originCity') + `: ${originLabel}`, t('pages.tracking.destinationCity') + `: ${destLabel}`];
+    }
+    if (coords.length >= 2) {
+      return [
+        originLabel || t('pages.tracking.originCity'),
+        destLabel || t('pages.tracking.destinationCity')
+      ];
+    }
     if (coords.length === 1) return [t('pages.tracking.lastReportedPosition')];
     return [];
-  }, [coords, t]);
+  }, [coords, originName, destinationName, t]);
 
   const trackingDataForMap = useMemo(
     () => ({
@@ -487,7 +496,7 @@ const ShipmentTracking = () => {
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h5 className="mb-0">{t('pages.tracking.title')}</h5>
         <LifecycleBadge stage={payload?.lifecycleStage || ui.status} size="lg" />
-        <StatusBadge uiState={ui} size="lg" />
+        <StatusBadge uiState={{ ...ui, status: effectiveStatus }} size="lg" />
       </div>
       {ui.showShipperAcceptedBanner ? (
         <p className="small text-primary mb-2 fw-semibold">{ui.label}</p>
@@ -515,7 +524,11 @@ const ShipmentTracking = () => {
           trackingActive={trackingActive}
         />
       </div>
-      <StatusTimeline uiState={{ ...ui, status: effectiveStatus }} events={timelineEvents} />
+      <StatusTimeline
+        uiState={{ ...ui, status: effectiveStatus }}
+        currentStatus={effectiveStatus}
+        events={timelineEvents}
+      />
       {workspaceRole === 'carrier' && trackingActive ? (
         <div className="mt-3 mb-3">
           <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>

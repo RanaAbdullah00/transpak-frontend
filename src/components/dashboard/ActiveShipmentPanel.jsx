@@ -9,8 +9,7 @@ import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
-import { buildPresentationStatusTimeline } from '../../utils/demoTrackingFallback.js';
-import { getOptimisticStatusTimeline } from '../../utils/shipmentStatusOptimistic.js';
+import { getOptimisticStatusTimeline, resolveEffectiveShipmentStatus } from '../../utils/shipmentStatusOptimistic.js';
 import { normalizeCoordList, safeStringField } from '../../utils/mapCoords.js';
 
 /**
@@ -54,6 +53,11 @@ const ActiveShipmentPanel = ({
   };
 
   const ui = uiState;
+  const effectiveStatus = resolveEffectiveShipmentStatus(
+    data.refKey || trackHref || '',
+    ui?.status || data?.tracking?.status || 'booked'
+  );
+  const uiForDisplay = ui ? { ...ui, status: effectiveStatus } : { status: effectiveStatus };
   const timelineEvents = useMemo(() => {
     try {
       const historyEvents = Array.isArray(data.history)
@@ -76,9 +80,9 @@ const ActiveShipmentPanel = ({
           done: true
         }));
       }
-      return buildPresentationStatusTimeline(ui?.status || data?.tracking?.status || 'booked', t);
+      return [];
     } catch {
-      return buildPresentationStatusTimeline('booked', t);
+      return [];
     }
   }, [data, trackHref, ui?.status, t]);
 
@@ -108,7 +112,7 @@ const ActiveShipmentPanel = ({
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
         <div className="d-flex flex-wrap gap-2 align-items-center">
           <LifecycleBadge stage={lifecycle || ui?.status} />
-          {ui ? <StatusBadge uiState={ui} /> : null}
+          {ui ? <StatusBadge uiState={uiForDisplay} /> : null}
         </div>
         {href ? (
           <Link to={href} className="btn btn-sm btn-outline-primary">
@@ -167,7 +171,11 @@ const ActiveShipmentPanel = ({
         </div>
       ) : null}
       <div className="mt-3">
-        <StatusTimeline uiState={ui} currentStatus={ui?.status || data?.tracking?.status} events={timelineEvents} />
+        <StatusTimeline
+          uiState={uiForDisplay}
+          currentStatus={effectiveStatus}
+          events={timelineEvents}
+        />
       </div>
     </div>
   );

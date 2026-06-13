@@ -4,18 +4,6 @@ import { clearAuthToken, getAuthToken, setAuthToken } from './authTokenStorage.j
 import { persistWorkspaceContext, clearWorkspaceContext } from './workspaceContext.js';
 import { ensureRolesArray } from './unwrapApi.js';
 
-export function isDemoAdminEmail(email) {
-  const norm = String(email || '')
-    .trim()
-    .toLowerCase();
-  if (!norm) return false;
-  const fromEnv = String(import.meta.env.VITE_DEMO_ADMIN_EMAIL || '')
-    .trim()
-    .toLowerCase();
-  const adminEmail = fromEnv || 'mrrajpoot.327@gmail.com';
-  return norm === adminEmail;
-}
-
 export function resolveActiveRole(user, apiData = {}) {
   const fromUser =
     user?.activeRole != null && String(user.activeRole).trim()
@@ -45,11 +33,6 @@ export function canAccessAdminRoutes(user) {
 export function hasCommercialRole(user) {
   const roles = getUserRolesFromSession(user);
   return roles.includes('shipper') || roles.includes('carrier');
-}
-
-export function applyDemoAdminSession(session, email) {
-  if (!session || !isDemoAdminEmail(email)) return session;
-  return session;
 }
 
 export function clearAuthStorage() {

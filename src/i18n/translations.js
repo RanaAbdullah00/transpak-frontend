@@ -632,6 +632,8 @@ export const translations = {
         listedFareHint: 'Listed fare: {{price}} PKR',
         carrierAcceptSuccess: 'Bid submitted — awaiting shipper confirmation',
         carrierCounterSuccess: 'Counter offer sent to shipper',
+        vehicleTypeMismatchWarning:
+          'Your fleet vehicle type does not match this load. Bid was submitted — assign a matching truck before pickup.',
         carrierRejectSuccess: 'Load hidden from your board',
         carrierUseFreightBoard: 'Use the freight board to accept or counter on loads'
       },
@@ -707,6 +709,8 @@ export const translations = {
         loadFailed: 'Could not load tracking.',
         timelineUpdate: 'Update',
         mapPoint: 'Point {{n}}',
+        originCity: 'Origin city',
+        destinationCity: 'Destination city',
         lastReportedPosition: 'Last reported position',
         locationStale: 'Driver location is outdated — waiting for a fresh GPS report.',
         updateStatus: 'Update shipment status',
@@ -738,6 +742,9 @@ export const translations = {
         historyTabClosed: 'Closed',
         historyTabCancelled: 'Cancelled',
         historyBidRow: 'Rejected bid',
+        historySearchPlaceholder: 'Search by load code or route…',
+        historyRoleShipper: 'Loads you posted',
+        historyRoleCarrier: 'Loads you carried',
         activeTitle: 'Active shipments',
         activeLead: 'Live contracts you are shipping or carrying right now.'
       },
@@ -2101,6 +2108,8 @@ export const translations = {
         listedFareHint: 'درج کرایہ: {{price}} PKR',
         carrierAcceptSuccess: 'بڈ بھیج دیا — شپپر کی تصدیق کا انتظار',
         carrierCounterSuccess: 'کاؤنٹر آفر شپپر کو بھیج دی',
+        vehicleTypeMismatchWarning:
+          'آپ کے بیڑے کی گاڑی کی قسم اس لوڈ سے مماثل نہیں۔ بڈ جمع ہو گئی — پک اپ سے پہلے مناسب ٹرک تفویض کریں۔',
         carrierRejectSuccess: 'لوڈ آپ کے بورڈ سے ہٹا دیا',
         carrierUseFreightBoard: 'لوڈز پر قبول یا جوابی پیشکش کے لیے لوڈ بورڈ استعمال کریں'
       },
@@ -2120,6 +2129,8 @@ export const translations = {
         loadFailed: 'سراغ لوڈ نہیں ہو سکا۔',
         timelineUpdate: 'اپ ڈیٹ',
         mapPoint: 'نقطہ {{n}}',
+        originCity: 'ابتدائی شہر',
+        destinationCity: 'منزل شہر',
         lastReportedPosition: 'آخری رپورٹ شدہ مقام',
         locationStale: 'ڈرائیور کی لوکیشن پرانی ہے — تازہ GPS کا انتظار ہے۔',
         updateStatus: 'شپمنٹ کی حیثیت اپ ڈیٹ کریں',
@@ -2611,6 +2622,9 @@ export const translations = {
         historyTabClosed: 'بند',
         historyTabCancelled: 'منسوخ',
         historyBidRow: 'مسترد بڈ',
+        historySearchPlaceholder: 'لوڈ کوڈ یا روٹ سے تلاش…',
+        historyRoleShipper: 'آپ کے پوسٹ کردہ لوڈز',
+        historyRoleCarrier: 'آپ کی گزارش کردہ لوڈز',
         activeTitle: 'فعال شپمنٹس',
         activeLead: 'وہ معاہدے جو ابھی لائیو ہیں۔'
       },

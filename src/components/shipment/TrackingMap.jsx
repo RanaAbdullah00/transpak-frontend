@@ -5,7 +5,6 @@ import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeCoordList, routeFromCityNames, toLatLngPair } from '../../utils/mapCoords.js';
 import { useMapRoute } from '../../hooks/useMapRoute.js';
-import { useDemoTrackingPosition } from '../../hooks/useDemoTrackingPosition.js';
 
 const TrackingMap = ({
   route = [],
@@ -85,18 +84,10 @@ const TrackingMap = ({
   const driverLat = driverCoords?.[0];
   const driverLng = driverCoords?.[1];
   const hasDriverCoords = driverLat != null && driverLng != null;
-  const demoDriver = useDemoTrackingPosition({
-    enabled: trackingActive,
-    refKey: trackingData?.refKey || `${resolvedOrigin}-${resolvedDestination}`,
-    routeCoords: coords,
-    status: trackingData?.tracking?.status || 'booked',
-    hasLiveDriver: hasDriverCoords
-  });
   const driver = useMemo(() => {
     if (hasDriverCoords) return [driverLat, driverLng];
-    if (demoDriver) return demoDriver;
     return null;
-  }, [hasDriverCoords, driverLat, driverLng, demoDriver]);
+  }, [hasDriverCoords, driverLat, driverLng]);
   const locationUnavailable =
     Boolean(trackingData?.tracking?.locationUnavailable) && !driver && !hasDriverCoords;
 

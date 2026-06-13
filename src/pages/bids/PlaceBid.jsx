@@ -8,14 +8,9 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifySuccess, notifyError, notifyInfo } from '../../components/ui/ToastProvider.jsx';
-import { notifyProfileIncomplete } from '../../utils/notifySystem.js';
+import { notifyProfileIncomplete, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
-import DemoVehicleMismatchPanel from '../../components/demo/DemoVehicleMismatchPanel.jsx';
-import {
-  applyDemoPresentationContract,
-  captureDemoVehicleMismatch
-} from '../../utils/demoBidLayer.js';
 
 // Carrier bid placement page. Expects "load" object from AvailableLoads route state.
 const PlaceBid = () => {
@@ -43,8 +38,6 @@ const PlaceBid = () => {
   const [currency, setCurrency] = useState('PKR');
   const [transitTime, setTransitTime] = useState(2);
   const [note, setNote] = useState('');
-  const [demoMismatch, setDemoMismatch] = useState(false);
-  const [demoBusy, setDemoBusy] = useState(false);
 
   useEffect(() => {
     if (load?.expectedPrice) {
@@ -87,30 +80,15 @@ const PlaceBid = () => {
         throw new Error(t('pages.placeBid.bidFailed'));
       }
 
+      if (bid?.vehicleTypeMismatchWarning) {
+        notifySystem(SystemNotifyType.WARNING, t('pages.loads.vehicleTypeMismatchWarning'));
+      }
+
       notifySuccess(t('pages.placeBid.bidPlaced', { code: load.code }));
       emitRealtimeRefresh('bids');
       navigate('/loads');
     } catch (error) {
-      if (captureDemoVehicleMismatch(error, load, () => setDemoMismatch(true))) return;
       notifyError(formatUserError(error, t, { fallback: t('pages.placeBid.bidFailed') }));
-    }
-  };
-
-  const handleDemoProceed = async () => {
-    setDemoBusy(true);
-    try {
-      applyDemoPresentationContract(load, {
-        userId: user?.id,
-        role: user?.activeRole,
-        carrierId: user?.id,
-        amount: Number(amount)
-      });
-      notifySuccess(t('demo.overrideSuccess'));
-      setDemoMismatch(false);
-      emitRealtimeRefresh('shipments');
-      navigate('/dashboard');
-    } finally {
-      setDemoBusy(false);
     }
   };
 
@@ -151,14 +129,6 @@ const PlaceBid = () => {
           <Card className="p-4 h-100">
             <h6 className="mb-3">{t('pages.placeBid.yourDetails')}</h6>
 
-            {demoMismatch ? (
-              <DemoVehicleMismatchPanel
-                loadLabel={load.code}
-                onProceed={handleDemoProceed}
-                onDismiss={() => setDemoMismatch(false)}
-                busy={demoBusy}
-              />
-            ) : null}
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
                 <label className="form-label fw-semibold small">{t('pages.placeBid.amountLabel')}</label>

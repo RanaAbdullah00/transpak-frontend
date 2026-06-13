@@ -13,7 +13,24 @@ const sessions = new Map();let reconnectHandler = null;
 let reconnectSocketId = null;
 const reconnectSnapshotAt = new Map();
 
-const GPS_MIN_INTERVAL_MS = Number(import.meta.env.VITE_TRACKING_GPS_MIN_MS || 2500);
+const GPS_MIN_INTERVAL_MS = Number(import.meta.env.VITE_TRACKING_GPS_MIN_MS || 10000);
+const GPS_MIN_MOVE_METERS = Number(import.meta.env.VITE_TRACKING_GPS_MIN_MOVE_M || 35);
+
+function movedEnoughMeters(prev, next) {
+  if (!prev || !next) return true;
+  const lat1 = Number(prev[0]);
+  const lng1 = Number(prev[1]);
+  const lat2 = Number(next[0]);
+  const lng2 = Number(next[1]);
+  if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) return true;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  const meters = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return meters >= GPS_MIN_MOVE_METERS;
+}
 
 function primaryKey(ref) {
   return String(ref || '').trim();
@@ -33,7 +50,8 @@ export function joinSession(primaryRef, aliasRefs = []) {
       refs: new Set(),
       consumers: 0,
       socketJoined: false,
-      lastGpsEmitAt: 0
+      lastGpsEmitAt: 0,
+      lastGpsCoords: null
     };
     sessions.set(key, row);
   }
@@ -93,12 +111,16 @@ export function resetAllSocketJoinFlags() {
   });
 }
 
-export function canEmitGps(primaryRef, minMs = GPS_MIN_INTERVAL_MS) {
+export function canEmitGps(primaryRef, minMs = GPS_MIN_INTERVAL_MS, coords = null) {
   const row = sessions.get(primaryKey(primaryRef));
   if (!row) return false;
   const now = Date.now();
   if (now - row.lastGpsEmitAt < minMs) return false;
+  if (coords && row.lastGpsCoords && !movedEnoughMeters(row.lastGpsCoords, coords)) {
+    return false;
+  }
   row.lastGpsEmitAt = now;
+  if (coords) row.lastGpsCoords = coords;
   return true;
 }
 
