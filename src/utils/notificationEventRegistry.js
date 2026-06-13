@@ -24,6 +24,12 @@ export function buildNotificationEventId(input = {}) {
   const ref = String(
     input.shipmentRef ?? input.refKey ?? input.ref ?? input.code ?? input.loadCode ?? '_'
   ).trim() || '_';
+  const entity = String(
+    input.entityId ?? input.eventId ?? input.notificationId ?? ''
+  ).trim();
+  if (entity) {
+    return `${type}_${ref}_${entity}`;
+  }
   const bucket = notificationTimestampBucket(
     input.timestamp ?? input.createdAt ?? Date.now()
   );

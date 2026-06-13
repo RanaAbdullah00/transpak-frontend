@@ -1,18 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { invalidateRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
 import Loader from '../ui/Loader.jsx';
-
-function StarRow({ value }) {
-  const v = Math.max(0, Math.min(5, Number(value) || 0));
-  return (
-    <span className="tp-review-stars" aria-hidden>
-      {'★'.repeat(v)}
-      <span className="text-muted opacity-50">{'☆'.repeat(5 - v)}</span>
-    </span>
-  );
-}
+import ReviewCard from '../reviews/ReviewCard.jsx';
 
 function RatingDistribution({ list, t }) {
   const counts = useMemo(() => {
@@ -31,9 +23,7 @@ function RatingDistribution({ list, t }) {
       <div className="small text-muted text-uppercase fw-semibold mb-2">{t('reviews.ratingBreakdown')}</div>
       {[5, 4, 3, 2, 1].map((n) => (
         <div key={n} className="d-flex align-items-center gap-2 mb-1 small">
-          <span className="text-muted tp-w-rating-label">
-            {n}★
-          </span>
+          <span className="text-muted tp-w-rating-label">{n}★</span>
           <div className="progress flex-grow-1 rounded-pill tp-progress-md">
             <div
               className="progress-bar bg-warning tp-progress-bar"
@@ -41,13 +31,17 @@ function RatingDistribution({ list, t }) {
               style={{ '--tp-progress': `${(counts[n] / max) * 100}%` }}
             />
           </div>
-          <span className="text-muted text-end tp-w-rating-count">
-            {counts[n]}
-          </span>
+          <span className="text-muted text-end tp-w-rating-count">{counts[n]}</span>
         </div>
       ))}
     </div>
   );
+}
+
+function parseReviewsPayload(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.reviews)) return data.reviews;
+  return [];
 }
 
 const ProfileReviewsPanel = () => {
@@ -67,28 +61,37 @@ const ProfileReviewsPanel = () => {
     });
   }, [list]);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!uid) {
       setList([]);
       setLoading(false);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await request({ url: `/reviews/${uid}` });
-        if (!cancelled) setList(Array.isArray(data) ? data : data?.reviews || []);
-      } catch {
-        if (!cancelled) setList([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    setLoading(true);
+    try {
+      const data = await request({ url: `/reviews/${uid}` });
+      setList(parseReviewsPayload(data));
+    } catch {
+      setList([]);
+    } finally {
+      setLoading(false);
+    }
   }, [uid, request]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'reviews') return;
+      if (uid) invalidateRatingSummary(uid);
+      load();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [load, uid]);
 
   if (!uid) {
     return <p className="small text-muted mb-0">{t('reviews.signInToSeeReviews')}</p>;
@@ -117,18 +120,7 @@ const ProfileReviewsPanel = () => {
       <div className="small text-muted text-uppercase fw-semibold mb-2">{t('reviews.recentTimeline')}</div>
       <ul className="list-unstyled mb-0 d-flex flex-column gap-3 tp-reviews-list">
         {sorted.map((r) => (
-          <li
-            key={r.id || `${r.createdAt}-${r.rating}-${r.comment}`}
-            className="tp-review-card rounded-4 p-3 border shadow-sm border-start border-warning border-3"
-          >
-            <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-              <StarRow value={r.rating} />
-              <time className="small text-muted text-nowrap" dateTime={r.createdAt}>
-                {r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
-              </time>
-            </div>
-            {r.comment ? <p className="small mb-0 mt-2 text-body">{r.comment}</p> : null}
-          </li>
+          <ReviewCard key={r.id || `${r.createdAt}-${r.rating}-${r.comment}`} review={r} accent />
         ))}
       </ul>
     </div>

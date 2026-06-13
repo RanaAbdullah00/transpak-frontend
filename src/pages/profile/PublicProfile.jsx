@@ -1,13 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Card from '../../components/ui/Card.jsx';
 import Loader from '../../components/ui/Loader.jsx';
+import ReviewCard from '../../components/reviews/ReviewCard.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { invalidateRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
 import { translateRoleLabel } from '../../utils/i18nLabels.js';
 import SafeAvatar from '../../components/ui/SafeAvatar.jsx';
 import SafeImage from '../../components/ui/SafeImage.jsx';
 import VehicleTypeLabel from '../../components/loadboard/VehicleTypeLabel.jsx';
+
+function parseReviewsPayload(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.reviews)) return data.reviews;
+  return [];
+}
 
 const PublicProfile = () => {
   const { id } = useParams();
@@ -16,6 +24,16 @@ const PublicProfile = () => {
   const [profile, setProfile] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const loadReviews = useCallback(async () => {
+    if (!id) return;
+    try {
+      const r = await request({ url: `/reviews/${id}` });
+      setReviews(parseReviewsPayload(r));
+    } catch {
+      setReviews([]);
+    }
+  }, [id, request]);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,7 +46,7 @@ const PublicProfile = () => {
         ]);
         if (!cancelled) {
           setProfile(p);
-          setReviews(Array.isArray(r) ? r : r?.reviews || []);
+          setReviews(parseReviewsPayload(r));
         }
       } catch {
         if (!cancelled) {
@@ -43,6 +61,17 @@ const PublicProfile = () => {
       cancelled = true;
     };
   }, [id, request]);
+
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'reviews') return;
+      if (id) invalidateRatingSummary(id);
+      loadReviews();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [id, loadReviews]);
 
   if (loading) {
     return (
@@ -169,13 +198,9 @@ const PublicProfile = () => {
         {reviews.length === 0 ? (
           <p className="text-muted small mb-0">{t('reviews.noReviewsYet')}</p>
         ) : (
-          <ul className="list-unstyled mb-0 d-flex flex-column gap-2">
+          <ul className="list-unstyled mb-0 d-flex flex-column gap-3">
             {reviews.map((r) => (
-              <li key={r.id} className="tp-review-card rounded-3 p-3 border">
-                <div className="fw-semibold">{'★'.repeat(Number(r.rating) || 0)}</div>
-                {r.comment ? <p className="small mb-0 mt-1">{r.comment}</p> : null}
-                <time className="small text-muted">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</time>
-              </li>
+              <ReviewCard key={r.id} review={r} />
             ))}
           </ul>
         )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
+import SafeAvatar from '../ui/SafeAvatar.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
@@ -69,7 +70,20 @@ const ReviewPromptModal = ({ prompt, onClose, onSubmitted }) => {
 
   return (
     <Modal open={Boolean(prompt)} title={title} onClose={onClose} size="sm" closeLabel={t('reviews.skipReview')}>
-      <p className="small text-muted mb-2">{prompt.label || prompt.toUserName}</p>
+      <div className="d-flex align-items-center gap-3 mb-3 p-2 rounded-3 border bg-body-secondary bg-opacity-25">
+        <div className="tp-avatar-sm rounded-circle overflow-hidden border flex-shrink-0">
+          <SafeAvatar
+            src={prompt.toUserAvatar || prompt.toAvatar}
+            name={prompt.toUserName || prompt.label}
+          />
+        </div>
+        <div className="min-w-0">
+          <div className="fw-semibold small text-truncate">{prompt.toUserName || t('reviews.counterpartyRole')}</div>
+          {prompt.label && prompt.toUserName ? (
+            <div className="small text-muted text-truncate">{prompt.label}</div>
+          ) : null}
+        </div>
+      </div>
       <p className="small mb-3">{t('reviews.promptBody')}</p>
       <div className="mb-2">
         <span className="small fw-semibold d-block mb-1">{t('reviews.yourRating')}</span>

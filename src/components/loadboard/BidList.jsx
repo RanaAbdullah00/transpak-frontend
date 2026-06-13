@@ -4,7 +4,6 @@ import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
-import { deriveBidType } from '../../utils/flowSession.js';
 import {
   assertIsSnapshotConsumer,
   collectSnapshotBids,
@@ -97,9 +96,11 @@ const BidList = memo(({
       } else if (status === 'expired') {
         closed.push(bid);
       } else if (!bid.status || isActiveBidStatus(bid.status)) {
-        const isSuggested = deriveBidType(bid) === 'suggested' || normalizeBidStatus(bid.status) === BID_STATUS.COUNTER;
-        if (isSuggested) suggested.push(bid);
-        else standard.push(bid);
+        if (isCounterOffered(bid.status)) {
+          suggested.push(bid);
+        } else {
+          standard.push(bid);
+        }
       } else {
         closed.push(bid);
       }
@@ -157,7 +158,7 @@ const BidList = memo(({
           {safeSuggestedBids.length > 0 ? (
             <>
               <hr className="my-3" />
-              <h6 className="text-info small text-uppercase mb-2">{t('pages.bids.suggestedBidsHeading')}</h6>
+              <h6 className="text-info small text-uppercase mb-2">{t('pages.bids.counterOffersHeading')}</h6>
               {safeSuggestedBids.map((bid) => (
                 <BidCard
                   key={`suggested-${bid.id}`}

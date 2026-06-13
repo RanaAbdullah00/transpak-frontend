@@ -34,6 +34,16 @@ const AdminFleetQueue = () => {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'space') return;
+      load();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [load]);
+
   const act = async (id, action) => {
     setBusyId(id);
     try {

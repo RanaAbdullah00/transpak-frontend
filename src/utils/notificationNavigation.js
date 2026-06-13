@@ -76,7 +76,8 @@ export function resolveNotificationPath(notification, { activeRole } = {}) {
   }
 
   if (title.includes('TRUCK') || title.includes('FLEET')) {
-    return '/truck-details';
+    if (role === 'admin') return '/admin/fleet';
+    return '/carrier/truck-details';
   }
 
   if (title.includes('DISPUTE')) {

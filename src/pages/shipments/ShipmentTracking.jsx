@@ -116,8 +116,9 @@ const ShipmentTracking = () => {
     const onTrackingRefresh = () => refreshActiveRow({ silent: true });
     const onLegacyRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope === 'all' || !scope) return;
-      if (scope === 'shipments' || scope === 'tracking') refreshActiveRow({ silent: true });
+      if (!scope || scope === 'all' || scope === 'shipments' || scope === 'tracking') {
+        refreshActiveRow({ silent: true });
+      }
     };
     const onHydrate = (e) => {
       const tick = ++hydrateTickRef.current;

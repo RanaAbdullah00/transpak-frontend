@@ -135,7 +135,9 @@ const ActiveShipmentCard = ({
   );
   const upcomingForCarrier = resolveUpcomingShipmentStatus(resolvedTrackRef, baseStatus);
   const canRenderAdvanceButton =
-    carrierMode && isValidShipmentTrackRef(resolvedTrackRef) && trackingActive;
+    carrierMode &&
+    isValidShipmentTrackRef(resolvedTrackRef) &&
+    (trackingActive || Boolean(snapshot.activeRow || shipmentRow));
   const nextAdvanceStatus = carrierMode ? upcomingForCarrier : ui.upcomingStatus;
   const canEnableAdvance =
     canRenderAdvanceButton && nextAdvanceStatus != null;

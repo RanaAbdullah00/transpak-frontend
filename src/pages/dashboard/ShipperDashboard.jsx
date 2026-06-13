@@ -140,7 +140,7 @@ const ShipperDashboard = () => {
               <Loader />
             </div>
           ) : (
-            <LoadList loads={openLoads.length ? openLoads : mineLoads.slice(0, 5)} />
+            <LoadList loads={openLoads} />
           )}
         </div>
         <div className="col-12 col-lg-5">
@@ -151,16 +151,11 @@ const ShipperDashboard = () => {
       <div className="mt-4">
         <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
           <h6 className="mb-0">{t('loadsHub.mySpaceRequests')}</h6>
-          <div className="d-flex gap-2">
-            <Link to="/loads/manage?tab=market" className="btn btn-sm btn-primary">
-              {t('loadsHub.sendRequest')}
-            </Link>
-            <Link to="/loads/manage?tab=market" className="small text-decoration-none align-self-center">
-              {t('loadsHub.capacityMarket')}
-            </Link>
-          </div>
+          <Link to="/loads/manage?tab=market" className="btn btn-sm btn-primary">
+            {t('loadsHub.sendRequest')}
+          </Link>
         </div>
-        <SpaceSentRequestsPanel />
+        <SpaceSentRequestsPanel embedded />
       </div>
 
       <div className="mt-4">

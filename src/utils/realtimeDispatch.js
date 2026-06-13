@@ -145,6 +145,12 @@ export function handleDispatchEvent(dispatch, { onNotification } = {}) {
       dispatch.payload?.loadCode ||
       dispatch.refKey ||
       dispatch.notification?.code,
+    entityId:
+      dispatch.eventId ||
+      dispatch.notification?.id ||
+      dispatch.payload?.bidId ||
+      dispatch.payload?.truckId ||
+      dispatch.entityId,
     timestamp: dispatch.notification?.createdAt || dispatch.ts,
     eventId: dispatch.eventId || dispatch.notification?.id
   });

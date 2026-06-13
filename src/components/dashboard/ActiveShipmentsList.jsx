@@ -69,8 +69,7 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
     };
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
-      if (scope !== 'shipments') return;
-      if (e?.detail?.atomicSync) return;
+      if (scope && scope !== 'shipments' && scope !== 'all') return;
       bootstrap({ silent: hasLoadedRef.current });
     };
     const onShipmentsRefresh = () => bootstrap({ silent: hasLoadedRef.current });

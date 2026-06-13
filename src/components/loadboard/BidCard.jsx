@@ -117,6 +117,9 @@ const BidCard = ({
 
   const profileId =
     profileUserId || ratingTargetUserId || (isShipper ? resolvedBid.carrierId : resolvedBid.shipperId);
+  const profileAvatar = isShipper
+    ? resolvedBid.carrierAvatar || resolvedBid.carrierProfileImage
+    : resolvedBid.shipperAvatar || resolvedBid.shipperProfileImage;
   const primaryName =
     (isShipper ? resolvedBid.carrierName : counterpartyLabel || resolvedBid.carrierName) ||
     (isShipper ? t('auth.carrier') : t('auth.shipper'));
@@ -190,7 +193,14 @@ const BidCard = ({
           <div className="d-flex align-items-center gap-2 flex-wrap">
             {profileId ? (
               <h6 className="mb-0">
-                <ProfileLink userId={profileId} name={primaryName} showBadge role={profileRole} />
+                <ProfileLink
+                  userId={profileId}
+                  name={primaryName}
+                  avatarSrc={profileAvatar}
+                  showAvatar
+                  showBadge
+                  role={profileRole}
+                />
               </h6>
             ) : (
               <h6 className="mb-0 text-break">{primaryName}</h6>

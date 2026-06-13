@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import BidList from '../../components/loadboard/BidList.jsx';
+import BidTimeline from '../../components/bids/BidTimeline.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -105,7 +106,8 @@ const BidManagement = () => {
             const load = await request({ url: `/loads/${lid}` });
             const normalized = normalizeLoads([load])[0];
             next[lid] = {
-              distanceKm: normalized?.distanceKm ?? normalized?.distance ?? null
+              distanceKm: normalized?.distanceKm ?? normalized?.distance ?? null,
+              load: normalized
             };
           } catch {
             /* load may be restricted */
@@ -124,6 +126,16 @@ const BidManagement = () => {
     const distanceKm = lid ? loadMetaByLoad[lid]?.distanceKm : null;
     return distanceKm != null && distanceKm > 0 ? { ...b, distanceKm } : b;
   });
+
+  const bidsByLoad = useMemo(() => {
+    const map = new Map();
+    for (const bid of bidsWithDistance) {
+      const key = bid.loadId ? String(bid.loadId) : 'unknown';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(bid);
+    }
+    return [...map.entries()];
+  }, [bidsWithDistance]);
 
   useEffect(() => {
     const reconcile = () => {
@@ -164,14 +176,32 @@ const BidManagement = () => {
           <Loader />
         </div>
       ) : (
-        <BidList
-          bids={bidsWithDistance}
-          mode="shipper"
-          onAccept={handleAccept}
-          onReject={handleReject}
-          onSuggest={handleSuggest}
-          actionsDisabled={!profileComplete}
-        />
+        bidsByLoad.map(([loadId, groupBids]) => {
+          const loadStub =
+            loadMetaByLoad[loadId]?.load ||
+            (groupBids[0]
+              ? {
+                  id: loadId,
+                  status: groupBids.some((b) => String(b.status).toLowerCase() === 'accepted')
+                    ? 'booked'
+                    : 'open',
+                  createdAt: groupBids[0]?.createdAt
+                }
+              : null);
+          return (
+            <div key={loadId} className="mb-4">
+              {loadStub ? <BidTimeline load={loadStub} bids={groupBids} className="mb-3 p-3 rounded border bg-light-subtle" /> : null}
+              <BidList
+                bids={groupBids}
+                mode="shipper"
+                onAccept={handleAccept}
+                onReject={handleReject}
+                onSuggest={handleSuggest}
+                actionsDisabled={!profileComplete}
+              />
+            </div>
+          );
+        })
       )}
     </div>
   );

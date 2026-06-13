@@ -13,6 +13,7 @@ import { fleetStatusBadgeClass, isTruckMatchingEligible, normalizeTrucksResponse
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
 import SafeImage from '../../components/ui/SafeImage.jsx';
 import { syncTrucksAfterCreate } from '../../utils/truckListSync.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 const emptyForm = {
   id: null,
@@ -33,7 +34,8 @@ const TruckDetails = () => {
   const { request } = useApi();
   const [trucks, setTrucks] = useState([]);
   const [form, setForm] = useState(emptyForm);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFront, setUploadingFront] = useState(false);
+  const [uploadingBack, setUploadingBack] = useState(false);
   const [saving, setSaving] = useState(false);
   const [listLoading, setListLoading] = useState(true);
   const editing = useMemo(() => Boolean(form.id), [form.id]);
@@ -41,6 +43,7 @@ const TruckDetails = () => {
   const activeRole = user?.activeRole ?? user?.roles?.[0];
   const [profileReady, setProfileReady] = useState(user?.profileComplete === true);
   const isCarrier = activeRole === 'carrier';
+  const uploadingImage = uploadingFront || uploadingBack;
   const canSubmit = profileReady && isCarrier && !uploadingImage && !saving;
 
   useEffect(() => {
@@ -79,17 +82,30 @@ const TruckDetails = () => {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onRefresh = (e) => {
+      const scope = e?.detail?.scope;
+      if (scope && scope !== 'all' && scope !== 'space') return;
+      refresh();
+    };
+    window.addEventListener('tp:realtime-refresh', onRefresh);
+    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+  }, [refresh]);
+
   const onChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const uploadCardImage = async (file, field) => {
-    setUploadingImage(true);
+    const isFront = field === 'truckCardFrontImage';
+    if (isFront) setUploadingFront(true);
+    else setUploadingBack(true);
     try {
       const url = await uploadMediaFile(file, { retries: 1 });
       setForm((p) => ({ ...p, [field]: url }));
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.uploadFailed') }));
     } finally {
-      setUploadingImage(false);
+      if (isFront) setUploadingFront(false);
+      else setUploadingBack(false);
     }
   };
 
@@ -186,6 +202,7 @@ const TruckDetails = () => {
       } else {
         await fetchList();
       }
+      emitRealtimeRefresh('all');
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.saveFailed') }));
     } finally {
@@ -270,7 +287,7 @@ const TruckDetails = () => {
                     e.target.value = '';
                   }}
                 />
-                {uploadingImage && !form.truckCardFrontImage ? (
+                {uploadingFront && !form.truckCardFrontImage ? (
                   <div className="mt-2 small text-muted d-flex align-items-center gap-2">
                     <Loader size="sm" /> {t('pages.truckDetailsPage.uploading')}
                   </div>
@@ -302,6 +319,11 @@ const TruckDetails = () => {
                     e.target.value = '';
                   }}
                 />
+                {uploadingBack && !form.truckCardBackImage ? (
+                  <div className="mt-2 small text-muted d-flex align-items-center gap-2">
+                    <Loader size="sm" /> {t('pages.truckDetailsPage.uploading')}
+                  </div>
+                ) : null}
                 {form.truckCardBackImage ? (
                   <SafeImage
                     src={form.truckCardBackImage}
@@ -316,11 +338,11 @@ const TruckDetails = () => {
                 ) : null}
               </div>
               <div className="d-flex gap-2 flex-wrap">
-                <Button variant="primary" type="submit" className="tp-touch-target" disabled={!canSubmit}>
+                <Button variant="primary" type="submit" className="tp-touch-target d-inline-flex align-items-center gap-2" disabled={!canSubmit}>
                   {saving ? (
-                    <Loader light size="sm" />
-                  ) : uploadingImage ? (
-                    t('pages.truckDetailsPage.uploading')
+                    <>
+                      <Loader light size="sm" /> {t('pages.truckDetailsPage.saving')}
+                    </>
                   ) : editing ? (
                     t('pages.truckDetailsPage.saveChanges')
                   ) : (

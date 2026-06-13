@@ -9,8 +9,9 @@ import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 import { isCapacityFlowActive } from '../../utils/flowSession.js';
+import { SkeletonCard } from '../ui/Skeleton.jsx';
 
-const SpaceSentRequestsPanel = () => {
+const SpaceSentRequestsPanel = ({ embedded = false }) => {
   const { t } = useLanguage();
   const { request } = useApi();
   const { getSocket } = useContext(AppContext) || {};
@@ -86,11 +87,17 @@ const SpaceSentRequestsPanel = () => {
     }
   };
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return (
+      <Card className={`p-3 ${embedded ? 'mb-0' : 'mb-3'}`}>
+        <SkeletonCard rows={2} />
+      </Card>
+    );
+  }
 
   return (
-    <Card className="p-3 mb-3">
-      <h6 className="mb-3">{t('loadsHub.mySpaceRequests')}</h6>
+    <Card className={`p-3 ${embedded ? 'mb-0' : 'mb-3'}`}>
+      {!embedded ? <h6 className="mb-3">{t('loadsHub.mySpaceRequests')}</h6> : null}
       {!rows.length ? (
         <p className="small text-muted mb-0">{t('loadsHub.noSpaceRequestsYet')}</p>
       ) : (

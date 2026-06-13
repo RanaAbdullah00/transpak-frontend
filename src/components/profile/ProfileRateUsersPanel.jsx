@@ -9,6 +9,7 @@ import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { invalidateRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
+import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
 /** Post-delivery / closure only (InDrive-style). */
 function loadAllowsRating(load) {
@@ -76,6 +77,7 @@ function RateCard({ item, onSubmitted }) {
       });
       notifySuccess(t('reviews.submitted'));
       invalidateRatingSummary(item.toUserId);
+      emitRealtimeRefresh('all');
       onSubmitted?.();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('reviews.submitFailed') }));

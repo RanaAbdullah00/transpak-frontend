@@ -10,12 +10,40 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 
-// Shipper screen to manage their posted loads (open/assigned/completed).
+const TABS = ['open', 'booked', 'closed', 'expired'];
+
+function isLoadPastDeadline(load) {
+  const deadline = load?.deadline ?? load?.biddingEndsAt;
+  if (!deadline) return false;
+  const ts = new Date(deadline).getTime();
+  return Number.isFinite(ts) && ts <= Date.now();
+}
+
+function filterLoadsByTab(loads, tab) {
+  if (tab === 'open') {
+    return loads.filter((l) => l.status === 'open' && !isLoadPastDeadline(l));
+  }
+  if (tab === 'booked') {
+    return loads.filter((l) => l.status === 'booked');
+  }
+  if (tab === 'closed') {
+    return loads.filter((l) => l.status === 'closed');
+  }
+  if (tab === 'expired') {
+    return loads.filter(
+      (l) => l.status === 'cancelled' || (l.status === 'open' && isLoadPastDeadline(l))
+    );
+  }
+  return loads;
+}
+
+// Shipper screen to manage their posted loads (open/booked/closed/expired tabs).
 const ManageLoads = ({ embedded = false }) => {
   const { request, loading } = useApi();
   const { t } = useLanguage();
   const [loads, setLoads] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [activeTab, setActiveTab] = useState('open');
 
   const refresh = useCallback(async () => {
     try {
@@ -50,9 +78,24 @@ const ManageLoads = ({ embedded = false }) => {
         origin: l.origin || '—',
         destination: l.destination || '—',
         status: l.status || 'open',
-        bids: Number(l.bidCount ?? l.bids ?? 0)
+        bids: Number(l.bidCount ?? l.bids ?? 0),
+        deadline: l.deadline ?? l.biddingEndsAt ?? null
       })),
     [loads]
+  );
+
+  const tabCounts = useMemo(
+    () =>
+      TABS.reduce((acc, tab) => {
+        acc[tab] = filterLoadsByTab(normalizedLoads, tab).length;
+        return acc;
+      }, {}),
+    [normalizedLoads]
+  );
+
+  const visibleLoads = useMemo(
+    () => filterLoadsByTab(normalizedLoads, activeTab),
+    [normalizedLoads, activeTab]
   );
 
   const handleDeleteConfirm = async () => {
@@ -64,6 +107,16 @@ const ManageLoads = ({ embedded = false }) => {
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedDeleteLoad') }));
     }
+  };
+
+  const tabLabel = (tab) => {
+    const labels = {
+      open: t('pages.loads.tabOpen'),
+      booked: t('pages.loads.tabBooked'),
+      closed: t('pages.loads.tabClosed'),
+      expired: t('pages.loads.tabExpired')
+    };
+    return labels[tab] || tab;
   };
 
   return (
@@ -79,27 +132,48 @@ const ManageLoads = ({ embedded = false }) => {
         </div>
       ) : null}
 
+      <ul className="nav nav-pills nav-fill gap-1 mb-3 flex-wrap">
+        {TABS.map((tab) => (
+          <li className="nav-item" key={tab}>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tabLabel(tab)}
+              <span className="ms-1 badge rounded-pill bg-secondary-subtle text-secondary-emphasis">
+                {tabCounts[tab] ?? 0}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
       {loading ? (
         <div className="d-flex flex-column gap-3">
           <SkeletonCard rows={4} />
           <SkeletonCard rows={3} />
           <SkeletonCard rows={3} />
         </div>
-      ) : normalizedLoads.length === 0 ? (
+      ) : visibleLoads.length === 0 ? (
         <div className="text-center py-5 px-3 rounded-xl tp-surface-muted">
-          <p className="text-muted mb-2 fw-medium">{t('pages.loads.noLoadsTitle')}</p>
-          <p className="small text-muted mb-3">{t('pages.loads.noLoadsBody')}</p>
-          <Link to="/loads/post">
-            <Button variant="primary" className="rounded-lg">
-              {t('pages.loads.postLoadCta')}
-            </Button>
-          </Link>
+          <p className="text-muted mb-2 fw-medium">{t('pages.loads.noLoadsInTab', { tab: tabLabel(activeTab) })}</p>
+          {activeTab === 'open' ? (
+            <>
+              <p className="small text-muted mb-3">{t('pages.loads.noLoadsBody')}</p>
+              <Link to="/loads/post">
+                <Button variant="primary" className="rounded-lg">
+                  {t('pages.loads.postLoadCta')}
+                </Button>
+              </Link>
+            </>
+          ) : null}
         </div>
       ) : (
-        normalizedLoads.map((l) => {
-          const isOpen = l.status === 'open';
+        visibleLoads.map((l) => {
+          const isOpen = l.status === 'open' && activeTab === 'open';
           return (
-            <Card key={l.id}>
+            <Card key={l.id} className="mb-3">
               <div className="d-flex justify-content-between align-items-start gap-2">
                 <div>
                   <h6 className="mb-1">{l.cargo}</h6>
@@ -108,7 +182,7 @@ const ManageLoads = ({ embedded = false }) => {
                   </div>
                 </div>
                 <Badge
-                  variant={l.status === 'open' ? 'success' : l.status === 'assigned' ? 'warning' : 'secondary'}
+                  variant={l.status === 'open' ? 'success' : l.status === 'booked' ? 'warning' : 'secondary'}
                 >
                   {l.status}
                 </Badge>
