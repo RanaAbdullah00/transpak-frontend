@@ -4,6 +4,7 @@ import LoadCard from './LoadCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
+import VirtualListBody from '../ui/VirtualListBody.jsx';
 
 // Vertical list of load cards with mobile spacing.
 const LoadList = memo(({
@@ -36,10 +37,13 @@ const LoadList = memo(({
   }
 
   return (
-    <div className="mt-2">
-      {safeLoads.map((load) => (
+    <VirtualListBody
+      className="mt-2"
+      items={safeLoads}
+      itemHeight={156}
+      getItemKey={(load) => load.id}
+      renderItem={(load) => (
         <LoadCard
-          key={load.id}
           load={load}
           onBid={onBid}
           carrierMode={carrierMode}
@@ -50,8 +54,8 @@ const LoadList = memo(({
           ratingMap={ratingMap}
           ratingsLoading={ratingsLoading}
         />
-      ))}
-    </div>
+      )}
+    />
   );
 });
 

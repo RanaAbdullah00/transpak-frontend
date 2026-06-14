@@ -29,6 +29,9 @@ import {
 import { emitRealtimeRefresh } from '../utils/realtimeRefresh.js';
 import { pruneWorkspaceQueryCaches } from '../utils/workspaceQueryCache.js';
 import { emitShipmentStatusUpdated } from '../utils/shipmentStatusOptimistic.js';
+import { normalizeTrackingEvent } from '../utils/trackingEventContract.js';
+import { trackingEventDedupeCache } from '../utils/eventDedupeCache.js';
+import { recordTrackingEventDeduped } from '../hooks/usePerformanceTelemetry.js';
 
 export const AppContext = createContext(null);
 
@@ -462,6 +465,11 @@ export const AppProvider = ({ children }) => {
         ingestNotification(n);
       },
       onTracking: (p) => {
+        const event = normalizeTrackingEvent(p, 'socket');
+        if (event.eventId && trackingEventDedupeCache.has(event.eventId)) {
+          recordTrackingEventDeduped();
+          return;
+        }
         const refs = [p?.refKey, p?.loadId]
           .map((v) => String(v ?? '').trim())
           .filter(Boolean);

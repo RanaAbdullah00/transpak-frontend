@@ -12,6 +12,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
 import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
+import VirtualListBody from '../ui/VirtualListBody.jsx';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
 import { kgToTons, tonsToKg, ratePerKgToTon } from '../../utils/weightUnits.js';
@@ -229,9 +230,14 @@ const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
       ) : empty ? (
         <Card className="p-4 text-center text-muted small">{t('loadsHub.noCapacity')}</Card>
       ) : (
-        <div className="row g-3">
-          {listings.map((row) => (
-            <div key={row.id} className="col-md-6 col-lg-4">
+        <VirtualListBody
+          className="row g-3"
+          items={listings}
+          itemHeight={220}
+          threshold={60}
+          getItemKey={(row) => row.id}
+          renderItem={(row) => (
+            <div className="col-md-6 col-lg-4">
               <CarrierSpaceCard
                 listing={row}
                 ratingMap={ratingMap}
@@ -249,8 +255,8 @@ const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
                 }
               />
             </div>
-          ))}
-        </div>
+          )}
+        />
       )}
     </div>
   );

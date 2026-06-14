@@ -4,6 +4,7 @@ import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
+import VirtualListBody from '../ui/VirtualListBody.jsx';
 import { isActiveBidStatus, isCounterOffered, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import {
   assertIsSnapshotConsumer,
@@ -149,24 +150,28 @@ const BidList = memo(({
           {safeStandardBids.length > 0 ? (
             <>
               <h6 className="text-muted small text-uppercase mb-2">{t('pages.bids.standardBidsHeading')}</h6>
-              {safeStandardBids.map((bid) => (
-                <BidCard
-                  key={bid.id}
-                  bid={bid}
-                  onAccept={onAccept}
-                  onReject={onReject}
-                  onSuggest={onSuggest}
-                  onAcceptSuggestion={onAcceptSuggestion}
-                  onRejectSuggestion={onRejectSuggestion}
-                  isShipper={isShipper}
-                  isCarrier={isCarrier}
-                  actionsDisabled={actionsDisabled}
-                  ratingTargetUserId={ratingTargetFor(bid)}
-                  ratingMap={ratingMap}
-                  ratingsLoading={ratingsLoading}
-                  counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
-                />
-              ))}
+              <VirtualListBody
+                items={safeStandardBids}
+                itemHeight={148}
+                getItemKey={(bid) => bid.id}
+                renderItem={(bid) => (
+                  <BidCard
+                    bid={bid}
+                    onAccept={onAccept}
+                    onReject={onReject}
+                    onSuggest={onSuggest}
+                    onAcceptSuggestion={onAcceptSuggestion}
+                    onRejectSuggestion={onRejectSuggestion}
+                    isShipper={isShipper}
+                    isCarrier={isCarrier}
+                    actionsDisabled={actionsDisabled}
+                    ratingTargetUserId={ratingTargetFor(bid)}
+                    ratingMap={ratingMap}
+                    ratingsLoading={ratingsLoading}
+                    counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
+                  />
+                )}
+              />
             </>
           ) : null}
           {safeSuggestedBids.length > 0 ? (

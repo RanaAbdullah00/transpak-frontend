@@ -59,6 +59,13 @@ import {
   subscribeOptimisticShipmentStatus
 } from '../utils/shipmentStatusOptimistic.js';
 import { useTrackingCoordinator } from './useTrackingCoordinator.js';
+import { trackingEventDedupeCache } from '../utils/eventDedupeCache.js';
+import {
+  normalizeTrackingEvent,
+  rememberTrackingEvent,
+  shouldAcceptTrackingEvent
+} from '../utils/trackingEventContract.js';
+import { recordTrackingEventDeduped } from './usePerformanceTelemetry.js';
 
 /**
  * Coordinates + live GPS only. State gates come exclusively from GET /shipments/active row.
@@ -145,6 +152,10 @@ export function useShipmentTracking({
   const fetchGenerationRef = useRef(0);
   const hydratedRefsRef = useRef(new Set());
   const fetchTrackRef = useRef(null);
+  const trackingDedupeCtxRef = useRef({
+    cache: trackingEventDedupeCache,
+    lastTimestampByShipment: new Map()
+  });
   const prevTrackingGateRef = useRef(false);
   const socketKey = payload?.refKey || localRef;
 
@@ -354,7 +365,14 @@ export function useShipmentTracking({
   }, [fetchTrack, trackingGate, localRef, enabled, contractActivated, trackingEnabled]);
 
   const applyUpdate = useCallback(
-    (incoming) => {
+    (incoming, meta = {}) => {
+      const event = normalizeTrackingEvent(incoming, meta.source || 'socket');
+      const ctx = trackingDedupeCtxRef.current;
+      if (!shouldAcceptTrackingEvent(event, ctx)) {
+        recordTrackingEventDeduped();
+        return;
+      }
+      rememberTrackingEvent(event, ctx);
       scheduleBufferedUpdate(incoming);
     },
     [scheduleBufferedUpdate]

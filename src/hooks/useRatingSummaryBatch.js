@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApi } from './useApi.js';
+import {
+  recordRatingBatchRequest,
+  recordRatingCacheHit,
+  recordRatingCacheMiss
+} from './usePerformanceTelemetry.js';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -56,6 +61,10 @@ function scheduleBatchFetch(request) {
       notifyWaiters();
       return;
     }
+    const cacheMisses = ids.filter((id) => !cache.has(id)).length;
+    const cacheHits = ids.length - cacheMisses;
+    recordRatingCacheMiss(cacheMisses);
+    const started = Date.now();
     try {
       const data = await request({
         url: '/reviews/summary',
@@ -70,6 +79,12 @@ function scheduleBatchFetch(request) {
         cache.set(id, { avgRating: null, count: 0, lastReviewAt: null });
       }
     }
+    recordRatingBatchRequest({
+      userCount: ids.length,
+      durationMs: Date.now() - started,
+      cacheHits,
+      cacheMisses
+    });
     notifyWaiters();
   }, 40);
 }
@@ -133,11 +148,13 @@ export function useRatingSummaryBatch(userIds = []) {
     };
 
     if (!idsNeedFetch(ids) && refreshTick === 0) {
+      recordRatingCacheHit(ids.length);
       setLoading(false);
       return undefined;
     }
 
     if (ids.every((id) => cache.has(id))) {
+      recordRatingCacheHit(ids.length);
       applyFromCache();
       return () => {
         cancelled = true;

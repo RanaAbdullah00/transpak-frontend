@@ -18,10 +18,12 @@ import NotificationToastHost from './components/notifications/NotificationToast.
 import { initTranspakBuildInfo } from './utils/buildInfo.js';
 import { verifyProductionDeploy } from './utils/verifyDeploy.js';
 import { initContractSyncGuarantee } from './utils/contractSyncGuarantee.js';
+import { initPerformanceTelemetryExport } from './utils/performanceTelemetryExport.js';
 
 initTranspakBuildInfo();
 verifyProductionDeploy();
 initContractSyncGuarantee();
+initPerformanceTelemetryExport();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
