@@ -110,6 +110,8 @@ const SpaceRequestsPanel = ({ embedded = false, onRowCount, listingIdFilter = nu
           spaceRequestId: id,
           toUserId: row.shipperId,
           toUserName: row.shipperName,
+          toUserAvatar: row.shipperAvatar,
+          toUserRole: 'shipper',
           label: `${row.origin} → ${row.destination}`
         });
       }

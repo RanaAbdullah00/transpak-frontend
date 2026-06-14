@@ -54,6 +54,7 @@ import {
 } from '../utils/contractActivationLayer.js';
 import {
   emitShipmentStatusUpdated,
+  rehydrateShipmentStatusFromApi,
   resolveEffectiveShipmentStatus,
   subscribeOptimisticShipmentStatus
 } from '../utils/shipmentStatusOptimistic.js';
@@ -141,6 +142,7 @@ export function useShipmentTracking({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fetchGenerationRef = useRef(0);
+  const hydratedRefsRef = useRef(new Set());
   const fetchTrackRef = useRef(null);
   const prevTrackingGateRef = useRef(false);
   const socketKey = payload?.refKey || localRef;
@@ -247,6 +249,17 @@ export function useShipmentTracking({
         if (generation !== fetchGenerationRef.current) return;
         const normalized = sanitizeTrackingPayload(normalizeTracking(res?.data) || res?.data);
         const apiStatus = normalized?.tracking?.status;
+        const forceHydrate = reconnectSnapshot || !hydratedRefsRef.current.has(localRef);
+        rehydrateShipmentStatusFromApi(
+          localRef,
+          {
+            status: apiStatus,
+            history: normalized?.history,
+            updatedAt: normalized?.tracking?.locationUpdatedAt || normalized?.history?.[0]?.time
+          },
+          { force: forceHydrate }
+        );
+        if (forceHydrate) hydratedRefsRef.current.add(localRef);
         if (apiStatus) {
           emitShipmentStatusUpdated(localRef, apiStatus, { source: 'api' });
         }

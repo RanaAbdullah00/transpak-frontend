@@ -13,7 +13,7 @@ export function spaceStepId(status) {
 /** Operation Center "Request sent" — pending lifecycle only. */
 export function isOpsRequestSentRow(row) {
   const s = String(row?.status || '').toLowerCase();
-  return s === 'request_sent' || s === 'accepted';
+  return s === 'request_sent';
 }
 
 export function proposedSpacePrice(row) {

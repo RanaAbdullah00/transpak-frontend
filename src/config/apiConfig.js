@@ -60,10 +60,12 @@ export function logApiBootstrap() {
   const viteUrl = trimUrl(import.meta.env.VITE_API_URL) || '(unset — dev proxy mode)';
   const root = getApiRoot();
   const origin = resolveViteApiOrigin() || '(relative /api via dev proxy)';
-  // eslint-disable-next-line no-console
-  console.log('API BASE URL:', viteUrl);
-  // eslint-disable-next-line no-console
-  console.log('[transpak] API origin:', origin, '| API root:', root);
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log('API BASE URL:', viteUrl);
+    // eslint-disable-next-line no-console
+    console.log('[transpak] API origin:', origin, '| API root:', root);
+  }
   if (import.meta.env.PROD && !trimUrl(import.meta.env.VITE_API_URL)) {
     console.error('[transpak] FATAL: production build without VITE_API_URL');
   }

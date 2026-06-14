@@ -120,6 +120,36 @@ export function resolveUpcomingShipmentStatus(ref, currentStatus) {
   return nextShipmentStatus(resolveEffectiveShipmentStatus(ref, currentStatus));
 }
 
+/** Seed optimistic store from API on load/refresh (server truth unless local opt is further). */
+export function rehydrateShipmentStatusFromApi(
+  ref,
+  { status, history = [], updatedAt = null } = {},
+  { force = false } = {}
+) {
+  const key = refKey(ref);
+  if (!key) return;
+  const apiStatus = normalizeShipmentStatus(status);
+  if (!apiStatus) return;
+  const opt = getOptimisticShipmentStatus(key);
+  if (!force && opt && statusRank(opt) > statusRank(apiStatus)) {
+    return;
+  }
+  statusByRef.set(key, apiStatus);
+  const historyList = Array.isArray(history) ? history : [];
+  if (force || historyList.length || !timelineByRef.get(key)?.length) {
+    const entries = historyList
+      .filter((h) => h && typeof h === 'object')
+      .map((h) => ({
+        event: h.event || h.label || h.status || apiStatus,
+        time: h.time || updatedAt || null,
+        location: h.location ?? null,
+        status: h.status || apiStatus
+      }));
+    timelineByRef.set(key, entries);
+  }
+  notify();
+}
+
 function inferTimelineEventStatus(ev, fallbackStatus) {
   const fromField = normalizeShipmentStatus(ev?.status);
   if (fromField) return fromField;
@@ -131,7 +161,11 @@ function inferTimelineEventStatus(ev, fallbackStatus) {
 /**
  * Merge API history + optimistic timeline; terminal effective status wins over stale rows.
  */
-export function mergeShipmentTimelineEvents(ref, history = [], { apiStatus = null, fallbackLabel = 'Update' } = {}) {
+export function mergeShipmentTimelineEvents(
+  ref,
+  history = [],
+  { apiStatus = null, fallbackLabel = 'Update', updatedAt = null } = {}
+) {
   const key = refKey(ref);
   const historyList = Array.isArray(history) ? history : [];
   const optimisticLog = key ? getOptimisticStatusTimeline(key) : [];
@@ -152,9 +186,13 @@ export function mergeShipmentTimelineEvents(ref, history = [], { apiStatus = nul
   if (terminal) {
     const lastStatus = events.length ? normalizeShipmentStatus(events[events.length - 1]?.status) : null;
     if (lastStatus !== effectiveStatus) {
+      const terminalTime =
+        updatedAt ||
+        (historyList.length ? historyList[historyList.length - 1]?.time : null) ||
+        new Date().toISOString();
       events.push({
         label: effectiveStatus,
-        time: new Date().toISOString(),
+        time: terminalTime,
         done: true,
         note: null,
         status: effectiveStatus

@@ -158,6 +158,7 @@ const ActiveShipmentCard = ({
           }
           trackRef={resolvedTrackRef}
           carrierMode={carrierMode}
+          hideTrackingLink
         />
       </div>
       <button

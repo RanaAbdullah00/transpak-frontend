@@ -1192,10 +1192,6 @@ export const translations = {
         noteBody:
           'Our team reviews your profile and fleet uploads together. You will be notified when verification is complete.'
       },
-      carrierTrustHub: {
-        lead: 'Live tracking, verification steps, and your trust score in one place.',
-        trackingLead: 'Open an active shipment to view live route progress and delivery milestones.'
-      },
       trackingMap: {
         title: 'Live map',
         pickup: 'Pickup',
@@ -1492,7 +1488,6 @@ export const translations = {
       openMenu: 'Open menu',
       notificationsAria: 'Notifications',
       carrierVerification: 'Verification guide',
-      carrierTrustHub: 'Trust & tracking',
       carrierScore: 'Score',
       roleSwitchAria: 'Role switch',
       shipperShort: 'Shipper',
@@ -2617,10 +2612,6 @@ export const translations = {
         noteBody:
           'اس سکرین پر الگ دستاویز کی قطار نہیں — آپ کی اپ لوڈز پروفائل اور ٹرکس کے ساتھ جائزہ لی جاتی ہیں۔'
       },
-      carrierTrustHub: {
-        lead: 'لائیو ٹریکنگ، تصدیق کے مراحل، اور آپ کا اعتماد اسکور ایک جگہ۔',
-        trackingLead: 'فعال شپمنٹ کھولیں تاکہ لائیو راستے کی پیش رفت اور ڈیلیوری کے مراحل دیکھ سکیں۔'
-      },
       trackingMap: {
         title: 'لائیو نقشہ',
         pickup: 'پک اپ',
@@ -2968,7 +2959,6 @@ export const translations = {
       openMenu: 'مینو کھولیں',
       notificationsAria: 'نوٹیفکیشنز',
       carrierVerification: 'تصدیق کی رہنمائی',
-      carrierTrustHub: 'اعتماد و ٹریکنگ',
       carrierScore: 'اسکور',
       roleSwitchAria: 'کردار تبدیل کریں',
       shipperShort: 'بھیجنے والا',

@@ -82,6 +82,8 @@ const SpaceSentRequestsPanel = ({ embedded = false, onRowCount }) => {
           spaceRequestId: id,
           toUserId: row.carrierId,
           toUserName: row.carrierName,
+          toUserAvatar: row.carrierAvatar,
+          toUserRole: 'carrier',
           label: `${row.origin} → ${row.destination}`
         });
       }

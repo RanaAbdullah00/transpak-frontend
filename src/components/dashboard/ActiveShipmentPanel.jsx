@@ -65,16 +65,18 @@ const ActiveShipmentPanel = ({
   );
   const uiForDisplay = ui ? { ...ui, status: effectiveStatus } : { status: effectiveStatus };
   const timelineEvents = useMemo(() => {
+    if (summaryMode) return [];
     try {
       const { events } = mergeShipmentTimelineEvents(data.refKey || trackHref || '', data.history, {
         apiStatus: ui?.status || data?.tracking?.status,
-        fallbackLabel: t('pages.tracking.timelineUpdate')
+        fallbackLabel: t('pages.tracking.timelineUpdate'),
+        updatedAt: raw?.tracking?.locationUpdatedAt || data.history?.[data.history.length - 1]?.time
       });
       return events;
     } catch {
       return [];
     }
-  }, [data.refKey, data.history, data.tracking?.status, trackHref, ui?.status, t]);
+  }, [summaryMode, data.refKey, data.history, data.tracking?.status, trackHref, ui?.status, raw?.tracking?.locationUpdatedAt, t]);
 
   if (!trackingActive) {
     return (

@@ -32,7 +32,6 @@ export const ACTIVE_ROUTE_MAP = new Set([
   '/loads/accepted',
   '/carrier/space/post',
   '/carrier/truck-details',
-  '/carrier/trust',
   '/carrier/verification',
   '/bids',
   '/bids/mine',

@@ -30,7 +30,7 @@ export function isBidFlowActive(bid) {
 
 export function isCapacityFlowActive(row = {}) {
   const s = String(row.status || '').toLowerCase();
-  return s === 'active' || s === 'in_transit' || s === 'accepted';
+  return s === 'active' || s === 'in_transit';
 }
 
 export function isCapacityFlowPending(row = {}) {

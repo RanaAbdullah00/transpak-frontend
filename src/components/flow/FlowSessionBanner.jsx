@@ -14,6 +14,8 @@ const FlowSessionBanner = ({
   trackRef = null,
   carrierMode = false,
   counterpartyName = null,
+  /** When true, suppress tracking CTA (dashboard card owns the single link). */
+  hideTrackingLink = false,
   className = ''
 }) => {
   const { t } = useLanguage();
@@ -47,7 +49,7 @@ const FlowSessionBanner = ({
           </div>
           <p className="small text-muted mb-0">{subtitle}</p>
         </div>
-        {trackRef ? (
+        {trackRef && !hideTrackingLink ? (
           <Link
             to={`/shipments/tracking/${encodeURIComponent(trackRef)}`}
             className="btn btn-sm btn-success flex-shrink-0"
