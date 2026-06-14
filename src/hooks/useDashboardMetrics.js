@@ -50,11 +50,23 @@ export function useDashboardMetrics() {
 
   const activities = useMemo(() => {
     const rows = Array.isArray(app?.notifications) ? app.notifications : [];
-    return rows.slice(0, 8).map((n) => ({
-      id: n.id,
-      message: n.message || n.title || '',
-      time: n.createdAt ? new Date(n.createdAt).toLocaleString() : ''
-    }));
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const seen = new Set();
+    return rows
+      .filter((n) => {
+        const id = n?.id != null ? String(n.id) : '';
+        if (!id || seen.has(id)) return false;
+        const ts = n.createdAt ? new Date(n.createdAt).getTime() : NaN;
+        if (!Number.isFinite(ts) || ts < cutoff) return false;
+        seen.add(id);
+        return true;
+      })
+      .slice(0, 8)
+      .map((n) => ({
+        id: n.id,
+        message: n.message || n.title || '',
+        time: n.createdAt ? new Date(n.createdAt).toLocaleString() : ''
+      }));
   }, [app?.notifications]);
 
   return { ops, loadingOps, activities, activeRole, refreshOps };

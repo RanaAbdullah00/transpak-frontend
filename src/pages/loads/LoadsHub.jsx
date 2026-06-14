@@ -1,16 +1,16 @@
-import React, { useEffect, useMemo } from 'react';
+/**
+ * Phase 2 — LoadsHub carrier capacity browse removed; carriers see freight loads only.
+ */
+import React, { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import SegmentTabs from '../../components/ui/SegmentTabs.jsx';
-import ManageLoads from './ManageLoads.jsx';
 import AvailableLoads from './AvailableLoads.jsx';
+import ManageLoads from './ManageLoads.jsx';
 import CapacityMarketplace from '../../components/carrier/CapacityMarketplace.jsx';
 import MySpaceListings from '../../components/carrier/MySpaceListings.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-
-const SUB_LOADS = 'loads';
-const SUB_CAPACITY = 'capacity';
 
 const LoadsHub = () => {
   const { user } = useAuth();
@@ -22,11 +22,8 @@ const LoadsHub = () => {
   const [params, setParams] = useSearchParams();
   const defaultTab = isShipper ? 'posted' : 'marketplace';
   const tab = params.get('tab') || defaultTab;
-  const subParam = params.get('sub');
-  const carrierSub =
-    subParam === SUB_CAPACITY || subParam === SUB_LOADS ? subParam : SUB_LOADS;
 
-  const shipperTabs = useMemo(
+  const shipperTabs = React.useMemo(
     () => [
       { id: 'posted', label: t('loadsHub.myPosted') },
       { id: 'market', label: t('loadsHub.capacityMarket') }
@@ -34,32 +31,20 @@ const LoadsHub = () => {
     [t]
   );
 
-  const carrierMarketTabs = useMemo(
-    () => [
-      { id: SUB_LOADS, label: t('loadsHub.openLoadsTab') },
-      { id: SUB_CAPACITY, label: t('loadsHub.availableCapacityTab') }
-    ],
-    [t]
-  );
-
   useEffect(() => {
     if (isCarrier) {
-      if (tab === 'freight') {
-        setParams({ tab: 'marketplace', sub: SUB_LOADS }, { replace: true });
-        return;
-      }
-      if (tab === 'capacity') {
-        setParams({ tab: 'marketplace', sub: SUB_CAPACITY }, { replace: true });
+      if (tab === 'freight' || tab === 'capacity') {
+        setParams({ tab: 'marketplace' }, { replace: true });
         return;
       }
       if (tab !== 'marketplace' && tab !== 'my-listings') {
-        setParams({ tab: 'marketplace', sub: carrierSub }, { replace: true });
+        setParams({ tab: 'marketplace' }, { replace: true });
       }
     }
     if (isShipper && tab !== 'posted' && tab !== 'market') {
       setParams({ tab: 'posted' }, { replace: true });
     }
-  }, [isCarrier, isShipper, tab, setParams, carrierSub]);
+  }, [isCarrier, isShipper, tab, setParams]);
 
   useEffect(() => {
     document.body.classList.remove('tp-role-shipper', 'tp-role-carrier');
@@ -75,15 +60,7 @@ const LoadsHub = () => {
   }
 
   const setTab = (id) => {
-    if (isCarrier && id === 'marketplace') {
-      setParams({ tab: id, sub: carrierSub }, { replace: true });
-      return;
-    }
     setParams({ tab: id }, { replace: true });
-  };
-
-  const setCarrierSub = (id) => {
-    setParams({ tab: 'marketplace', sub: id }, { replace: true });
   };
 
   if (isCarrier) {
@@ -118,19 +95,7 @@ const LoadsHub = () => {
             ) : null}
           </div>
         </div>
-        {tab === 'marketplace' ? (
-          <>
-            <SegmentTabs
-              tabs={carrierMarketTabs}
-              active={carrierSub}
-              onChange={setCarrierSub}
-              className="mb-3"
-            />
-            {carrierSub === SUB_LOADS ? <AvailableLoads embedded /> : <CapacityMarketplace browseMode />}
-          </>
-        ) : (
-          <MySpaceListings hideIncomingRequests />
-        )}
+        {tab === 'marketplace' ? <AvailableLoads embedded /> : <MySpaceListings hideIncomingRequests />}
       </div>
     );
   }

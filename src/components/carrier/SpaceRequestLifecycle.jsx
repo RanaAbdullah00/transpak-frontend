@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Badge from '../ui/Badge.jsx';
 import Button from '../ui/Button.jsx';
 import FlowTimeline, { SPACE_STEPS, SPACE_STEPS_REJECTED } from '../ui/FlowTimeline.jsx';
 import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
@@ -8,6 +9,7 @@ import TranslatedText from '../ui/TranslatedText.jsx';
 import { spaceStepId, proposedSpacePrice } from '../../utils/spaceFlow.js';
 import { translateSpaceRequestStatus } from '../../utils/i18nLabels.js';
 import { formatVisibilitySummary } from '../../utils/capacityVisibility.js';
+import { resolveBadgeVariantForStatus } from '../../utils/statusColorTokens.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { getTrackingRef, hasOptimisticActivation } from '../../utils/contractActivationLayer.js';
 import { formatTons } from '../../utils/weightUnits.js';
@@ -70,14 +72,7 @@ const SpaceRequestLifecycle = ({
   const usesShipmentEngine = Boolean(trackingRef) || optimisticActive || eventAccepted;
   const proposed = proposedSpacePrice(row);
   const steps = status === 'rejected' ? SPACE_STEPS_REJECTED : SPACE_STEPS;
-  const badgeClass =
-    status === 'rejected'
-      ? 'text-bg-danger'
-      : status === 'completed'
-        ? 'text-bg-success'
-        : status === 'accepted' || status === 'active' || status === 'in_transit'
-          ? 'text-bg-primary'
-          : 'text-bg-secondary';
+  const badgeVariant = resolveBadgeVariantForStatus(status);
 
   return (
     <div className={`border rounded-3 p-3 tp-space-request-row ${priority ? 'tp-space-request-row--priority border-warning' : ''}`}>
@@ -102,7 +97,7 @@ const SpaceRequestLifecycle = ({
           )}{' '}
           · {formatTons(row?.requestedKg)} t
         </div>
-        <span className={`badge ${badgeClass}`}>{translateSpaceRequestStatus(t, status)}</span>
+        <Badge variant={badgeVariant}>{translateSpaceRequestStatus(t, status)}</Badge>
       </div>
       <div className="small text-muted mb-2">
         {row.origin} → {row.destination}

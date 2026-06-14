@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Card from '../ui/Card.jsx';
+import Modal from '../ui/Modal.jsx';
 import { SkeletonCard } from '../ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -15,6 +16,7 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
   const { request, loading } = useApi();
   const [listings, setListings] = useState([]);
   const [editListing, setEditListing] = useState(null);
+  const [requestsListing, setRequestsListing] = useState(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -66,16 +68,17 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
     <>
       {!hideIncomingRequests ? <SpaceRequestsPanel /> : null}
       <div className="row g-3">
-      {listings.map((row) => (
-        <div key={row.id} className="col-md-6 col-lg-4">
-          <CarrierSpaceCard
-            listing={row}
-            mine
-            onClose={() => closeListing(row.id)}
-            onEdit={setEditListing}
-          />
-        </div>
-      ))}
+        {listings.map((row) => (
+          <div key={row.id} className="col-md-6 col-lg-4">
+            <CarrierSpaceCard
+              listing={row}
+              mine
+              onClose={() => closeListing(row.id)}
+              onEdit={setEditListing}
+              onViewRequests={setRequestsListing}
+            />
+          </div>
+        ))}
       </div>
       <EditCarrierSpaceModal
         listing={editListing}
@@ -83,6 +86,20 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
         onClose={() => setEditListing(null)}
         onSaved={refresh}
       />
+      <Modal
+        open={Boolean(requestsListing)}
+        title={
+          requestsListing
+            ? `${requestsListing.origin} → ${requestsListing.destination}`
+            : t('loadsHub.incomingRequests')
+        }
+        onClose={() => setRequestsListing(null)}
+        size="lg"
+      >
+        {requestsListing ? (
+          <SpaceRequestsPanel listingIdFilter={requestsListing.id} embedded />
+        ) : null}
+      </Modal>
     </>
   );
 };

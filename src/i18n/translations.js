@@ -725,6 +725,7 @@ export const translations = {
         opsPendingSpace: 'Pending requests',
         opsRemainingKg: 'Available (tons)',
         viewLiveTracking: 'View live map',
+        trackingSummaryHint: 'Open live tracking for map, timeline, and status updates.',
         activeTripMode: 'Active trip',
         activeTripSharing: 'Sharing live GPS with shipper',
         openFullMap: 'Full-screen map'
@@ -2762,6 +2763,7 @@ export const translations = {
         opsPendingSpace: 'زیر التواء درخواستیں',
         opsRemainingKg: 'دستیاب (ٹن)',
         viewLiveTracking: 'لائیو میپ دیکھیں',
+        trackingSummaryHint: 'میپ، ٹائم لائن اور حیثیت کی تازہ کاری کے لیے لائیو ٹریکنگ کھولیں۔',
         activeTripMode: 'فعال سفر',
         activeTripSharing: 'شپپر کے ساتھ لائیو GPS شیئر ہو رہا ہے',
         openFullMap: 'مکمل اسکرین میپ'

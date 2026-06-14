@@ -64,6 +64,11 @@ const ReviewPromptModal = ({ prompt, onClose, onSubmitted }) => {
         </div>
         <div className="min-w-0">
           <div className="fw-semibold small text-truncate">{prompt.toUserName || t('reviews.counterpartyRole')}</div>
+          {prompt.toUserRole ? (
+            <div className="small text-muted text-truncate">
+              {prompt.toUserRole === 'carrier' ? t('auth.carrier') : t('auth.shipper')}
+            </div>
+          ) : null}
           {prompt.label && prompt.toUserName ? (
             <div className="small text-muted text-truncate">{prompt.label}</div>
           ) : null}

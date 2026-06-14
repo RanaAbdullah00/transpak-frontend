@@ -12,7 +12,7 @@ import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 import { isCapacityFlowPending } from '../../utils/flowSession.js';
 
-const SpaceRequestsPanel = ({ embedded = false, onRowCount }) => {
+const SpaceRequestsPanel = ({ embedded = false, onRowCount, listingIdFilter = null }) => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { request } = useApi();
@@ -32,9 +32,15 @@ const SpaceRequestsPanel = ({ embedded = false, onRowCount }) => {
     refresh();
   }, [refresh]);
 
+  const visibleRows = React.useMemo(() => {
+    if (!listingIdFilter) return rows;
+    const target = String(listingIdFilter);
+    return rows.filter((r) => String(r?.listingId || '') === target);
+  }, [rows, listingIdFilter]);
+
   useEffect(() => {
-    onRowCount?.(rows.length);
-  }, [rows.length, onRowCount]);
+    onRowCount?.(visibleRows.length);
+  }, [visibleRows.length, onRowCount]);
 
   useEffect(() => {
     const socket = getSocket?.();
@@ -113,7 +119,7 @@ const SpaceRequestsPanel = ({ embedded = false, onRowCount }) => {
     }
   };
 
-  const pendingCount = rows.filter((r) => isCapacityFlowPending(r)).length;
+  const pendingCount = visibleRows.filter((r) => isCapacityFlowPending(r)).length;
 
   return (
     <Card className={`p-3 mb-3 ${pendingCount > 0 ? 'tp-space-requests-panel--priority border-warning' : ''}`}>
@@ -123,11 +129,11 @@ const SpaceRequestsPanel = ({ embedded = false, onRowCount }) => {
           <span className="badge text-bg-warning">{t('loadsHub.pendingRequests', { count: pendingCount })}</span>
         ) : null}
       </div>
-      {!rows.length ? (
+      {!visibleRows.length ? (
         <p className="small text-muted mb-0">{t('loadsHub.noIncomingRequests')}</p>
       ) : (
         <div className="d-flex flex-column gap-3">
-          {rows.map((r) => (
+          {visibleRows.map((r) => (
             <SpaceRequestLifecycle
               key={r.id}
               row={r}

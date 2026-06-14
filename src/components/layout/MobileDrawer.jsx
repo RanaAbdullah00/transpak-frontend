@@ -89,10 +89,10 @@ const MobileDrawer = ({ open, onClose }) => {
                 <NavLink to="/carrier/truck-details" className={linkClass} onClick={onClose}>
                   {t('nav.truckDetails')}
                 </NavLink>
-                <NavLink to="/carrier/trust" className={linkClass} onClick={onClose}>
+                <NavLink to="/carrier/verification" className={linkClass} onClick={onClose}>
                   <span className="d-flex align-items-center gap-2">
                     <FaClipboardCheck size={14} aria-hidden />
-                    {t('nav.carrierTrustHub')}
+                    {t('nav.carrierVerification')}
                   </span>
                 </NavLink>
               </>

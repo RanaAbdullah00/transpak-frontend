@@ -2,9 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ActiveShipmentPanel from './ActiveShipmentPanel.jsx';
 import StatusBadge from '../shipment/StatusBadge.jsx';
-import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { getNextAllowedActions } from '../../utils/stateNormalizationEngine.js';
 import {
   assertIsSnapshotConsumer,
   getUnifiedShipmentSnapshot,
@@ -18,19 +16,14 @@ import {
 import { useTrackingActive } from '../../hooks/useTrackingActive.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { useAuth } from '../../hooks/useAuth.js';
-import { useApi } from '../../hooks/useApi.js';
-import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
-import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
-import {
-  commitOptimisticStatusAdvance,
-  resolveEffectiveShipmentStatus,
-  subscribeOptimisticShipmentStatus
-} from '../../utils/shipmentStatusOptimistic.js';
-import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
-import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import FlowSessionBanner from '../flow/FlowSessionBanner.jsx';
 import { FLOW_STATUS, FLOW_TYPE } from '../../utils/flowSession.js';
 import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
+import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
+import {
+  resolveEffectiveShipmentStatus,
+  subscribeOptimisticShipmentStatus
+} from '../../utils/shipmentStatusOptimistic.js';
 
 /**
  * Unified active shipment card — only rendered from GET /shipments/active rows.
@@ -53,7 +46,6 @@ const ActiveShipmentCard = ({
   defaultExpanded = false
 }) => {
   const { t } = useLanguage();
-  const { request } = useApi();
   const { user } = useAuth();
   const stableRoleRef = useRef(null);
   if (stableRoleRef.current == null) {
@@ -67,7 +59,6 @@ const ActiveShipmentCard = ({
   }
   const workspaceRole = stableRoleRef.current;
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [advancingStatus, setAdvancingStatus] = useState(false);
   const [, bumpOptimistic] = useState(0);
 
   useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
@@ -121,33 +112,17 @@ const ActiveShipmentCard = ({
     role: workspaceRole,
     userId: user?.id ?? null
   });
-  const { trackingData, uiState, loading, livePos, geoError } = useShipmentTracking({
-    trackRef: resolvedTrackRef,
-    assignedCarrierId: resolvedCarrierId,
-    shipmentStatus: resolvedStatus,
-    trackingEnabled: trackingActive,
-    shareLive: shareLive && (Boolean(resolvedCarrierId) || trackingActive),
-    enabled: Boolean(resolvedTrackRef) && trackingActive,
-    role: workspaceRole,
-    flowType: resolvedFlowType
-  });
 
   const baseStatus = resolvedStatus ?? snapshot.shipmentStatus ?? 'booked';
   const effectiveStatus = resolveEffectiveShipmentStatus(resolvedTrackRef, baseStatus);
   const ui = useMemo(
-    () => withShipmentUILabels({ ...(snapshot.uiState ?? uiState), status: effectiveStatus }, t),
-    [snapshot.uiState, uiState, effectiveStatus, t]
+    () =>
+      withShipmentUILabels(
+        { ...(snapshot.uiState ?? {}), status: effectiveStatus },
+        t
+      ),
+    [snapshot.uiState, effectiveStatus, t]
   );
-  const advanceActions = useMemo(
-    () => (carrierMode ? getNextAllowedActions(effectiveStatus, { role: 'carrier' }) : []),
-    [carrierMode, effectiveStatus]
-  );
-  const primaryAction = advanceActions[0] ?? null;
-  const canRenderAdvanceButton =
-    carrierMode &&
-    isValidShipmentTrackRef(resolvedTrackRef) &&
-    (trackingActive || Boolean(snapshot.activeRow || shipmentRow));
-  const canEnableAdvance = canRenderAdvanceButton && primaryAction != null;
 
   useEffect(() => {
     if (trackingActive && (defaultExpanded || carrierMode || contractActivated)) {
@@ -160,41 +135,16 @@ const ActiveShipmentCard = ({
       ? `/shipments/tracking/${encodeURIComponent(resolvedTrackRef)}`
       : null;
 
-  const handleAdvanceStatus = async () => {
-    const step = primaryAction?.nextBackendStatus;
-    if (!step || !resolvedTrackRef || !canEnableAdvance) return;
-    commitOptimisticStatusAdvance(resolvedTrackRef, step, {
-      label: t(primaryAction.labelKey)
-    });
-    setAdvancingStatus(true);
-    try {
-      await request({
-        method: 'PUT',
-        url: `/shipments/${encodeURIComponent(resolvedTrackRef)}/status`,
-        data: { status: step }
-      });
-      notifySystem(SystemNotifyType.SUCCESS, t('pages.tracking.statusUpdated'));
-      ingestFlowNotification({
-        kind: NOTIFICATION_KIND.STATUS_UPDATE,
-        dispatchType: 'STATUS_UPDATED',
-        title: t('pages.tracking.statusUpdated'),
-        message: `${resolvedTrackRef}: ${step}`,
-        shipmentRef: resolvedTrackRef,
-        roleType: carrierMode ? 'carrier' : 'shipper',
-        soundType: 'status',
-        priority: 'medium',
-      });
-      await triggerStatusActivationSync(resolvedTrackRef);
-    } catch (err) {
-      notifyApiError(err);
-    } finally {
-      setAdvancingStatus(false);
-    }
-  };
+  const originName =
+    shipmentRow?.origin || storeRow?.origin || snapshot.activeRow?.origin || '';
+  const destinationName =
+    shipmentRow?.destination || storeRow?.destination || snapshot.activeRow?.destination || '';
 
-  const summary = label || trackingData?.origin
-    ? `${trackingData?.origin || ''} → ${trackingData?.destination || ''}`.trim()
-    : resolvedTrackRef;
+  const summary =
+    label ||
+    (originName && destinationName
+      ? `${originName} → ${destinationName}`.trim()
+      : resolvedTrackRef);
 
   return (
     <div className="tp-active-shipment-card border rounded-3 mb-3 overflow-hidden tp-animate-fade-in">
@@ -221,20 +171,26 @@ const ActiveShipmentCard = ({
           <div className="small text-muted d-flex flex-wrap align-items-center gap-1">
             <span>{resolvedTrackRef}</span>
             {carrierMode && shipperId ? (
-              <ProfileAccessLayer
-                userId={shipperId}
-                name={shipperName}
-                avatarSrc={shipperAvatar}
-                className="small"
-              />
+              <>
+                <ProfileAccessLayer
+                  userId={shipperId}
+                  name={shipperName}
+                  avatarSrc={shipperAvatar}
+                  className="small"
+                />
+                <UserRatingBadge userId={shipperId} className="small" />
+              </>
             ) : null}
-            {!carrierMode && assignedCarrierId ? (
-              <ProfileAccessLayer
-                userId={assignedCarrierId}
-                name={carrierName}
-                avatarSrc={carrierAvatar}
-                className="small"
-              />
+            {!carrierMode && (assignedCarrierId || resolvedCarrierId) ? (
+              <>
+                <ProfileAccessLayer
+                  userId={assignedCarrierId || resolvedCarrierId}
+                  name={carrierName}
+                  avatarSrc={carrierAvatar}
+                  className="small"
+                />
+                <UserRatingBadge userId={assignedCarrierId || resolvedCarrierId} className="small" />
+              </>
             ) : null}
           </div>
         </div>
@@ -255,38 +211,22 @@ const ActiveShipmentCard = ({
       {expanded ? (
         <div className="px-3 pb-3 border-top">
           <ActiveShipmentPanel
-            trackingData={trackingData}
-            loadingTracking={loading}
-            liveDriver={trackingActive && shareLive && expanded}
-            liveLocation={livePos}
-            geoError={geoError}
+            trackingData={{
+              refKey: resolvedTrackRef,
+              origin: originName,
+              destination: destinationName,
+              history: shipmentRow?.history || storeRow?.history || [],
+              tracking: { status: effectiveStatus }
+            }}
+            loadingTracking={false}
             trackHref={href}
             trackingEnabled={trackingActive}
-            originName={
-              trackingData?.origin || shipmentRow?.origin || storeRow?.origin || ''
-            }
-            destinationName={
-              trackingData?.destination || shipmentRow?.destination || storeRow?.destination || ''
-            }
+            originName={originName}
+            destinationName={destinationName}
             uiState={ui}
-            carrierAdvance={
-              carrierMode && trackingActive && isValidShipmentTrackRef(resolvedTrackRef)
-                ? {
-                    title: t('pages.tracking.updateStatus'),
-                    upcoming: canEnableAdvance ? primaryAction?.nextBackendStatus : null,
-                    loadingStatus: advancingStatus,
-                    buttonLabel: primaryAction
-                      ? t(primaryAction.labelKey)
-                      : t('pages.tracking.updateStatus'),
-                    statusLine: t('pages.tracking.advanceStatus'),
-                    onAdvance: handleAdvanceStatus
-                  }
-                : null
-            }
+            variant="summary"
             emptyState={
-              loading ? null : (
-                <div className="text-muted small py-3 text-center">{t('pages.tracking.waitingForData')}</div>
-              )
+              <div className="text-muted small py-3 text-center">{t('pages.tracking.waitingForData')}</div>
             }
           />
         </div>

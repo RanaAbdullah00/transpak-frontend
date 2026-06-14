@@ -119,3 +119,47 @@ export function resolveEffectiveShipmentStatus(ref, apiStatus) {
 export function resolveUpcomingShipmentStatus(ref, currentStatus) {
   return nextShipmentStatus(resolveEffectiveShipmentStatus(ref, currentStatus));
 }
+
+function inferTimelineEventStatus(ev, fallbackStatus) {
+  const fromField = normalizeShipmentStatus(ev?.status);
+  if (fromField) return fromField;
+  const fromEvent = normalizeShipmentStatus(ev?.event || ev?.label);
+  if (fromEvent && SHIPMENT_ORDER.includes(fromEvent)) return fromEvent;
+  return fallbackStatus;
+}
+
+/**
+ * Merge API history + optimistic timeline; terminal effective status wins over stale rows.
+ */
+export function mergeShipmentTimelineEvents(ref, history = [], { apiStatus = null, fallbackLabel = 'Update' } = {}) {
+  const key = refKey(ref);
+  const historyList = Array.isArray(history) ? history : [];
+  const optimisticLog = key ? getOptimisticStatusTimeline(key) : [];
+  const baseStatus =
+    normalizeShipmentStatus(apiStatus) ||
+    normalizeShipmentStatus(historyList[0]?.status) ||
+    'booked';
+  const effectiveStatus = resolveEffectiveShipmentStatus(key, baseStatus);
+  const merged = [...historyList, ...optimisticLog].filter((ev) => ev && typeof ev === 'object');
+  const events = merged.map((ev) => ({
+    label: ev.event || ev.label || fallbackLabel,
+    time: ev.time || '',
+    done: true,
+    note: ev.location ?? null,
+    status: inferTimelineEventStatus(ev, effectiveStatus)
+  }));
+  const terminal = effectiveStatus === 'closed' || effectiveStatus === 'delivered';
+  if (terminal) {
+    const lastStatus = events.length ? normalizeShipmentStatus(events[events.length - 1]?.status) : null;
+    if (lastStatus !== effectiveStatus) {
+      events.push({
+        label: effectiveStatus,
+        time: new Date().toISOString(),
+        done: true,
+        note: null,
+        status: effectiveStatus
+      });
+    }
+  }
+  return { events, effectiveStatus };
+}

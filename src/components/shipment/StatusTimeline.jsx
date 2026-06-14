@@ -35,7 +35,7 @@ const StatusTimeline = ({ currentStatus, uiState = null, events = [] }) => {
       <ul className="list-unstyled small mb-0 tp-timeline">
         {safeEvents.map((e, idx) => {
           const { date, time } = splitEventTime(e?.time);
-          const dotClass = timelineDotClassForStatus(e?.status || e?.label || currentStatus);
+          const dotClass = timelineDotClassForStatus(e?.status || currentStatus);
           return (
             <li key={`${e?.label ?? 'step'}-${idx}`} className="tp-timeline-item">
               <div className={`tp-timeline-dot ${e.done ? 'done' : ''} ${dotClass}`} />

@@ -21,7 +21,6 @@ import AcceptedLoads from '../pages/loads/AcceptedLoads.jsx';
 import FleetMonitoring from '../pages/fleet/FleetMonitoring.jsx';
 import AddTruck from '../pages/fleet/AddTruck.jsx';
 import CarrierVerification from '../pages/auth/CarrierVerification.jsx';
-import CarrierTrustHub from '../pages/carrier/CarrierTrustHub.jsx';
 import ShipmentHistory from '../pages/shipments/ShipmentHistory.jsx';
 import ShipmentsActive from '../pages/shipments/ShipmentsActive.jsx';
 import Profile from '../pages/profile/Profile.jsx';
@@ -60,8 +59,8 @@ export const commercialRoutes = [
   <Route key="bids-approve" path="/bids/approve" element={protectedCommercial('bids-approve', <ApproveCarrier />, ['shipper'])} />,
   <Route key="fleet" path="/fleet" element={protectedCommercial('fleet', <FleetMonitoring />, ['carrier'])} />,
   <Route key="carrier-truck-details" path="/carrier/truck-details" element={protectedCommercial('carrier-truck-details', <TruckDetails />, ['carrier'])} />,
-  <Route key="carrier-verification" path="/carrier/verification" element={<Navigate to="/carrier/trust?tab=verification" replace />} />,
-  <Route key="carrier-trust" path="/carrier/trust" element={protectedCommercial('carrier-trust', <CarrierTrustHub />, ['carrier'])} />,
+  <Route key="carrier-verification" path="/carrier/verification" element={protectedCommercial('carrier-verification', <CarrierVerification />, ['carrier'])} />,
+  <Route key="carrier-trust-redirect" path="/carrier/trust" element={<Navigate to="/carrier/verification" replace />} />,
   <Route key="fleet-add" path="/fleet/add" element={protectedCommercial('fleet-add', <AddTruck />, ['carrier'])} />,
   <Route key="shipments-active" path="/shipments/active" element={protectedCommercial('shipments-active', <ShipmentsActive />, ['shipper', 'carrier'])} />,
   <Route key="shipments-tracking" path="/shipments/tracking/:trackId?" element={protectedCommercial('shipments-tracking', <ShipmentTracking />, ['shipper', 'carrier'])} />,

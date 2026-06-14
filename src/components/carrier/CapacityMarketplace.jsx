@@ -4,6 +4,7 @@ import Button from '../ui/Button.jsx';
 import Modal from '../ui/Modal.jsx';
 import { SkeletonCard } from '../ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
@@ -30,7 +31,10 @@ function filterCityParam(value) {
 
 const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { request, loading } = useApi();
+  const activeRole = user?.activeRole ?? user?.roles?.[0];
+  const canRequestCapacity = activeRole === 'shipper';
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_FILTERS }));
   const [listings, setListings] = useState([]);
   const [listError, setListError] = useState(null);
@@ -222,12 +226,16 @@ const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
               <CarrierSpaceCard
                 listing={row}
                 onViewDetails={setDetailsTarget}
-                onRequest={(l) => {
-                  setDetailsTarget(null);
-                  setRequestTarget(l);
-                  setRequestTons('');
-                  setRequestMessage('');
-                }}
+                onRequest={
+                  canRequestCapacity
+                    ? (l) => {
+                        setDetailsTarget(null);
+                        setRequestTarget(l);
+                        setRequestTons('');
+                        setRequestMessage('');
+                      }
+                    : undefined
+                }
               />
             </div>
           ))}

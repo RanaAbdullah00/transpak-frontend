@@ -9,12 +9,16 @@ import Button from '../ui/Button.jsx';
 import Loader from '../ui/Loader.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
-import { getOptimisticStatusTimeline, resolveEffectiveShipmentStatus } from '../../utils/shipmentStatusOptimistic.js';
+import {
+  mergeShipmentTimelineEvents,
+  resolveEffectiveShipmentStatus
+} from '../../utils/shipmentStatusOptimistic.js';
 import { normalizeCoordList, safeStringField } from '../../utils/mapCoords.js';
 
 /**
  * Single tracking UI for shipper + carrier dashboards.
- * Visibility is controlled only by trackingEnabled (trackingActive).
+ * variant="summary" — dashboard card expand (no map/timeline/advance).
+ * variant="full" — tracking page layout.
  */
 const ActiveShipmentPanel = ({
   trackingData,
@@ -29,10 +33,12 @@ const ActiveShipmentPanel = ({
   originName = '',
   destinationName = '',
   /** trackingActive — sole visibility gate */
-  trackingEnabled = null
+  trackingEnabled = null,
+  variant = 'full'
 }) => {
   const { t } = useLanguage();
   const trackingActive = Boolean(trackingEnabled);
+  const summaryMode = variant === 'summary';
 
   const raw = trackingData && typeof trackingData === 'object' ? trackingData : null;
   const data = {
@@ -60,37 +66,39 @@ const ActiveShipmentPanel = ({
   const uiForDisplay = ui ? { ...ui, status: effectiveStatus } : { status: effectiveStatus };
   const timelineEvents = useMemo(() => {
     try {
-      const historyEvents = Array.isArray(data.history)
-        ? data.history
-            .filter((h) => h && typeof h === 'object')
-            .map((h) => ({
-              label: h.event ?? h.label ?? '',
-              time: h.time ?? '',
-              note: h.location ?? null,
-              done: true
-            }))
-        : [];
-      if (historyEvents.length) return historyEvents;
-      const optimistic = getOptimisticStatusTimeline(data.refKey || trackHref || '');
-      if (optimistic.length) {
-        return optimistic.map((ev) => ({
-          label: ev?.event || ev?.label || '',
-          time: ev?.time || '',
-          note: ev?.location ?? null,
-          done: true
-        }));
-      }
-      return [];
+      const { events } = mergeShipmentTimelineEvents(data.refKey || trackHref || '', data.history, {
+        apiStatus: ui?.status || data?.tracking?.status,
+        fallbackLabel: t('pages.tracking.timelineUpdate')
+      });
+      return events;
     } catch {
       return [];
     }
-  }, [data, trackHref, ui?.status, t]);
+  }, [data.refKey, data.history, data.tracking?.status, trackHref, ui?.status, t]);
 
   if (!trackingActive) {
     return (
       emptyState ?? (
         <div className="text-muted small py-3 text-center">{t('pages.tracking.trackingNotActiveYet')}</div>
       )
+    );
+  }
+
+  if (summaryMode) {
+    return (
+      <div className="tp-active-shipment-panel tp-active-shipment-panel--summary">
+        <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+          <LifecycleBadge stage={data.lifecycleStage || ui?.status} />
+          {ui ? <StatusBadge uiState={uiForDisplay} /> : null}
+        </div>
+        {ui?.showShipperAcceptedBanner && ui.label ? (
+          <p className="small text-primary mb-2 fw-semibold">
+            <TranslatedText text={ui.label} as="span" />
+          </p>
+        ) : null}
+        <ShipmentProgressBox uiState={uiForDisplay} eta={data.tracking?.eta} />
+        <p className="small text-muted mb-0 mt-2">{t('pages.dashboard.trackingSummaryHint')}</p>
+      </div>
     );
   }
 

@@ -3,7 +3,7 @@ import { FaGavel } from 'react-icons/fa';
 import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { isActiveBidStatus, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { isActiveBidStatus, isCounterOffered, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import {
   assertIsSnapshotConsumer,
   collectSnapshotBids,

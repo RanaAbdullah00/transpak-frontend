@@ -78,9 +78,9 @@ const Sidebar = () => {
               <FaTruck />
               {t('nav.truckDetails')}
             </NavLink>
-            <NavLink to="/carrier/trust" className={navLinkClass}>
-              <FaMapMarkedAlt />
-              {t('nav.carrierTrustHub')}
+            <NavLink to="/carrier/verification" className={navLinkClass}>
+              <FaClipboardCheck />
+              {t('nav.carrierVerification')}
             </NavLink>
           </>
         )}

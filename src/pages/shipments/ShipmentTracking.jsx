@@ -18,7 +18,7 @@ import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import {
   commitOptimisticStatusAdvance,
   emitShipmentStatusUpdated,
-  getOptimisticStatusTimeline,
+  mergeShipmentTimelineEvents,
   resolveEffectiveShipmentStatus,
   subscribeOptimisticShipmentStatus
 } from '../../utils/shipmentStatusOptimistic.js';
@@ -111,12 +111,20 @@ const ShipmentTracking = () => {
   }, [refreshActiveRow]);
 
   useEffect(() => {
-    const onShipmentsRefresh = () => refreshActiveRow({ silent: true });
-    const onTrackingRefresh = () => refreshActiveRow({ silent: true });
+    const refreshTickRef = { pending: false };
+    const scheduleRefresh = (handler) => {
+      if (refreshTickRef.pending) return;
+      refreshTickRef.pending = true;
+      requestAnimationFrame(() => {
+        refreshTickRef.pending = false;
+        handler();
+      });
+    };
+    const onDebouncedRefresh = () => scheduleRefresh(() => refreshActiveRow({ silent: true }));
     const onLegacyRefresh = (e) => {
       const scope = e?.detail?.scope;
       if (!scope || scope === 'all' || scope === 'shipments' || scope === 'tracking') {
-        refreshActiveRow({ silent: true });
+        onDebouncedRefresh();
       }
     };
     const onHydrate = (e) => {
@@ -146,19 +154,37 @@ const ShipmentTracking = () => {
     };
     const onContractSync = (e) => {
       const ref = String(e?.detail?.ref || '').trim();
-      if (ref && ref === id) refreshActiveRow({ silent: true });
+      if (ref && ref === id) onDebouncedRefresh();
     };
-    window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
-    window.addEventListener('tp:tracking-refresh', onTrackingRefresh);
+    const onActivated = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      if (ref && ref === id) {
+        bumpOptimistic((n) => n + 1);
+        onDebouncedRefresh();
+      }
+    };
+    const onStatusUpdated = (e) => {
+      const ref = String(e?.detail?.ref || '').trim();
+      if (ref && ref === id) {
+        bumpOptimistic((n) => n + 1);
+        onDebouncedRefresh();
+      }
+    };
+    window.addEventListener('tp:shipments-refresh', onDebouncedRefresh);
+    window.addEventListener('tp:tracking-refresh', onDebouncedRefresh);
     window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:contract-sync', onContractSync);
+    window.addEventListener('tp:contract-activated', onActivated);
+    window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
     return () => {
-      window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
-      window.removeEventListener('tp:tracking-refresh', onTrackingRefresh);
+      window.removeEventListener('tp:shipments-refresh', onDebouncedRefresh);
+      window.removeEventListener('tp:tracking-refresh', onDebouncedRefresh);
       window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
       window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
       window.removeEventListener('tp:contract-sync', onContractSync);
+      window.removeEventListener('tp:contract-activated', onActivated);
+      window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
     };
   }, [refreshActiveRow, id, user?.id, workspaceRole]);
 
@@ -186,29 +212,6 @@ const ShipmentTracking = () => {
   useEffect(() => subscribeOptimisticActivation(() => bumpOptimistic((n) => n + 1)), []);
 
   useEffect(() => subscribeOptimisticShipmentStatus(() => bumpOptimistic((n) => n + 1)), []);
-
-  useEffect(() => {
-    const onActivated = (e) => {
-      const ref = String(e?.detail?.ref || '').trim();
-      if (ref && ref === id) {
-        bumpOptimistic((n) => n + 1);
-        refreshActiveRow({ silent: true });
-      }
-    };
-    const onStatusUpdated = (e) => {
-      const ref = String(e?.detail?.ref || '').trim();
-      if (ref && ref === id) {
-        bumpOptimistic((n) => n + 1);
-        refreshActiveRow({ silent: true });
-      }
-    };
-    window.addEventListener('tp:contract-activated', onActivated);
-    window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
-    return () => {
-      window.removeEventListener('tp:contract-activated', onActivated);
-      window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
-    };
-  }, [id, refreshActiveRow]);
 
   const hasOptimistic = hasOptimisticActivation(id);
   const isHydrating = (activeLoading || backgroundHydrating) && !hasOptimistic;
@@ -371,15 +374,11 @@ const ShipmentTracking = () => {
   const timelineEvents = useMemo(() => {
     try {
       const h = Array.isArray(payload?.history) ? payload.history : [];
-      const optimisticLog = getOptimisticStatusTimeline(id);
-      const merged = [...h, ...optimisticLog].filter((ev) => ev && typeof ev === 'object');
-      if (!merged.length) return [];
-      return merged.map((ev) => ({
-        label: ev.event || ev.label || t('pages.tracking.timelineUpdate'),
-        time: ev.time || '',
-        done: true,
-        note: ev.location ?? null
-      }));
+      const { events } = mergeShipmentTimelineEvents(id, h, {
+        apiStatus: effectiveStatus,
+        fallbackLabel: t('pages.tracking.timelineUpdate')
+      });
+      return events;
     } catch {
       return [];
     }
