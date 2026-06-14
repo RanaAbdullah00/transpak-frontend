@@ -58,6 +58,7 @@ import {
   resolveEffectiveShipmentStatus,
   subscribeOptimisticShipmentStatus
 } from '../utils/shipmentStatusOptimistic.js';
+import { useTrackingCoordinator } from './useTrackingCoordinator.js';
 
 /**
  * Coordinates + live GPS only. State gates come exclusively from GET /shipments/active row.
@@ -229,6 +230,32 @@ export function useShipmentTracking({
     [localRef]
   );
 
+  const socket = getSocket?.() || null;
+  const socketReady = isTrackingSocketReady(socketStatus, socket);
+  const coordinator = useTrackingCoordinator(localRef, { socketReady, trackingGate });
+  const {
+    beginRehydrate,
+    markRehydrated,
+    scheduleBufferedUpdate,
+    registerFlushHandler
+  } = coordinator;
+
+  const applyPipelineRef = useRef(applyPipeline);
+  applyPipelineRef.current = applyPipeline;
+
+  useEffect(() => {
+    registerFlushHandler((incoming) => {
+      if (!incoming) return;
+      setPayload((prev) => {
+        if (!matchesTrackingPayload(incoming, localRef, socketKey, prev?.refKey, prev?.loadId)) {
+          return prev;
+        }
+        const next = applyPipelineRef.current(prev, incoming, 'socket', false);
+        return trackingPayloadEqual(prev, next) ? prev : next;
+      });
+    });
+  }, [registerFlushHandler, localRef, socketKey]);
+
   const fetchTrack = useCallback(
     async ({ silent = false, reconnectSnapshot = false } = {}) => {
       if (!enabled || !localRef) {
@@ -239,6 +266,7 @@ export function useShipmentTracking({
         setError('');
         return;
       }
+      if (reconnectSnapshot) beginRehydrate();
       const generation = fetchGenerationRef.current;
       if (!silent) setLoading(true);
       if (!silent) setError('');
@@ -263,6 +291,7 @@ export function useShipmentTracking({
         if (apiStatus) {
           emitShipmentStatusUpdated(localRef, apiStatus, { source: 'api' });
         }
+        markRehydrated();
         setPayload((prev) => {
           const base = hydrateTrackingFromCache(localRef, prev);
           const next = applyPipeline(base, normalized, 'rest', reconnectSnapshot);
@@ -274,11 +303,12 @@ export function useShipmentTracking({
           setError(e?.message || t('pages.tracking.loadFailed'));
         }
         setPayload((prev) => prev || getCachedTrackingPayload(localRef));
+        if (reconnectSnapshot) markRehydrated();
       } finally {
         if (generation === fetchGenerationRef.current && !silent) setLoading(false);
       }
     },
-    [enabled, localRef, t, applyPipeline]
+    [enabled, localRef, t, applyPipeline, beginRehydrate, markRehydrated]
   );
 
   fetchTrackRef.current = fetchTrack;
@@ -325,16 +355,9 @@ export function useShipmentTracking({
 
   const applyUpdate = useCallback(
     (incoming) => {
-      if (!incoming) return;
-      setPayload((prev) => {
-        if (!matchesTrackingPayload(incoming, localRef, socketKey, prev?.refKey, prev?.loadId)) {
-          return prev;
-        }
-        const next = applyPipeline(prev, incoming, 'socket', false);
-        return trackingPayloadEqual(prev, next) ? prev : next;
-      });
+      scheduleBufferedUpdate(incoming);
     },
-    [localRef, socketKey, applyPipeline]
+    [scheduleBufferedUpdate]
   );
 
   useEffect(() => {
@@ -397,8 +420,6 @@ export function useShipmentTracking({
     return () => window.removeEventListener('tp:tracking-snapshot', onReconnectSnapshot);
   }, [trackingGate, localRef, socketKey, fetchTrack]);
 
-  const socket = getSocket?.() || null;
-  const socketReady = isTrackingSocketReady(socketStatus, socket);
   const { publishLocation } = useTrackingSocket({
     socket,
     sessionRef: localRef,

@@ -11,6 +11,7 @@ import { notifySuccess, notifyError, notifyInfo } from '../../components/ui/Toas
 import { notifyProfileIncomplete, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
 
 // Carrier bid placement page. Expects "load" object from AvailableLoads route state.
 const PlaceBid = () => {
@@ -20,6 +21,9 @@ const PlaceBid = () => {
   const location = useLocation();
   const load = location.state?.load;
   const { request, loading } = useApi();
+  const { ratingMap, loading: ratingsLoading } = useRatingSummaryBatch(
+    load?.shipperId ? [load.shipperId] : []
+  );
 
   useEffect(() => {
     const role = user?.activeRole ?? user?.roles?.[0];
@@ -122,7 +126,7 @@ const PlaceBid = () => {
               <TranslatedText text={load.cargo} />
             </span>
           </h5>
-          <LoadCard load={load} />
+          <LoadCard load={load} ratingMap={ratingMap} ratingsLoading={ratingsLoading} />
         </div>
 
         <div className="col-lg-5">

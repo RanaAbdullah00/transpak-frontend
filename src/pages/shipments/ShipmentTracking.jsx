@@ -111,22 +111,6 @@ const ShipmentTracking = () => {
   }, [refreshActiveRow]);
 
   useEffect(() => {
-    const refreshTickRef = { pending: false };
-    const scheduleRefresh = (handler) => {
-      if (refreshTickRef.pending) return;
-      refreshTickRef.pending = true;
-      requestAnimationFrame(() => {
-        refreshTickRef.pending = false;
-        handler();
-      });
-    };
-    const onDebouncedRefresh = () => scheduleRefresh(() => refreshActiveRow({ silent: true }));
-    const onLegacyRefresh = (e) => {
-      const scope = e?.detail?.scope;
-      if (!scope || scope === 'all' || scope === 'shipments' || scope === 'tracking') {
-        onDebouncedRefresh();
-      }
-    };
     const onHydrate = (e) => {
       const tick = ++hydrateTickRef.current;
       const rows = e?.detail?.rows;
@@ -152,37 +136,23 @@ const ShipmentTracking = () => {
         if (!hasOptimisticActivation(id)) refreshActiveRow({ silent: true });
       });
     };
-    const onContractSync = (e) => {
-      const ref = String(e?.detail?.ref || '').trim();
-      if (ref && ref === id) onDebouncedRefresh();
-    };
     const onActivated = (e) => {
       const ref = String(e?.detail?.ref || '').trim();
       if (ref && ref === id) {
         bumpOptimistic((n) => n + 1);
-        onDebouncedRefresh();
       }
     };
     const onStatusUpdated = (e) => {
       const ref = String(e?.detail?.ref || '').trim();
       if (ref && ref === id) {
         bumpOptimistic((n) => n + 1);
-        onDebouncedRefresh();
       }
     };
-    window.addEventListener('tp:shipments-refresh', onDebouncedRefresh);
-    window.addEventListener('tp:tracking-refresh', onDebouncedRefresh);
-    window.addEventListener('tp:realtime-refresh', onLegacyRefresh);
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
-    window.addEventListener('tp:contract-sync', onContractSync);
     window.addEventListener('tp:contract-activated', onActivated);
     window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
     return () => {
-      window.removeEventListener('tp:shipments-refresh', onDebouncedRefresh);
-      window.removeEventListener('tp:tracking-refresh', onDebouncedRefresh);
-      window.removeEventListener('tp:realtime-refresh', onLegacyRefresh);
       window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
-      window.removeEventListener('tp:contract-sync', onContractSync);
       window.removeEventListener('tp:contract-activated', onActivated);
       window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
     };

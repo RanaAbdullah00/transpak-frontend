@@ -18,7 +18,9 @@ const LoadCard = ({
   onCarrierAccept,
   onCarrierCounter,
   onCarrierReject,
-  carrierBusy = false
+  carrierBusy = false,
+  ratingMap = null,
+  ratingsLoading = false
 }) => {
   const { t } = useLanguage();
   const expectedPrice = Number(load?.expectedPrice ?? 0);
@@ -49,7 +51,13 @@ const LoadCard = ({
             <h6 className="mb-1 text-break">
               <TranslatedText text={load.cargo} />
             </h6>
-            {shipperId ? <UserRatingBadge userId={shipperId} /> : null}
+            {shipperId ? (
+              <UserRatingBadge
+                userId={shipperId}
+                ratingMap={ratingMap}
+                loading={ratingsLoading}
+              />
+            ) : null}
           </div>
           <small className="text-muted d-block text-break">
             {t('pages.loads.loadCardRef', { code: formatLoadDisplayId(load) })}

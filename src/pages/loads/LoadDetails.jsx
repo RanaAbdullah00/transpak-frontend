@@ -19,6 +19,7 @@ import {
 import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
 import { mergeWorkspaceParams } from '../../utils/workspaceApi.js';
+import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
 import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
 import {
   commitOptimisticBidAccept,
@@ -46,6 +47,9 @@ const LoadDetails = () => {
   const isOwner = useMemo(
     () => load && uid && String(load.shipperId) === String(uid),
     [load, uid]
+  );
+  const { ratingMap, loading: ratingsLoading } = useRatingSummaryBatch(
+    load?.shipperId ? [load.shipperId] : []
   );
 
   const fetchData = useCallback(async () => {
@@ -216,6 +220,8 @@ const LoadDetails = () => {
           ...load,
           bidCount: isOwner ? (bids?.length ?? 0) : Number(load?.bidCount ?? load?.bid_count ?? 0)
         }}
+        ratingMap={ratingMap}
+        ratingsLoading={ratingsLoading}
       />
       <Card className="p-3 mt-3 tp-pipeline-card">
         <h6 className="small text-muted text-uppercase mb-2">{t('bidTimeline.title')}</h6>

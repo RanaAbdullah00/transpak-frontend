@@ -1,13 +1,14 @@
 import React from 'react';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { useReceivedRatingSummary } from '../../hooks/useReceivedRatingSummary.js';
+import { lookupRatingSummary } from '../../hooks/useRatingSummaryBatch.js';
 
 /**
  * Compact star + average for bid cards / lists (counterparty trust signal).
+ * Lookup-only — parent must batch-fetch via useRatingSummaryBatch.
  */
-const UserRatingBadge = ({ userId, className = '' }) => {
+const UserRatingBadge = ({ userId, ratingMap = null, loading = false, className = '' }) => {
   const { t } = useLanguage();
-  const { avg, count, loading } = useReceivedRatingSummary(userId);
+  const { avg, count } = lookupRatingSummary(ratingMap, userId);
 
   if (!userId) return null;
 

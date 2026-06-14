@@ -11,6 +11,7 @@ import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
+import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
 import CitySelect from '../ui/CitySearchSelect.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
 import { kgToTons, tonsToKg, ratePerKgToTon } from '../../utils/weightUnits.js';
@@ -103,6 +104,14 @@ const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
   }, [filters, t]);
 
   const empty = useMemo(() => !loading && !listError && listings.length === 0, [loading, listError, listings.length]);
+  const ratingUserIds = useMemo(() => {
+    const ids = new Set();
+    for (const row of listings) {
+      if (row?.carrierId) ids.add(String(row.carrierId));
+    }
+    return [...ids];
+  }, [listings]);
+  const { ratingMap, loading: ratingsLoading } = useRatingSummaryBatch(ratingUserIds);
 
   const setField = (name, value) => setFilters((prev) => ({ ...prev, [name]: value }));
 
@@ -225,6 +234,8 @@ const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
             <div key={row.id} className="col-md-6 col-lg-4">
               <CarrierSpaceCard
                 listing={row}
+                ratingMap={ratingMap}
+                ratingsLoading={ratingsLoading}
                 onViewDetails={setDetailsTarget}
                 onRequest={
                   canRequestCapacity

@@ -3,6 +3,7 @@ import { FaGavel } from 'react-icons/fa';
 import BidCard from './BidCard.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
 import { isActiveBidStatus, isCounterOffered, normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
 import {
   assertIsSnapshotConsumer,
@@ -128,6 +129,17 @@ const BidList = memo(({
     return shipperIdByLoadId[String(bid.loadId)] || null;
   };
 
+  const ratingUserIds = useMemo(() => {
+    const ids = new Set();
+    for (const bid of normalizedBids) {
+      const target = ratingTargetFor(bid);
+      if (target) ids.add(String(target));
+    }
+    return [...ids];
+  }, [normalizedBids, isShipper, shipperIdByLoadId]);
+
+  const { ratingMap, loading: ratingsLoading } = useRatingSummaryBatch(ratingUserIds);
+
   return (
     <div className="mt-2">
       {safeStandardBids.length === 0 && safeSuggestedBids.length === 0 && normalizedBids.length === 0 ? (
@@ -150,6 +162,8 @@ const BidList = memo(({
                   isCarrier={isCarrier}
                   actionsDisabled={actionsDisabled}
                   ratingTargetUserId={ratingTargetFor(bid)}
+                  ratingMap={ratingMap}
+                  ratingsLoading={ratingsLoading}
                   counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
                 />
               ))}
@@ -172,6 +186,8 @@ const BidList = memo(({
                   isCarrier={isCarrier}
                   actionsDisabled={actionsDisabled}
                   ratingTargetUserId={ratingTargetFor(bid)}
+                  ratingMap={ratingMap}
+                  ratingsLoading={ratingsLoading}
                   counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
                 />
               ))}
@@ -188,6 +204,8 @@ const BidList = memo(({
                   isShipper={isShipper}
                   isCarrier={isCarrier}
                   ratingTargetUserId={ratingTargetFor(bid)}
+                  ratingMap={ratingMap}
+                  ratingsLoading={ratingsLoading}
                   counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
                 />
               ))}
@@ -204,6 +222,8 @@ const BidList = memo(({
                   isShipper={isShipper}
                   isCarrier={isCarrier}
                   ratingTargetUserId={ratingTargetFor(bid)}
+                  ratingMap={ratingMap}
+                  ratingsLoading={ratingsLoading}
                   counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
                 />
               ))}
@@ -220,6 +240,8 @@ const BidList = memo(({
                   isShipper={isShipper}
                   isCarrier={isCarrier}
                   ratingTargetUserId={ratingTargetFor(bid)}
+                  ratingMap={ratingMap}
+                  ratingsLoading={ratingsLoading}
                   counterpartyLabel={isCarrier && bid.loadId ? counterpartyLabelByLoadId?.[String(bid.loadId)] : undefined}
                 />
               ))}

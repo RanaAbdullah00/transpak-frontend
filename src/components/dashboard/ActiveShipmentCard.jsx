@@ -16,6 +16,7 @@ import {
 import { useTrackingActive } from '../../hooks/useTrackingActive.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
 import FlowSessionBanner from '../flow/FlowSessionBanner.jsx';
 import { FLOW_STATUS, FLOW_TYPE } from '../../utils/flowSession.js';
 import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
@@ -104,6 +105,14 @@ const ActiveShipmentCard = ({
     snapshot.activeRow?.assignedCarrierId ??
     snapshot.contractFields?.assignedCarrierId ??
     assignedCarrierId;
+  const ratingUserIds = useMemo(() => {
+    const ids = new Set();
+    if (shipperId) ids.add(String(shipperId));
+    const carrier = assignedCarrierId || resolvedCarrierId;
+    if (carrier) ids.add(String(carrier));
+    return [...ids];
+  }, [shipperId, assignedCarrierId, resolvedCarrierId]);
+  const { ratingMap, loading: ratingsLoading } = useRatingSummaryBatch(ratingUserIds);
   const resolvedFlowType = snapshot.activeRow?.flowType ?? snapshot.contractFields?.flowType ?? flowType;
   const contractActivated = Boolean(snapshot.contractActivated);
   const { trackingActive, storeRow, shipmentRow } = useTrackingActive({
@@ -179,7 +188,12 @@ const ActiveShipmentCard = ({
                   avatarSrc={shipperAvatar}
                   className="small"
                 />
-                <UserRatingBadge userId={shipperId} className="small" />
+                <UserRatingBadge
+                  userId={shipperId}
+                  ratingMap={ratingMap}
+                  loading={ratingsLoading}
+                  className="small"
+                />
               </>
             ) : null}
             {!carrierMode && (assignedCarrierId || resolvedCarrierId) ? (
@@ -190,7 +204,12 @@ const ActiveShipmentCard = ({
                   avatarSrc={carrierAvatar}
                   className="small"
                 />
-                <UserRatingBadge userId={assignedCarrierId || resolvedCarrierId} className="small" />
+                <UserRatingBadge
+                  userId={assignedCarrierId || resolvedCarrierId}
+                  ratingMap={ratingMap}
+                  loading={ratingsLoading}
+                  className="small"
+                />
               </>
             ) : null}
           </div>

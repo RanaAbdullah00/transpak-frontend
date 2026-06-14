@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Card from '../ui/Card.jsx';
 import Modal from '../ui/Modal.jsx';
 import { SkeletonCard } from '../ui/Skeleton.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { useRatingSummaryBatch } from '../../hooks/useRatingSummaryBatch.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import CarrierSpaceCard from './CarrierSpaceCard.jsx';
 import EditCarrierSpaceModal from './EditCarrierSpaceModal.jsx';
@@ -42,6 +43,15 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
     return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
   }, [refresh]);
 
+  const ratingUserIds = useMemo(() => {
+    const ids = new Set();
+    for (const row of listings) {
+      if (row?.carrierId) ids.add(String(row.carrierId));
+    }
+    return [...ids];
+  }, [listings]);
+  const { ratingMap, loading: ratingsLoading } = useRatingSummaryBatch(ratingUserIds);
+
   const closeListing = async (id) => {
     try {
       await request({ method: 'PATCH', url: `/carrier-space/${id}`, data: { status: 'closed' } });
@@ -73,6 +83,8 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
             <CarrierSpaceCard
               listing={row}
               mine
+              ratingMap={ratingMap}
+              ratingsLoading={ratingsLoading}
               onClose={() => closeListing(row.id)}
               onEdit={setEditListing}
               onViewRequests={setRequestsListing}

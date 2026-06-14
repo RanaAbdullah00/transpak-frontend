@@ -10,7 +10,7 @@ import { formatTons, ratePerKgToTon } from '../../utils/weightUnits.js';
 import { canCloseListingWithContract } from '../../utils/contractMapper.js';
 import { formatVisibilitySummary } from '../../utils/capacityVisibility.js';
 
-const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onViewDetails, onViewRequests }) => {
+const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onViewDetails, onViewRequests, ratingMap = null, ratingsLoading = false }) => {
   const { t } = useLanguage();
   const remTons = formatTons(listing.remainingSpaceKg ?? 0);
   const capTons = formatTons(listing.truckCapacityKg ?? 0);
@@ -36,7 +36,12 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onVi
               showBadge
               role={t('auth.carrier')}
             />
-            <UserRatingBadge userId={listing.carrierId} className="small" />
+            <UserRatingBadge
+              userId={listing.carrierId}
+              ratingMap={ratingMap}
+              loading={ratingsLoading}
+              className="small"
+            />
           </div>
         ) : null}
       </div>

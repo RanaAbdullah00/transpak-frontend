@@ -39,6 +39,8 @@ const BidCard = ({
   actionsDisabled,
   /** UUID of counterpart for trust badge (carrier when shipper; shipper when carrier) */
   ratingTargetUserId = null,
+  ratingMap = null,
+  ratingsLoading = false,
   /** Explicit profile link target (defaults to ratingTargetUserId or bid.carrierId) */
   profileUserId = null,
   /** Optional label when carrierName is empty (carrier view) */
@@ -204,7 +206,13 @@ const BidCard = ({
             ) : (
               <h6 className="mb-0 text-break">{primaryName}</h6>
             )}
-            {profileId ? <UserRatingBadge userId={profileId} /> : null}
+            {profileId ? (
+              <UserRatingBadge
+                userId={profileId}
+                ratingMap={ratingMap}
+                loading={ratingsLoading}
+              />
+            ) : null}
           </div>
           <small className="text-muted d-block text-break">
             {resolvedBid.vehicleType} · {resolvedBid.transitTime} {t('bidCard.daysSuffix')}
