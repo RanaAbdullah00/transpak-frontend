@@ -65,6 +65,7 @@ import {
   rememberTrackingEvent,
   shouldAcceptTrackingEvent
 } from '../utils/trackingEventContract.js';
+import { createSequenceAuthorityGate } from '../utils/trackingSequenceAuthority.js';
 import { recordTrackingEventDeduped } from './usePerformanceTelemetry.js';
 
 /**
@@ -156,6 +157,7 @@ export function useShipmentTracking({
     cache: trackingEventDedupeCache,
     lastTimestampByShipment: new Map()
   });
+  const sequenceGateRef = useRef(createSequenceAuthorityGate());
   const prevTrackingGateRef = useRef(false);
   const socketKey = payload?.refKey || localRef;
 
@@ -373,6 +375,10 @@ export function useShipmentTracking({
         return;
       }
       rememberTrackingEvent(event, ctx);
+      if (!sequenceGateRef.current.accept(incoming)) {
+        recordTrackingEventDeduped();
+        return;
+      }
       scheduleBufferedUpdate(incoming);
     },
     [scheduleBufferedUpdate]

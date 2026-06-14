@@ -40,15 +40,25 @@ export function exportPerformanceMetricsToConsole() {
 }
 
 export async function exportPerformanceMetricsToBackend() {
-  if (import.meta.env.VITE_PERF_EXPORT_BACKEND !== '1') return null;
+  if (!isTelemetryEnabled()) return null;
   const payload = buildPerformanceExportPayload();
   try {
-    await api.post('/operations/client-perf', payload, {
+    await api.post('/metrics/ingest', payload, {
       skipGlobalErrorToast: true,
       timeout: 4000
     });
   } catch {
     /* sampled export must not affect UX */
+  }
+  if (import.meta.env.VITE_PERF_EXPORT_BACKEND === '1') {
+    try {
+      await api.post('/operations/client-perf', payload, {
+        skipGlobalErrorToast: true,
+        timeout: 4000
+      });
+    } catch {
+      /* legacy ingest path */
+    }
   }
   return payload;
 }
