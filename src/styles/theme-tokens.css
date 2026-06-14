@@ -1,3 +1,75 @@
+:root {
+  --tp-badge-primary-bg: var(--pak-primary);
+  --tp-badge-primary-fg: #fff;
+  --tp-badge-success-bg: var(--pak-success);
+  --tp-badge-success-fg: #fff;
+  --tp-badge-warning-bg: var(--pak-warning);
+  --tp-badge-warning-fg: #0c0a09;
+  --tp-badge-danger-bg: var(--pak-danger);
+  --tp-badge-danger-fg: #fff;
+  --tp-badge-info-bg: #0284c7;
+  --tp-badge-info-fg: #fff;
+  --tp-badge-secondary-bg: var(--pak-secondary);
+  --tp-badge-secondary-fg: #fff;
+  --tp-status-posted: #0284c7;
+  --tp-status-accepted: #22c55e;
+  --tp-status-in-transit: #38bdf8;
+  --tp-status-completed: #16a34a;
+  --tp-status-cancelled: #dc2626;
+  --tp-status-closed: #6b7280;
+}
+
+body.dark-theme {
+  --tp-badge-primary-bg: var(--pak-primary-dark);
+  --tp-badge-success-bg: #15803d;
+  --tp-badge-warning-bg: #ca8a04;
+  --tp-badge-info-bg: #0ea5e9;
+  --tp-badge-secondary-bg: #4b5563;
+  --tp-status-posted: #0ea5e9;
+  --tp-status-accepted: #4ade80;
+  --tp-status-in-transit: #7dd3fc;
+  --tp-status-completed: #22c55e;
+  --tp-status-cancelled: #f87171;
+  --tp-status-closed: #9ca3af;
+}
+
+.badge.bg-primary {
+  background-color: var(--tp-badge-primary-bg) !important;
+  color: var(--tp-badge-primary-fg) !important;
+}
+
+.badge.bg-success {
+  background-color: var(--tp-badge-success-bg) !important;
+  color: var(--tp-badge-success-fg) !important;
+}
+
+.badge.bg-warning {
+  background-color: var(--tp-badge-warning-bg) !important;
+  color: var(--tp-badge-warning-fg) !important;
+}
+
+.badge.bg-danger {
+  background-color: var(--tp-badge-danger-bg) !important;
+  color: var(--tp-badge-danger-fg) !important;
+}
+
+.badge.bg-info {
+  background-color: var(--tp-badge-info-bg) !important;
+  color: var(--tp-badge-info-fg) !important;
+}
+
+.badge.bg-secondary {
+  background-color: var(--tp-badge-secondary-bg) !important;
+  color: var(--tp-badge-secondary-fg) !important;
+}
+
+.tp-timeline-dot--posted { background: var(--tp-status-posted); }
+.tp-timeline-dot--accepted { background: var(--tp-status-accepted); }
+.tp-timeline-dot--in-transit { background: var(--tp-status-in-transit); }
+.tp-timeline-dot--completed { background: var(--tp-status-completed); }
+.tp-timeline-dot--cancelled { background: var(--tp-status-cancelled); }
+.tp-timeline-dot--closed { background: var(--tp-status-closed); }
+
 /* Role-aware dashboard accents (same green brand) */
 body.tp-role-shipper {
   --tp-role-accent: #2563eb;

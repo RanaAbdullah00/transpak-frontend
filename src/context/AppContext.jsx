@@ -2,14 +2,14 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import { createSocketClient } from '../services/socket.js';
 import { normalizeNotification } from '../adapters/normalize.js';
 import { isRenderableClientNotification, sanitizeNotificationRoleType } from '../utils/notificationsFilter.js';
-import { notificationsForWorkspace } from '../utils/notificationScope.js';
+import { notificationsForWorkspace, userHasDualCommercialRoles } from '../utils/notificationScope.js';
 import { routeRealtimeNotification } from '../utils/notifySystem.js';
 import api from '../services/api.js';
 import { unwrapResponseData, ensureArray } from '../utils/unwrapApi.js';
 import { notifyApiError } from '../utils/notifySystem.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { getAuthToken } from '../utils/authTokenStorage.js';
-import { workspaceQueryParams } from '../utils/workspaceApi.js';
+import { notificationQueryParams } from '../utils/workspaceApi.js';
 import { getWorkspace } from '../utils/workspace.js';
 import {
   acknowledgeSyncedEventIds,
@@ -173,7 +173,7 @@ export const AppProvider = ({ children }) => {
     (async () => {
       try {
         const res = await api.get('/notifications', {
-          params: { limit: 30, ...workspaceQueryParams(user) },
+          params: notificationQueryParams(user, { limit: 30 }),
           skipGlobalErrorToast: true
         });
         if (cancelled) return;
@@ -274,7 +274,7 @@ export const AppProvider = ({ children }) => {
     if (!user?.id) return;
     try {
       const res = await api.get('/notifications', {
-        params: { limit: 30, ...workspaceQueryParams(user) },
+        params: notificationQueryParams(user, { limit: 30 }),
         skipGlobalErrorToast: true
       });
       const page = normalizeNotificationsPayload(unwrapResponseData(res));
@@ -298,7 +298,7 @@ export const AppProvider = ({ children }) => {
     setNotificationsLoadingMore(true);
     try {
       const res = await api.get('/notifications', {
-        params: { limit: 30, cursor: notificationsCursor, ...workspaceQueryParams(user) },
+        params: notificationQueryParams(user, { limit: 30, cursor: notificationsCursor }),
         skipGlobalErrorToast: true
       });
       const page = normalizeNotificationsPayload(unwrapResponseData(res));
@@ -373,7 +373,7 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     if (!user?.id || socketStatus === 'connected') return undefined;
 
-    const pollMs = Number(import.meta.env.VITE_NOTIFICATION_POLL_MS || 28000);
+    const pollMs = Number(import.meta.env.VITE_NOTIFICATION_POLL_MS || 12000);
     const pollId = window.setInterval(async () => {
       if (document.hidden || socketConnectedRef.current) return;
       await refetchNotifications();
@@ -404,8 +404,11 @@ export const AppProvider = ({ children }) => {
       const u = userRef.current;
       if (!u) return true;
       const rt = row?.roleType != null ? String(row.roleType).toLowerCase() : '';
-      const active = getWorkspace(u);
       if (!rt) return true;
+      if (userHasDualCommercialRoles(u)) {
+        return rt === 'shipper' || rt === 'carrier' || rt === 'admin';
+      }
+      const active = getWorkspace(u);
       if (active === 'admin') return rt === 'admin';
       return rt === active;
     };
@@ -445,7 +448,7 @@ export const AppProvider = ({ children }) => {
       },
       onDispatch: (d) => {
         const u = userRef.current;
-        if (d?.scope?.workspace && u) {
+        if (d?.scope?.workspace && u && !userHasDualCommercialRoles(u)) {
           const active = getWorkspace(u);
           if (String(d.scope.workspace).toLowerCase() !== active) return;
         }

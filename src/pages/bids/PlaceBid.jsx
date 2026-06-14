@@ -25,7 +25,7 @@ const PlaceBid = () => {
     const role = user?.activeRole ?? user?.roles?.[0];
     if (role === 'carrier' && !load) {
       notifyInfo(t('pages.loads.carrierUseFreightBoard'));
-      navigate('/loads/manage?tab=freight', { replace: true });
+      navigate('/loads/manage?tab=marketplace&sub=loads', { replace: true });
       return;
     }
     if (user && user.profileComplete === false) {

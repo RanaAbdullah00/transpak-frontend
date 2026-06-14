@@ -10,7 +10,7 @@ import SpaceRequestsPanel from './SpaceRequestsPanel.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 
-const MySpaceListings = () => {
+const MySpaceListings = ({ hideIncomingRequests = false }) => {
   const { t } = useLanguage();
   const { request, loading } = useApi();
   const [listings, setListings] = useState([]);
@@ -56,7 +56,7 @@ const MySpaceListings = () => {
   if (listings.length === 0) {
     return (
       <>
-        <SpaceRequestsPanel />
+        {!hideIncomingRequests ? <SpaceRequestsPanel /> : null}
         <Card className="p-4 text-center text-muted small">{t('loadsHub.noMySpace')}</Card>
       </>
     );
@@ -64,7 +64,7 @@ const MySpaceListings = () => {
 
   return (
     <>
-      <SpaceRequestsPanel />
+      {!hideIncomingRequests ? <SpaceRequestsPanel /> : null}
       <div className="row g-3">
       {listings.map((row) => (
         <div key={row.id} className="col-md-6 col-lg-4">

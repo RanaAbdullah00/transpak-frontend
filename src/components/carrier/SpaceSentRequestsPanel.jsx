@@ -5,13 +5,13 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
-import { emitRealtimeRefresh } from '../../utils/spaceFlow.js';
+import { emitRealtimeRefresh, isOpsRequestSentRow } from '../../utils/spaceFlow.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 import { isCapacityFlowActive } from '../../utils/flowSession.js';
 import { SkeletonCard } from '../ui/Skeleton.jsx';
 
-const SpaceSentRequestsPanel = ({ embedded = false }) => {
+const SpaceSentRequestsPanel = ({ embedded = false, onRowCount }) => {
   const { t } = useLanguage();
   const { request } = useApi();
   const { getSocket } = useContext(AppContext) || {};
@@ -21,7 +21,7 @@ const SpaceSentRequestsPanel = ({ embedded = false }) => {
   const refresh = useCallback(async () => {
     try {
       const data = await request({ method: 'GET', url: '/carrier-space/requests/sent' });
-      setRows(Array.isArray(data) ? data : []);
+      setRows((Array.isArray(data) ? data : []).filter(isOpsRequestSentRow));
     } catch {
       setRows([]);
     } finally {
@@ -32,6 +32,10 @@ const SpaceSentRequestsPanel = ({ embedded = false }) => {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (loaded) onRowCount?.(rows.length);
+  }, [loaded, rows.length, onRowCount]);
 
   useEffect(() => {
     const socket = getSocket?.();

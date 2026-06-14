@@ -6,6 +6,7 @@ import {
   normalizeShipmentStatus as normalizeBackendStatus,
   nextShipmentStatus
 } from './shipmentStatus.js';
+import { resolveBadgeVariantForStatus } from './statusColorTokens.js';
 
 export const CANONICAL_STATES = Object.freeze([
   'POSTED',
@@ -33,11 +34,11 @@ const CANONICAL_TO_BACKEND = Object.freeze({
 });
 
 const CANONICAL_BADGE_VARIANT = Object.freeze({
-  POSTED: 'secondary',
-  ACCEPTED: 'primary',
-  IN_TRANSIT: 'primary',
-  DELIVERED: 'success',
-  CLOSED: 'secondary'
+  POSTED: resolveBadgeVariantForStatus('posted'),
+  ACCEPTED: resolveBadgeVariantForStatus('accepted'),
+  IN_TRANSIT: resolveBadgeVariantForStatus('intransit'),
+  DELIVERED: resolveBadgeVariantForStatus('delivered'),
+  CLOSED: resolveBadgeVariantForStatus('closed')
 });
 
 /** Next backend status → single carrier action (one Close only, at delivered→closed). */
@@ -90,8 +91,7 @@ export function getCanonicalBadgeVariant(canonical) {
 
 /** Badge variant from raw backend/canonical status string. */
 export function getBackendBadgeVariant(rawStatus) {
-  const canonical = normalizeShipmentStatus(rawStatus);
-  return getCanonicalBadgeVariant(canonical);
+  return resolveBadgeVariantForStatus(rawStatus);
 }
 
 /**

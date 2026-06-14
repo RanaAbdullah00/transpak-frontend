@@ -1,4 +1,5 @@
 /** Display lifecycle — keep in sync with backend `utils/logisticsLifecycle.js`. */
+import { resolveLifecycleBadgeVariant } from './statusColorTokens.js';
 export const LIFECYCLE_STAGES = [
   'created',
   'posted',
@@ -11,14 +12,14 @@ export const LIFECYCLE_STAGES = [
 ];
 
 const STAGE_VARIANT = {
-  created: 'secondary',
-  posted: 'secondary',
-  bid_open: 'warning',
-  bid_accepted: 'warning',
-  assigned: 'warning',
-  in_transit: 'primary',
-  delivered: 'success',
-  closed: 'secondary'
+  created: resolveLifecycleBadgeVariant('created'),
+  posted: resolveLifecycleBadgeVariant('posted'),
+  bid_open: resolveLifecycleBadgeVariant('bid_open'),
+  bid_accepted: resolveLifecycleBadgeVariant('bid_accepted'),
+  assigned: resolveLifecycleBadgeVariant('assigned'),
+  in_transit: resolveLifecycleBadgeVariant('in_transit'),
+  delivered: resolveLifecycleBadgeVariant('delivered'),
+  closed: resolveLifecycleBadgeVariant('closed')
 };
 
 export function normalizeLifecycleStage(raw) {

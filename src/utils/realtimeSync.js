@@ -1,12 +1,13 @@
 import api from '../services/api.js';
 import { unwrapResponseData } from './unwrapApi.js';
-import { mergeWorkspaceParams } from './workspaceApi.js';
+import { notificationQueryParams } from './workspaceApi.js';
 import { setLastNotificationSyncAt, setModuleSyncTimestamps } from './realtimeDedupe.js';
 export async function syncNotificationsSince(user, { since } = {}) {
-  const params = mergeWorkspaceParams(user, {
+  const params = {
+    ...notificationQueryParams(user),
     limit: 80,
     ...(since ? { since } : {})
-  });
+  };
   const res = await api.get('/notifications/sync', {
     params,
     skipGlobalErrorToast: true
@@ -23,7 +24,7 @@ export async function syncNotificationsSince(user, { since } = {}) {
 
 export async function fetchUnreadCount(user) {
   const res = await api.get('/notifications/unread-count', {
-    params: mergeWorkspaceParams(user),
+    params: notificationQueryParams(user),
     skipGlobalErrorToast: true
   });
   const data = unwrapResponseData(res);
@@ -67,7 +68,7 @@ function mapNotificationSyncFallback(fallback) {
  * Falls back to /notifications/sync when /operations/sync/events is not deployed yet.
  */
 export async function syncEventsSince(user, { since } = {}) {
-  const params = mergeWorkspaceParams(user, {
+  const params = notificationQueryParams(user, {
     ...(since ? { since } : {})
   });
   try {

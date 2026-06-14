@@ -6,13 +6,13 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
-import { triggerAcceptActivationSync, emitRealtimeRefresh } from '../../utils/spaceFlow.js';
+import { triggerAcceptActivationSync, emitRealtimeRefresh, isOpsRequestSentRow } from '../../utils/spaceFlow.js';
 import { commitOptimisticSpaceAccept } from '../../utils/contractActivationLayer.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import SpaceRequestLifecycle from './SpaceRequestLifecycle.jsx';
 import { isCapacityFlowPending } from '../../utils/flowSession.js';
 
-const SpaceRequestsPanel = () => {
+const SpaceRequestsPanel = ({ embedded = false, onRowCount }) => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { request } = useApi();
@@ -22,7 +22,7 @@ const SpaceRequestsPanel = () => {
   const refresh = useCallback(async () => {
     try {
       const data = await request({ method: 'GET', url: '/carrier-space/requests/incoming' });
-      setRows(Array.isArray(data) ? data : []);
+      setRows((Array.isArray(data) ? data : []).filter(isOpsRequestSentRow));
     } catch {
       setRows([]);
     }
@@ -31,6 +31,10 @@ const SpaceRequestsPanel = () => {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    onRowCount?.(rows.length);
+  }, [rows.length, onRowCount]);
 
   useEffect(() => {
     const socket = getSocket?.();

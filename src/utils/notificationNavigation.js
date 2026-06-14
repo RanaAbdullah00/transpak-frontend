@@ -59,7 +59,7 @@ export function resolveNotificationPath(notification, { activeRole } = {}) {
   }
 
   if (title.includes('SPACE') || title.includes('CAPACITY')) {
-    if (role === 'carrier') return '/loads/manage?tab=capacity';
+    if (role === 'carrier') return '/loads/manage?tab=marketplace&sub=capacity';
     if (role === 'shipper') return '/loads/manage?tab=market';
     return '/loads/manage';
   }

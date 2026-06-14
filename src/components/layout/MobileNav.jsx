@@ -59,7 +59,8 @@ const MobileNav = () => {
       ? { to: '/carrier/truck-details', icon: <FaTools />, label: t('nav.truckDetails') }
       : { to: '/loads/manage', icon: <FaTools />, label: t('common.manage') };
 
-  const loadsPath = activeRole === 'carrier' ? '/loads/manage?tab=freight' : '/loads/manage';
+  const loadsPath =
+    activeRole === 'carrier' ? '/loads/manage?tab=marketplace&sub=loads' : '/loads/manage';
   const bidsPath = activeRole === 'carrier' ? '/bids/mine' : '/bids';
 
   return (

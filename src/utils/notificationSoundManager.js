@@ -38,11 +38,11 @@ function playTone(freq, durationSec, gainPeak = 0.07) {
 }
 
 const SOUND_PROFILES = Object.freeze({
-  accept: { freq: 880, dur: 0.22, gain: 0.08 },
-  reject: { freq: 220, dur: 0.28, gain: 0.07 },
-  suggest: { freq: 520, dur: 0.14, gain: 0.05 },
-  status: { freq: 640, dur: 0.12, gain: 0.04 },
-  contract: { freq: 740, dur: 0.32, gain: 0.09 }
+  accept: { freq: 880, dur: 0.22, gain: 0.12 },
+  reject: { freq: 220, dur: 0.28, gain: 0.11 },
+  suggest: { freq: 520, dur: 0.14, gain: 0.09 },
+  status: { freq: 640, dur: 0.12, gain: 0.08 },
+  contract: { freq: 740, dur: 0.32, gain: 0.13 }
 });
 
 /**

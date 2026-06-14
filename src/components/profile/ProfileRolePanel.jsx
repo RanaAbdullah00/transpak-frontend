@@ -14,7 +14,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 /**
  * Profile “trust center” role summary: active role, role chips, lightweight stats (existing APIs only).
  */
-const ProfileRolePanel = () => {
+const ProfileRolePanel = ({ scoreOnly = false }) => {
   const { user, setActiveRole, roleSwitching } = useAuth();
   const { request } = useApi();
   const { t } = useLanguage();
@@ -156,6 +156,28 @@ const ProfileRolePanel = () => {
   };
 
   if (hideForAdmin) return null;
+
+  const verifiedLabel = user?.verified
+    ? t('profile.verificationApproved')
+    : t('profile.verificationPending');
+  const verifiedAt = user?.verifiedAt || user?.updatedAt || null;
+  const verifiedTime =
+    verifiedAt && !Number.isNaN(new Date(verifiedAt).getTime())
+      ? new Date(verifiedAt).toLocaleString()
+      : t('common.emDash');
+
+  if (scoreOnly) {
+    return (
+      <div className="tp-profile-role-panel">
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <span className="badge rounded-pill bg-success">{verifiedLabel}</span>
+          <span className="small text-muted">{verifiedTime}</span>
+        </div>
+        <div className="small text-uppercase fw-semibold text-muted mb-1">{t('profile.trustLayer')}</div>
+        <p className="mb-0 fs-5 fw-semibold text-body">{trustLine}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="d-flex flex-column gap-3 tp-profile-role-panel">

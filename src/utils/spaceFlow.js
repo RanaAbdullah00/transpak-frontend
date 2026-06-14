@@ -10,6 +10,12 @@ export function spaceStepId(status) {
   return 'request_sent';
 }
 
+/** Operation Center "Request sent" — pending lifecycle only. */
+export function isOpsRequestSentRow(row) {
+  const s = String(row?.status || '').toLowerCase();
+  return s === 'request_sent' || s === 'accepted';
+}
+
 export function proposedSpacePrice(row) {
   const kg = Number(row?.requestedKg);
   const rate = Number(row?.ratePerKg);

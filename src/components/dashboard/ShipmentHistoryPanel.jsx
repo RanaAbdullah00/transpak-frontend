@@ -9,7 +9,8 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 import { sanitizeBadgeVariant } from '../../utils/badgeVariants.js';
-import { normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { resolveBadgeVariantForStatus } from '../../utils/statusColorTokens.js';
+import { normalizeBidStatus, BID_STATUS, isBidExpired } from '../../utils/bidStatus.js';
 import { normalizeShipmentHistoryList } from '../../utils/normalizeShipmentHistory.js';
 import { fetchCompletedShipmentRows, loadHistoryCache, saveHistoryCache } from '../../utils/shipmentHistoryFetch.js';
 import EmptyState from '../ui/EmptyState.jsx';
@@ -17,20 +18,41 @@ import Button from '../ui/Button.jsx';
 import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 
 const TAB_COMPLETED = 'completed';
-const TAB_CLOSED = 'closed';
+const TAB_ACCEPTED = 'accepted';
 const TAB_CANCELLED = 'cancelled';
 
 function historyBadgeVariant(status) {
-  const s = normalizeShipmentStatus(status);
-  if (s === 'delivered') return 'success';
-  if (s === 'closed') return 'secondary';
-  if (s === 'cancelled') return 'danger';
-  return 'secondary';
+  return resolveBadgeVariantForStatus(status);
 }
 
 async function fetchCompletedRows(request, roles) {
-  const result = await fetchCompletedShipmentRows(request, { roles });
-  return result;
+  return fetchCompletedShipmentRows(request, { roles });
+}
+
+async function fetchAcceptedRows(request, carrierMode) {
+  try {
+    const bids = await request({
+      url: carrierMode ? '/bids/mine' : '/bids',
+      skipGlobalErrorToast: true
+    });
+    return (Array.isArray(bids) ? bids : [])
+      .filter((b) => normalizeBidStatus(b.status) === BID_STATUS.ACCEPTED && !isBidExpired(b))
+      .map((b) => ({
+        id: b.id,
+        code: b.loadCode || b.loadId,
+        cargo: b.loadCode || b.loadId || '—',
+        origin: b.origin || '',
+        destination: b.destination || '',
+        shipmentStatus: 'booked',
+        status: 'booked',
+        shipperId: b.shipperId,
+        shipperName: b.shipperName,
+        counterpartyId: carrierMode ? b.shipperId : b.carrierId,
+        counterpartyName: carrierMode ? b.shipperName : b.carrierName
+      }));
+  } catch {
+    return [];
+  }
 }
 
 async function fetchCancelledRows(request, carrierMode) {
@@ -60,26 +82,35 @@ async function fetchCancelledRows(request, carrierMode) {
   }
 }
 
-/**
- * Compact shipment history for dashboards (does not affect active shipments).
- */
-const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
+const ShipmentHistoryPanel = ({
+  carrierMode = false,
+  limit = 5,
+  statusScope = null,
+  searchQuery = '',
+  onRowCount
+}) => {
   const { t } = useLanguage();
   const { request } = useApi();
   const { user } = useAuth();
   const [tab, setTab] = useState(TAB_COMPLETED);
-  const [search, setSearch] = useState('');
+  const [internalSearch, setInternalSearch] = useState('');
   const [completedRows, setCompletedRows] = useState([]);
+  const [acceptedRows, setAcceptedRows] = useState([]);
   const [cancelledRows, setCancelledRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+
+  const search = searchQuery || internalSearch;
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
     try {
-      const completedResult = await fetchCompletedRows(request, carrierMode ? ['carrier'] : ['shipper']);
-      const cancelled = await fetchCancelledRows(request, carrierMode);
+      const [completedResult, accepted, cancelled] = await Promise.all([
+        fetchCompletedRows(request, carrierMode ? ['carrier'] : ['shipper']),
+        fetchAcceptedRows(request, carrierMode),
+        fetchCancelledRows(request, carrierMode)
+      ]);
       if (completedResult.error) {
         setFetchError(completedResult.error);
         const cached = loadHistoryCache(user?.id);
@@ -88,10 +119,9 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
         }
       } else {
         saveHistoryCache(user?.id, completedResult.rows);
-      }
-      if (!completedResult.error) {
         setCompletedRows(normalizeShipmentHistoryList(completedResult.rows, { carrierMode }));
       }
+      setAcceptedRows(normalizeShipmentHistoryList(accepted, { carrierMode }));
       setCancelledRows(
         normalizeShipmentHistoryList(
           cancelled.map((r) => ({
@@ -108,6 +138,7 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
           ? normalizeShipmentHistoryList(cached, { carrierMode })
           : []
       );
+      setAcceptedRows([]);
       setCancelledRows([]);
       setFetchError({ retryable: true, message: 'history_failed' });
     } finally {
@@ -133,8 +164,8 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
 
   const tabs = useMemo(
     () => [
+      { id: TAB_ACCEPTED, label: t('pages.shipments.historyTabAccepted') },
       { id: TAB_COMPLETED, label: t('pages.shipments.historyTabCompleted') },
-      { id: TAB_CLOSED, label: t('pages.shipments.historyTabClosed') },
       { id: TAB_CANCELLED, label: t('pages.shipments.historyTabCancelled') }
     ],
     [t]
@@ -142,12 +173,18 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
 
   const filtered = useMemo(() => {
     let rows = [];
-    if (tab === TAB_CANCELLED) rows = cancelledRows;
+    if (tab === TAB_ACCEPTED) rows = acceptedRows;
+    else if (tab === TAB_CANCELLED) rows = cancelledRows;
     else {
-      const want = tab === TAB_CLOSED ? 'closed' : 'delivered';
       rows = completedRows.filter((r) => {
         const s = normalizeShipmentStatus(r.shipmentStatus ?? r.status);
-        return s === want;
+        return s === 'delivered' || s === 'closed';
+      });
+    }
+    if (statusScope === 'completed') {
+      rows = completedRows.filter((r) => {
+        const s = normalizeShipmentStatus(r.shipmentStatus ?? r.status);
+        return s === 'delivered' || s === 'closed';
       });
     }
     const q = search.trim().toLowerCase();
@@ -158,9 +195,14 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
       const route = `${r.origin || ''} ${r.destination || ''}`.toLowerCase();
       return code.includes(q) || cargo.includes(q) || route.includes(q);
     });
-  }, [tab, completedRows, cancelledRows, search]);
+  }, [tab, completedRows, acceptedRows, cancelledRows, search, statusScope]);
 
   const visible = limit > 0 ? filtered.slice(0, limit) : filtered;
+
+  useEffect(() => {
+    if (loading) return;
+    if (statusScope === 'completed') onRowCount?.(filtered.length);
+  }, [filtered.length, loading, onRowCount, statusScope]);
 
   if (loading) {
     return (
@@ -170,22 +212,19 @@ const ShipmentHistoryPanel = ({ carrierMode = false, limit = 5 }) => {
     );
   }
 
-  const roleHint = carrierMode
-    ? t('pages.shipments.historyRoleCarrier')
-    : t('pages.shipments.historyRoleShipper');
-
   return (
     <div className="tp-shipment-history-panel">
-      <p className="small text-muted mb-2">{roleHint}</p>
-      <input
-        type="search"
-        className="form-control form-control-sm mb-2"
-        placeholder={t('pages.shipments.historySearchPlaceholder')}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        aria-label={t('pages.shipments.historySearchPlaceholder')}
-      />
-      <SegmentTabs tabs={tabs} active={tab} onChange={setTab} className="mb-3" />
+      {!searchQuery ? (
+        <input
+          type="search"
+          className="form-control form-control-sm mb-2"
+          placeholder={t('pages.shipments.historySearchPlaceholder')}
+          value={internalSearch}
+          onChange={(e) => setInternalSearch(e.target.value)}
+          aria-label={t('pages.shipments.historySearchPlaceholder')}
+        />
+      ) : null}
+      {!statusScope ? <SegmentTabs tabs={tabs} active={tab} onChange={setTab} className="mb-3" /> : null}
       {fetchError ? (
         <Card className="p-3 mb-2 text-center">
           <p className="small text-danger mb-2">{t('pages.shipments.historyLoadFailed')}</p>

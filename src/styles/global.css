@@ -4998,20 +4998,6 @@ body.dark-theme .btn-outline-secondary:hover {
   color: #fff;
 }
 
-body.dark-theme .badge.bg-success {
-  background-color: #15803d !important;
-  color: #fff !important;
-}
-
-body.dark-theme .badge.bg-warning {
-  background-color: #ca8a04 !important;
-  color: #0c0a09 !important;
-}
-
-body.dark-theme .badge.bg-primary {
-  background-color: #2563eb !important;
-  color: #fff !important;
-}
 
 /* --- Inputs: readable placeholders (light + dark) --- */
 body:not(.dark-theme) .form-control::placeholder,

@@ -4,11 +4,13 @@ import SegmentTabs from '../../components/ui/SegmentTabs.jsx';
 import ManageLoads from './ManageLoads.jsx';
 import AvailableLoads from './AvailableLoads.jsx';
 import CapacityMarketplace from '../../components/carrier/CapacityMarketplace.jsx';
-import SpaceSentRequestsPanel from '../../components/carrier/SpaceSentRequestsPanel.jsx';
 import MySpaceListings from '../../components/carrier/MySpaceListings.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+
+const SUB_LOADS = 'loads';
+const SUB_CAPACITY = 'capacity';
 
 const LoadsHub = () => {
   const { user } = useAuth();
@@ -18,33 +20,46 @@ const LoadsHub = () => {
   const isCarrier = activeRole === 'carrier';
 
   const [params, setParams] = useSearchParams();
-  const defaultTab = isShipper ? 'posted' : 'freight';
+  const defaultTab = isShipper ? 'posted' : 'marketplace';
   const tab = params.get('tab') || defaultTab;
+  const subParam = params.get('sub');
+  const carrierSub =
+    subParam === SUB_CAPACITY || subParam === SUB_LOADS ? subParam : SUB_LOADS;
 
-  const tabs = useMemo(() => {
-    if (isShipper) {
-      return [
-        { id: 'posted', label: t('loadsHub.myPosted') },
-        { id: 'market', label: t('loadsHub.capacityMarket') }
-      ];
-    }
-    if (isCarrier) {
-      return [
-        { id: 'freight', label: t('pages.dashboard.statOpenMarketplace') },
-        { id: 'capacity', label: t('loadsHub.navCapacityHub') }
-      ];
-    }
-    return [];
-  }, [isShipper, isCarrier, t]);
+  const shipperTabs = useMemo(
+    () => [
+      { id: 'posted', label: t('loadsHub.myPosted') },
+      { id: 'market', label: t('loadsHub.capacityMarket') }
+    ],
+    [t]
+  );
+
+  const carrierMarketTabs = useMemo(
+    () => [
+      { id: SUB_LOADS, label: t('loadsHub.openLoadsTab') },
+      { id: SUB_CAPACITY, label: t('loadsHub.availableCapacityTab') }
+    ],
+    [t]
+  );
 
   useEffect(() => {
-    if (isCarrier && tab !== 'freight' && tab !== 'capacity') {
-      setParams({ tab: 'freight' }, { replace: true });
+    if (isCarrier) {
+      if (tab === 'freight') {
+        setParams({ tab: 'marketplace', sub: SUB_LOADS }, { replace: true });
+        return;
+      }
+      if (tab === 'capacity') {
+        setParams({ tab: 'marketplace', sub: SUB_CAPACITY }, { replace: true });
+        return;
+      }
+      if (tab !== 'marketplace' && tab !== 'my-listings') {
+        setParams({ tab: 'marketplace', sub: carrierSub }, { replace: true });
+      }
     }
     if (isShipper && tab !== 'posted' && tab !== 'market') {
       setParams({ tab: 'posted' }, { replace: true });
     }
-  }, [isCarrier, isShipper, tab, setParams]);
+  }, [isCarrier, isShipper, tab, setParams, carrierSub]);
 
   useEffect(() => {
     document.body.classList.remove('tp-role-shipper', 'tp-role-carrier');
@@ -60,7 +75,15 @@ const LoadsHub = () => {
   }
 
   const setTab = (id) => {
+    if (isCarrier && id === 'marketplace') {
+      setParams({ tab: id, sub: carrierSub }, { replace: true });
+      return;
+    }
     setParams({ tab: id }, { replace: true });
+  };
+
+  const setCarrierSub = (id) => {
+    setParams({ tab: 'marketplace', sub: id }, { replace: true });
   };
 
   if (isCarrier) {
@@ -69,15 +92,24 @@ const LoadsHub = () => {
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
           <div>
             <h5 className="mb-1">
-              {tab === 'capacity' ? t('loadsHub.capacityHubTitle') : t('pages.dashboard.statOpenMarketplace')}
+              {tab === 'my-listings' ? t('loadsHub.myCapacity') : t('loadsHub.marketplaceTitle')}
             </h5>
             <p className="text-muted small mb-0">
-              {tab === 'capacity' ? t('loadsHub.capacityHubSubtitle') : t('loadsHub.carrierFreightSubtitle')}
+              {tab === 'my-listings'
+                ? t('loadsHub.capacityHubSubtitle')
+                : t('loadsHub.carrierFreightSubtitle')}
             </p>
           </div>
           <div className="d-flex gap-2 flex-wrap align-items-center">
-            <SegmentTabs tabs={tabs} active={tab} onChange={setTab} />
-            {tab === 'capacity' ? (
+            <SegmentTabs
+              tabs={[
+                { id: 'marketplace', label: t('loadsHub.marketplaceTitle') },
+                { id: 'my-listings', label: t('loadsHub.myCapacity') }
+              ]}
+              active={tab}
+              onChange={setTab}
+            />
+            {tab === 'my-listings' ? (
               <Link to="/carrier/space/post">
                 <Button variant="primary" className="btn-sm rounded-lg">
                   + {t('loadsHub.listCapacity')}
@@ -86,8 +118,19 @@ const LoadsHub = () => {
             ) : null}
           </div>
         </div>
-        {tab === 'freight' ? <AvailableLoads embedded /> : null}
-        {tab === 'capacity' ? <MySpaceListings /> : null}
+        {tab === 'marketplace' ? (
+          <>
+            <SegmentTabs
+              tabs={carrierMarketTabs}
+              active={carrierSub}
+              onChange={setCarrierSub}
+              className="mb-3"
+            />
+            {carrierSub === SUB_LOADS ? <AvailableLoads embedded /> : <CapacityMarketplace browseMode />}
+          </>
+        ) : (
+          <MySpaceListings hideIncomingRequests />
+        )}
       </div>
     );
   }
@@ -100,7 +143,7 @@ const LoadsHub = () => {
           <p className="text-muted small mb-0">{t('loadsHub.subtitle')}</p>
         </div>
         <div className="d-flex gap-2 flex-wrap align-items-center">
-          <SegmentTabs tabs={tabs} active={tab} onChange={setTab} />
+          <SegmentTabs tabs={shipperTabs} active={tab} onChange={setTab} />
           {tab === 'posted' ? (
             <Link to="/loads/post">
               <Button variant="primary" className="btn-sm rounded-lg">
@@ -112,21 +155,7 @@ const LoadsHub = () => {
       </div>
 
       {tab === 'posted' ? <ManageLoads embedded /> : null}
-      {tab === 'market' ? (
-        <>
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <p className="text-muted small mb-0">{t('loadsHub.subtitle')}</p>
-            <a href="#my-capacity-requests" className="btn btn-sm btn-outline-primary">
-              {t('loadsHub.mySpaceRequests')}
-            </a>
-          </div>
-          <CapacityMarketplace hubLayout>
-            <div id="my-capacity-requests">
-              <SpaceSentRequestsPanel embedded />
-            </div>
-          </CapacityMarketplace>
-        </>
-      ) : null}
+      {tab === 'market' ? <CapacityMarketplace hubLayout /> : null}
     </div>
   );
 };

@@ -11,7 +11,11 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
 import { ratePerTonToKg, tonsToKg } from '../../utils/weightUnits.js';
-import AvailabilitySlotPicker, { normalizeSlotList } from '../../components/carrier/AvailabilitySlotPicker.jsx';
+import CapacityVisibilityDuration, {
+  DEFAULT_VISIBILITY_HOURS,
+  DEFAULT_VISIBILITY_MINUTES
+} from '../../components/carrier/CapacityVisibilityDuration.jsx';
+import { visibilitySlotsPayload } from '../../utils/capacityVisibility.js';
 
 const emptyForm = () => ({
   origin: '',
@@ -29,7 +33,8 @@ const PostCarrierSpace = ({ embedded = false }) => {
   const { request } = useApi();
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyForm);
-  const [availabilitySlots, setAvailabilitySlots] = useState([{ start: '08:00', end: '12:00' }]);
+  const [visibilityHours, setVisibilityHours] = useState(String(DEFAULT_VISIBILITY_HOURS));
+  const [visibilityMinutes, setVisibilityMinutes] = useState(String(DEFAULT_VISIBILITY_MINUTES));
   const [loading, setLoading] = useState(false);
 
   const onChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -67,7 +72,7 @@ const PostCarrierSpace = ({ embedded = false }) => {
           vehicleType: form.vehicleType,
           ratePerKg: form.ratePerTon ? ratePerTonToKg(Number(form.ratePerTon)) : null,
           availableFrom: form.availableFrom || null,
-          availabilitySlots: normalizeSlotList(availabilitySlots),
+          availabilitySlots: visibilitySlotsPayload(visibilityHours, visibilityMinutes),
           notes: form.notes.trim() || null
         },
         skipGlobalErrorToast: true
@@ -77,10 +82,11 @@ const PostCarrierSpace = ({ embedded = false }) => {
       }
       notifySuccess(t('loadsHub.spaceListed'));
       setForm(emptyForm());
-      setAvailabilitySlots([{ start: '08:00', end: '12:00' }]);
+      setVisibilityHours(String(DEFAULT_VISIBILITY_HOURS));
+      setVisibilityMinutes(String(DEFAULT_VISIBILITY_MINUTES));
       emitRealtimeRefresh('loads');
       if (!embedded) {
-        navigate('/loads/manage?tab=capacity', { replace: true });
+        navigate('/loads/manage?tab=my-listings', { replace: true });
       }
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('loadsHub.spaceListFailed') }));
@@ -170,7 +176,14 @@ const PostCarrierSpace = ({ embedded = false }) => {
             />
           </div>
         </div>
-        <AvailabilitySlotPicker slots={availabilitySlots} onChange={setAvailabilitySlots} />
+        <CapacityVisibilityDuration
+          hours={visibilityHours}
+          minutes={visibilityMinutes}
+          onChange={({ hours, minutes }) => {
+            setVisibilityHours(hours);
+            setVisibilityMinutes(minutes);
+          }}
+        />
         <div className="mt-2">
           <label className="form-label small">{t('loadsHub.notes')}</label>
           <textarea

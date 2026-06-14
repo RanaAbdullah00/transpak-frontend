@@ -7,7 +7,7 @@ import VehicleTypeLabel from '../loadboard/VehicleTypeLabel.jsx';
 import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 import { formatTons, ratePerKgToTon } from '../../utils/weightUnits.js';
 import { canCloseListingWithContract } from '../../utils/contractMapper.js';
-import { formatSlotsSummary } from './AvailabilitySlotPicker.jsx';
+import { formatVisibilitySummary } from '../../utils/capacityVisibility.js';
 
 const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onViewDetails }) => {
   const { t } = useLanguage();
@@ -57,16 +57,16 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onVi
           })}
         </div>
       ) : null}
-      {listing.availableFrom || listing.availabilitySlots?.length ? (
+      {listing.availableFrom || formatVisibilitySummary(listing.availabilitySlots, t) ? (
         <div className="small text-muted mb-2">
           {listing.availableFrom ? (
             <span>
               {t('loadsHub.availableFrom')}: {String(listing.availableFrom).slice(0, 10)}
             </span>
           ) : null}
-          {formatSlotsSummary(listing.availabilitySlots, t) ? (
+          {formatVisibilitySummary(listing.availabilitySlots, t) ? (
             <span className={listing.availableFrom ? ' ms-1' : ''}>
-              · {formatSlotsSummary(listing.availabilitySlots, t)}
+              · {formatVisibilitySummary(listing.availabilitySlots, t)}
             </span>
           ) : null}
         </div>

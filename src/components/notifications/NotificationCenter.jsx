@@ -10,9 +10,11 @@ import { AppContext } from '../../context/AppContext.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import api from '../../services/api.js';
+import { fetchUnreadCount } from '../../utils/realtimeSync.js';
+import { notificationQueryParams } from '../../utils/workspaceApi.js';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
-import { notificationsForUser } from '../../utils/notificationScope.js';
+import { notificationsForUser, notificationsForRelatedRole, userHasDualCommercialRoles } from '../../utils/notificationScope.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
 import { resolveNotificationPath } from '../../utils/notificationNavigation.js';
@@ -24,7 +26,6 @@ import {
   subscribeNotifications
 } from '../../utils/notificationStore.js';
 import { NOTIFICATION_CATEGORY } from '../../utils/notificationEngine.js';
-import { playNotificationSoundForType } from '../../utils/notificationSoundManager.js';
 
 function mergeNotificationLists(apiRows = [], storeRows = []) {
   const byId = new Map();
@@ -56,7 +57,9 @@ const NotificationCenter = ({ className = '' }) => {
   const app = React.useContext(AppContext);
   const [open, setOpen] = React.useState(false);
   const [filterTab, setFilterTab] = React.useState('all');
+  const [relatedRoleView, setRelatedRoleView] = React.useState(false);
   const [serverUnread, setServerUnread] = React.useState(0);
+  const [serverUnreadReady, setServerUnreadReady] = React.useState(false);
 
   const storeRows = useSyncExternalStore(
     subscribeNotifications,
@@ -75,22 +78,23 @@ const NotificationCenter = ({ className = '' }) => {
   }, [apiRows, storeRows, user]);
 
   const filtered = useMemo(() => {
-    if (filterTab === 'all') return notifications;
-    return notifications.filter((n) => {
+    const base = relatedRoleView ? notificationsForRelatedRole(notifications, user) : notifications;
+    if (filterTab === 'all') return base;
+    return base.filter((n) => {
       const cat = String(n.category || '').toLowerCase();
       if (filterTab === 'contract') return cat === NOTIFICATION_CATEGORY.CONTRACT;
       if (filterTab === 'bid') return cat === NOTIFICATION_CATEGORY.BID;
       if (filterTab === 'status') return cat === NOTIFICATION_CATEGORY.STATUS;
       return true;
     });
-  }, [notifications, filterTab]);
+  }, [notifications, filterTab, relatedRoleView, user]);
 
   const markNotificationReadCtx = app?.markNotificationRead || (() => {});
   const refetchNotifications = app?.refetchNotifications;
 
   const contextUnread = notifications.filter((n) => !(n.read || n.isRead)).length;
   const storeUnread = getUnreadCount();
-  const unreadCount = Math.max(contextUnread, storeUnread, serverUnread);
+  const unreadCount = serverUnreadReady ? serverUnread : Math.max(contextUnread, storeUnread);
 
   const filterTabs = useMemo(
     () => [
@@ -106,14 +110,15 @@ const NotificationCenter = ({ className = '' }) => {
     const load = async () => {
       if (!user) {
         setServerUnread(0);
+        setServerUnreadReady(false);
         return;
       }
       try {
-        const res = await api.get('/notifications/unread-count', { skipGlobalErrorToast: true });
-        const n = typeof res.data?.count === 'number' ? res.data.count : 0;
+        const n = await fetchUnreadCount(user);
         setServerUnread(n);
+        setServerUnreadReady(true);
       } catch {
-        setServerUnread(0);
+        /* keep last known server count — avoid false zero flash */
       }
     };
     load();
@@ -146,12 +151,32 @@ const NotificationCenter = ({ className = '' }) => {
   }, [open, refetchNotifications]);
 
 
+  const syncUnreadFromServer = async () => {
+    if (!user) {
+      setServerUnread(0);
+      setServerUnreadReady(false);
+      return;
+    }
+    try {
+      const count = await fetchUnreadCount(user);
+      setServerUnread(count);
+      setServerUnreadReady(true);
+      window.dispatchEvent(new CustomEvent('tp:unread-sync', { detail: { count } }));
+    } catch {
+      /* refetch still reconciles list */
+    }
+  };
+
   const markAllRead = async () => {
     try {
-      await api.patch('/notifications/read-all');
+      await api.patch('/notifications/read-all', undefined, {
+        params: notificationQueryParams(user),
+        skipGlobalErrorToast: true
+      });
       markAllNotificationsRead();
       filtered.forEach((n) => markNotificationReadCtx(n.id || n._id));
       await refetchNotifications?.();
+      await syncUnreadFromServer();
       window.dispatchEvent(new CustomEvent('tp_notifications_read'));
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.notificationsPanel.markAllFailed') }));
@@ -164,13 +189,19 @@ const NotificationCenter = ({ className = '' }) => {
       markNotificationRead(id);
       markNotificationReadCtx(id);
       if (id) {
-        api.patch(`/notifications/${id}/read`).catch(() => {});
+        api
+          .patch(`/notifications/${id}/read`, undefined, {
+            params: notificationQueryParams(user),
+            skipGlobalErrorToast: true
+          })
+          .then(() => syncUnreadFromServer())
+          .catch(() => {});
       }
       const path = resolveNotificationPath(n, { activeRole: user?.activeRole });
       setOpen(false);
       navigate(path);
     },
-    [markNotificationReadCtx, navigate, user?.activeRole]
+    [markNotificationReadCtx, navigate, user, user?.activeRole]
   );
 
   const panel = open ? (
@@ -202,6 +233,18 @@ const NotificationCenter = ({ className = '' }) => {
         </div>
         <div className="px-2 pt-2">
           <SegmentTabs tabs={filterTabs} active={filterTab} onChange={setFilterTab} className="mb-2" />
+          {userHasDualCommercialRoles(user) ? (
+            <Button
+              variant={relatedRoleView ? 'primary' : 'outline-secondary'}
+              size="sm"
+              className="w-100 mb-2 rounded-lg"
+              onClick={() => setRelatedRoleView((v) => !v)}
+            >
+              {relatedRoleView
+                ? t('pages.notifications.viewAllRoles')
+                : t('pages.notifications.viewRelatedRoleActivity')}
+            </Button>
+          ) : null}
         </div>
         <div className="tp-notif-slide__scroll px-2 py-2">
           {!filtered.length ? (

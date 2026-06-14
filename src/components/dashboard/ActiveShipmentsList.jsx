@@ -17,13 +17,45 @@ import {
   getUnifiedShipmentSnapshot
 } from '../../utils/shipmentUIState.js';
 import { subscribeOptimisticActivation } from '../../utils/contractActivationLayer.js';
+import { normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 
-/**
- * Active shipments — read model: ActiveShipmentStore.
- * Bootstrap + socket refresh: GET /shipments/active (cold start / gap recovery).
- * Runtime activation: hydrate pipeline → store.
- */
-const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
+function matchesStatusFilter(rawStatus, filter) {
+  if (!filter) return true;
+  const backend = normalizeShipmentStatus(rawStatus) || String(rawStatus || '').toLowerCase();
+  if (filter === 'active') {
+    return backend === 'booked' || backend === 'pickedup';
+  }
+  if (filter === 'in_transit') {
+    return backend === 'intransit';
+  }
+  return true;
+}
+
+function matchesSearch(row, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return true;
+  const hay = [
+    row?.trackRef,
+    row?.code,
+    row?.origin,
+    row?.destination,
+    row?.cargo,
+    row?.shipperName,
+    row?.carrierName
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return hay.includes(q);
+}
+
+const ActiveShipmentsList = ({
+  carrierMode = false,
+  emptyState = null,
+  statusFilter = null,
+  searchQuery = '',
+  onRowCount
+}) => {
   const { t } = useLanguage();
   const { request } = useApi();
   const { rows } = useActiveShipmentStore();
@@ -86,9 +118,25 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
     };
   }, [bootstrap]);
 
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((row) => {
+        const status = row?.shipmentStatus ?? row?.status;
+        return matchesStatusFilter(status, statusFilter) && matchesSearch(row, searchQuery);
+      }),
+    [rows, statusFilter, searchQuery]
+  );
+
+  const loading = bootLoading && !hasLoadedRef.current;
+
+  useEffect(() => {
+    if (loading) return;
+    onRowCount?.(filteredRows.length);
+  }, [filteredRows.length, loading, onRowCount]);
+
   const rowSnapshots = useMemo(
     () =>
-      rows.map((row) => {
+      filteredRows.map((row) => {
         try {
           return assertIsSnapshotConsumer(
             getUnifiedShipmentSnapshot({
@@ -106,10 +154,8 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
           return EMPTY_UNIFIED_SNAPSHOT;
         }
       }),
-    [rows, carrierMode, activationTick]
+    [filteredRows, carrierMode, activationTick]
   );
-
-  const loading = bootLoading && !hasLoadedRef.current;
 
   if (loading && !rows.length) {
     return (
@@ -119,7 +165,7 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
     );
   }
 
-  if (!rows.length) {
+  if (!filteredRows.length) {
     return emptyState ?? (
       <div className="text-muted text-center py-4 small">{t('pages.dashboard.emptyNoActiveShipments')}</div>
     );
@@ -127,9 +173,9 @@ const ActiveShipmentsList = ({ carrierMode = false, emptyState = null }) => {
 
   return (
     <div className="tp-active-shipments-list">
-      {rows.length > 1 ? (
+      {filteredRows.length > 1 ? (
         <p className="small text-muted mb-2">
-          {t('pages.dashboard.activeShipmentsCount', { count: rows.length })}
+          {t('pages.dashboard.activeShipmentsCount', { count: filteredRows.length })}
         </p>
       ) : null}
       {rowSnapshots.filter(Boolean).map((snapshot, idx, arr) => {

@@ -10,7 +10,6 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useDashboardMetrics } from '../../hooks/useDashboardMetrics.js';
 import DashboardShipmentTabs from '../../components/dashboard/DashboardShipmentTabs.jsx';
-import SpaceRequestsPanel from '../../components/carrier/SpaceRequestsPanel.jsx';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
@@ -164,11 +163,8 @@ const CarrierDashboard = () => {
               {t('pages.dashboard.incompleteProfileCta')}
             </Link>
           )}
-          <Link to="/loads/manage?tab=capacity" className="btn btn-outline-primary btn-sm rounded-lg">
-            {t('loadsHub.navCapacityHub')}
-          </Link>
-          <Link to="/loads/manage?tab=freight" className="btn btn-outline-primary btn-sm rounded-lg">
-            {t('pages.dashboard.statOpenMarketplace')}
+            <Link to="/loads/manage?tab=marketplace&sub=loads" className="btn btn-outline-primary btn-sm rounded-lg">
+            {t('loadsHub.marketplaceTitle')}
           </Link>
         </div>
       </div>
@@ -185,7 +181,7 @@ const CarrierDashboard = () => {
         <div className="col-12 col-lg-7">
           <div className="d-flex justify-content-between align-items-center mb-2">
             <h6 className="mb-0">{t('pages.dashboard.recommendedLoads')}</h6>
-            <Link to="/loads/manage?tab=freight" className="small text-decoration-none">
+            <Link to="/loads/manage?tab=marketplace&sub=loads" className="small text-decoration-none">
               {t('common.viewAll')}
             </Link>
           </div>
@@ -210,13 +206,11 @@ const CarrierDashboard = () => {
       </div>
 
       <div className="mt-4">
-        <SpaceRequestsPanel />
-      </div>
-
-      <div className="mt-4">
-        <h6 className="mb-3">{t('pages.dashboard.myAssignedShipments')}</h6>
+        <h6 className="mb-3">{t('loadsHub.title')}</h6>
         <DashboardShipmentTabs
           carrierMode
+          ops={ops}
+          opsReady={!loadingOps}
           activeEmptyState={
             <div className="text-center py-5 px-3 tp-empty-state rounded-3 border border-dashed text-muted">
               <FaTruck className="fs-1 text-muted mb-3" />

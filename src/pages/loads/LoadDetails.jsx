@@ -178,7 +178,7 @@ const LoadDetails = () => {
       <nav aria-label="breadcrumb">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
-            <Link to={activeRole === 'shipper' ? '/loads/manage' : '/loads/manage?tab=freight'}>{t('common.loads')}</Link>
+            <Link to={activeRole === 'shipper' ? '/loads/manage' : '/loads/manage?tab=marketplace&sub=loads'}>{t('common.loads')}</Link>
           </li>
           <li className="breadcrumb-item active">
             {t('pages.loads.loadDetails')} {load.code}

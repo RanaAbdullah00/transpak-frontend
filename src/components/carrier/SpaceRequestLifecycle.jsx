@@ -7,7 +7,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import { spaceStepId, proposedSpacePrice } from '../../utils/spaceFlow.js';
 import { translateSpaceRequestStatus } from '../../utils/i18nLabels.js';
-import { formatSlotsSummary } from './AvailabilitySlotPicker.jsx';
+import { formatVisibilitySummary } from '../../utils/capacityVisibility.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { getTrackingRef, hasOptimisticActivation } from '../../utils/contractActivationLayer.js';
 import { formatTons } from '../../utils/weightUnits.js';
@@ -111,8 +111,8 @@ const SpaceRequestLifecycle = ({
             · {t('loadsHub.availableFrom')}: {String(row.availableFrom).slice(0, 10)}
           </span>
         ) : null}
-        {formatSlotsSummary(row.availabilitySlots, t) ? (
-          <span className="ms-2">· {formatSlotsSummary(row.availabilitySlots, t)}</span>
+        {formatVisibilitySummary(row.availabilitySlots, t) ? (
+          <span className="ms-2">· {formatVisibilitySummary(row.availabilitySlots, t)}</span>
         ) : null}
       </div>
       {proposed != null ? (

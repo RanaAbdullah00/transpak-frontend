@@ -71,15 +71,17 @@ const MobileDrawer = ({ open, onClose }) => {
                 <NavLink to="/shipments/history" className={linkClass} onClick={onClose}>
                   {t('nav.shipmentsHistory')}
                 </NavLink>
-                <NavLink to="/shipments/tracking" className={linkClass} onClick={onClose}>
-                  {t('nav.shipmentsTracking')}
-                </NavLink>
+                {activeRole === 'shipper' ? (
+                  <NavLink to="/shipments/tracking" className={linkClass} onClick={onClose}>
+                    {t('nav.shipmentsTracking')}
+                  </NavLink>
+                ) : null}
               </>
             )}
             {activeRole === 'carrier' && (
               <>
-                <NavLink to="/loads/manage?tab=freight" className={linkClass} onClick={onClose}>
-                  {t('pages.dashboard.statOpenMarketplace')}
+                <NavLink to="/loads/manage?tab=marketplace&sub=loads" className={linkClass} onClick={onClose}>
+                  {t('loadsHub.marketplaceTitle')}
                 </NavLink>
                 <NavLink to="/bids/mine" className={linkClass} onClick={onClose}>
                   {t('nav.myBids')}
@@ -87,10 +89,10 @@ const MobileDrawer = ({ open, onClose }) => {
                 <NavLink to="/carrier/truck-details" className={linkClass} onClick={onClose}>
                   {t('nav.truckDetails')}
                 </NavLink>
-                <NavLink to="/carrier/verification" className={linkClass} onClick={onClose}>
+                <NavLink to="/carrier/trust" className={linkClass} onClick={onClose}>
                   <span className="d-flex align-items-center gap-2">
                     <FaClipboardCheck size={14} aria-hidden />
-                    {t('nav.carrierVerification')}
+                    {t('nav.carrierTrustHub')}
                   </span>
                 </NavLink>
               </>

@@ -10,6 +10,9 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { resolveNotificationPath } from '../../utils/notificationNavigation.js';
 import { notificationsForWorkspace } from '../../utils/notificationScope.js';
+import { notificationQueryParams } from '../../utils/workspaceApi.js';
+import { fetchUnreadCount } from '../../utils/realtimeSync.js';
+import { markAllNotificationsRead } from '../../utils/notificationStore.js';
 
 function startOfDay(d) {
   const x = new Date(d);
@@ -54,11 +57,26 @@ const NotificationPanel = () => {
     return { today: a, older: b };
   }, [sorted]);
 
+  const syncUnreadFromServer = async () => {
+    if (!user) return;
+    try {
+      const count = await fetchUnreadCount(user);
+      window.dispatchEvent(new CustomEvent('tp:unread-sync', { detail: { count } }));
+    } catch {
+      /* ignore */
+    }
+  };
+
   const markAllRead = async () => {
     try {
-      await api.patch('/notifications/read-all');
+      await api.patch('/notifications/read-all', undefined, {
+        params: notificationQueryParams(user),
+        skipGlobalErrorToast: true
+      });
+      markAllNotificationsRead();
       sorted.forEach((n) => markNotificationRead(n.id || n._id));
       await refetchNotifications?.();
+      await syncUnreadFromServer();
       window.dispatchEvent(new CustomEvent('tp_notifications_read'));
     } catch {
       /* ignore */
@@ -70,10 +88,14 @@ const NotificationPanel = () => {
     const id = String(n.id || n._id || '');
     if (id) {
       api
-        .patch(`/notifications/${id}/read`)
-        .then(() => {
+        .patch(`/notifications/${id}/read`, undefined, {
+          params: notificationQueryParams(user),
+          skipGlobalErrorToast: true
+        })
+        .then(async () => {
+          await refetchNotifications?.();
+          await syncUnreadFromServer();
           window.dispatchEvent(new CustomEvent('tp_notifications_read'));
-          return refetchNotifications?.();
         })
         .catch(() => {});
     }

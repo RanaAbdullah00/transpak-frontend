@@ -10,7 +10,14 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
 import { kgToTons, ratePerKgToTon, ratePerTonToKg, tonsToKg } from '../../utils/weightUnits.js';
-import AvailabilitySlotPicker, { normalizeSlotList } from './AvailabilitySlotPicker.jsx';
+import CapacityVisibilityDuration, {
+  DEFAULT_VISIBILITY_HOURS,
+  DEFAULT_VISIBILITY_MINUTES
+} from './CapacityVisibilityDuration.jsx';
+import {
+  parseVisibilityFromSlots,
+  visibilitySlotsPayload
+} from '../../utils/capacityVisibility.js';
 
 const EditCarrierSpaceModal = ({ listing, open, onClose, onSaved }) => {
   const { t } = useLanguage();
@@ -24,7 +31,8 @@ const EditCarrierSpaceModal = ({ listing, open, onClose, onSaved }) => {
     ratePerTon: '',
     notes: ''
   });
-  const [availabilitySlots, setAvailabilitySlots] = useState([{ start: '08:00', end: '12:00' }]);
+  const [visibilityHours, setVisibilityHours] = useState(String(DEFAULT_VISIBILITY_HOURS));
+  const [visibilityMinutes, setVisibilityMinutes] = useState(String(DEFAULT_VISIBILITY_MINUTES));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -39,11 +47,14 @@ const EditCarrierSpaceModal = ({ listing, open, onClose, onSaved }) => {
       availableFrom: listing.availableFrom ? String(listing.availableFrom).slice(0, 10) : '',
       notes: listing.notes || ''
     });
-    setAvailabilitySlots(
-      normalizeSlotList(listing.availabilitySlots).length
-        ? normalizeSlotList(listing.availabilitySlots)
-        : [{ start: '08:00', end: '12:00' }]
-    );
+    const vis = parseVisibilityFromSlots(listing.availabilitySlots);
+    if (vis?.durationMinutes) {
+      setVisibilityHours(String(Math.floor(vis.durationMinutes / 60)));
+      setVisibilityMinutes(String(vis.durationMinutes % 60));
+    } else {
+      setVisibilityHours(String(DEFAULT_VISIBILITY_HOURS));
+      setVisibilityMinutes(String(DEFAULT_VISIBILITY_MINUTES));
+    }
   }, [listing, open]);
 
   const onChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -82,7 +93,7 @@ const EditCarrierSpaceModal = ({ listing, open, onClose, onSaved }) => {
           vehicleType: form.vehicleType,
           ratePerKg: form.ratePerTon ? ratePerTonToKg(Number(form.ratePerTon)) : null,
           availableFrom: form.availableFrom || null,
-          availabilitySlots: normalizeSlotList(availabilitySlots),
+          availabilitySlots: visibilitySlotsPayload(visibilityHours, visibilityMinutes),
           notes: form.notes.trim() || null
         }
       });
@@ -152,7 +163,14 @@ const EditCarrierSpaceModal = ({ listing, open, onClose, onSaved }) => {
             onChange={onChange}
           />
         </div>
-        <AvailabilitySlotPicker slots={availabilitySlots} onChange={setAvailabilitySlots} />
+        <CapacityVisibilityDuration
+          hours={visibilityHours}
+          minutes={visibilityMinutes}
+          onChange={({ hours, minutes }) => {
+            setVisibilityHours(hours);
+            setVisibilityMinutes(minutes);
+          }}
+        />
         <div>
           <label className="form-label small">{t('loadsHub.ratePerKgLabel')}</label>
           <input

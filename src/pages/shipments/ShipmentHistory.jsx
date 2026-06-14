@@ -12,7 +12,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import VehicleTypeLabel from '../../components/loadboard/VehicleTypeLabel.jsx';
-import { normalizeBidStatus, BID_STATUS } from '../../utils/bidStatus.js';
+import { normalizeBidStatus, BID_STATUS, isBidExpired } from '../../utils/bidStatus.js';
 import { normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 import { normalizeShipmentHistoryList } from '../../utils/normalizeShipmentHistory.js';
 import {
@@ -23,28 +23,16 @@ import {
 import ProfileAccessLayer from '../../components/profile/ProfileAccessLayer.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { sanitizeBadgeVariant } from '../../utils/badgeVariants.js';
-import { translateBidStatus } from '../../utils/i18nLabels.js';
+import { resolveBadgeVariantForStatus } from '../../utils/statusColorTokens.js';
 
 const TAB_COMPLETED = 'completed';
 const TAB_ACCEPTED = 'accepted';
-const TAB_REJECTED = 'rejected';
 const TAB_CANCELLED = 'cancelled';
-
-const COMPLETED_STATUSES = new Set(['closed', 'delivered']);
 
 async function fetchCompletedShipments(request, roles) {
   const result = await fetchCompletedShipmentRows(request, { roles });
   if (result.error) throw new Error(result.error.message);
   return result.rows;
-}
-
-function historyBadgeVariant(status, tab) {
-  const s = normalizeShipmentStatus(status);
-  if (tab === TAB_REJECTED || tab === TAB_CANCELLED) return 'danger';
-  if (s === 'delivered') return 'success';
-  if (s === 'closed') return 'secondary';
-  if (tab === TAB_ACCEPTED) return 'primary';
-  return 'secondary';
 }
 
 const ShipmentHistory = () => {
@@ -54,7 +42,6 @@ const ShipmentHistory = () => {
   const [tab, setTab] = useState(TAB_COMPLETED);
   const [completedRows, setCompletedRows] = useState([]);
   const [acceptedRows, setAcceptedRows] = useState([]);
-  const [rejectedRows, setRejectedRows] = useState([]);
   const [cancelledRows, setCancelledRows] = useState([]);
   const [fetchError, setFetchError] = useState(null);
   const roles = Array.isArray(user?.roles) ? user.roles : [];
@@ -64,55 +51,27 @@ const ShipmentHistory = () => {
   const refreshHistory = useCallback(async () => {
     setFetchError(null);
     try {
-      const [completed, bidsRaw, spaceSent] = await Promise.all([
+      const [completed, bidsRaw] = await Promise.all([
         fetchCompletedShipments(request, roles),
         request({
           url: carrierMode ? '/bids/mine' : '/bids',
           skipGlobalErrorToast: true
-        }).catch(() => []),
-        !carrierMode
-          ? request({ url: '/carrier-space/requests/sent', skipGlobalErrorToast: true }).catch(() => [])
-          : Promise.resolve([])
+        }).catch(() => [])
       ]);
 
       const bids = Array.isArray(bidsRaw) ? bidsRaw : [];
       const acceptedBids = bids
-        .filter((b) => normalizeBidStatus(b.status) === BID_STATUS.ACCEPTED)
+        .filter((b) => normalizeBidStatus(b.status) === BID_STATUS.ACCEPTED && !isBidExpired(b))
         .map((b) => ({
           id: b.id,
           code: b.loadCode || b.loadId,
           cargo: b.loadCode || b.loadId || t('pages.shipments.historyBidRow'),
-          origin: '',
-          destination: '',
+          origin: b.origin || '',
+          destination: b.destination || '',
           shipmentStatus: 'booked',
           status: 'booked',
-          counterpartyName: carrierMode ? null : b.carrierName
-        }));
-
-      const rejectedBids = bids
-        .filter((b) => normalizeBidStatus(b.status) === BID_STATUS.REJECTED)
-        .map((b) => ({
-          id: b.id,
-          code: b.loadCode || b.loadId,
-          cargo: b.loadCode || b.loadId || t('pages.shipments.historyBidRow'),
-          origin: '',
-          destination: '',
-          shipmentStatus: 'rejected',
-          status: 'rejected',
-          bidStatus: b.status,
-          counterpartyName: carrierMode ? null : b.carrierName
-        }));
-
-      const rejectedSpace = (Array.isArray(spaceSent) ? spaceSent : [])
-        .filter((r) => String(r.status || '').toLowerCase() === 'rejected')
-        .map((r) => ({
-          id: r.id,
-          code: r.loadCode || r.id,
-          cargo: `${r.origin || ''} → ${r.destination || ''}`.trim() || r.id,
-          origin: r.origin,
-          destination: r.destination,
-          shipmentStatus: 'rejected',
-          status: 'rejected'
+          counterpartyId: carrierMode ? b.shipperId : b.carrierId,
+          counterpartyName: carrierMode ? b.shipperName : b.carrierName
         }));
 
       let cancelled = [];
@@ -136,9 +95,6 @@ const ShipmentHistory = () => {
       setCompletedRows(normalizeShipmentHistoryList(completed, { carrierMode }));
       saveHistoryCache(user?.id, completed);
       setAcceptedRows(normalizeShipmentHistoryList(acceptedBids, { carrierMode }));
-      setRejectedRows(
-        normalizeShipmentHistoryList([...rejectedBids, ...rejectedSpace], { carrierMode })
-      );
       setCancelledRows(normalizeShipmentHistoryList(cancelled, { carrierMode }));
     } catch (err) {
       const cached = loadHistoryCache(user?.id);
@@ -148,7 +104,6 @@ const ShipmentHistory = () => {
           : []
       );
       setAcceptedRows([]);
-      setRejectedRows([]);
       setCancelledRows([]);
       setFetchError({ retryable: true, message: err?.message || 'history_failed' });
       notifyError(formatUserError(err, t, { fallback: t('pages.shipments.historyLoadFailed') }));
@@ -173,9 +128,8 @@ const ShipmentHistory = () => {
 
   const tabs = useMemo(
     () => [
-      { id: TAB_COMPLETED, label: t('pages.shipments.historyTabCompleted') },
       { id: TAB_ACCEPTED, label: t('pages.shipments.historyTabAccepted') },
-      { id: TAB_REJECTED, label: t('pages.shipments.historyTabRejected') },
+      { id: TAB_COMPLETED, label: t('pages.shipments.historyTabCompleted') },
       { id: TAB_CANCELLED, label: t('pages.shipments.historyTabCancelled') }
     ],
     [t]
@@ -183,10 +137,12 @@ const ShipmentHistory = () => {
 
   const rows = useMemo(() => {
     if (tab === TAB_ACCEPTED) return acceptedRows;
-    if (tab === TAB_REJECTED) return rejectedRows;
     if (tab === TAB_CANCELLED) return cancelledRows;
-    return completedRows;
-  }, [tab, completedRows, acceptedRows, rejectedRows, cancelledRows]);
+    return completedRows.filter((r) => {
+      const s = normalizeShipmentStatus(r.shipmentStatus ?? r.status);
+      return s === 'delivered' || s === 'closed';
+    });
+  }, [tab, completedRows, acceptedRows, cancelledRows]);
 
   const roleHint = carrierMode
     ? t('pages.shipments.historyRoleCarrier')
@@ -221,14 +177,11 @@ const ShipmentHistory = () => {
         rows.map((row) => {
           const code = row.shipmentRef || row.code || row.id;
           const status = row.unifiedStatus ?? row.shipmentStatus ?? row.status;
-          const bidStatus = row._raw?.bidStatus;
+          const statusKey = normalizeShipmentStatus(status) || 'unknown';
           const label =
-            tab === TAB_REJECTED && bidStatus
-              ? translateBidStatus(t, bidStatus)
-              : t(`status.${normalizeShipmentStatus(status) || 'unknown'}`) !==
-                  `status.${normalizeShipmentStatus(status) || 'unknown'}`
-                ? t(`status.${normalizeShipmentStatus(status) || 'unknown'}`)
-                : t('pages.shipments.historyClosedLabel');
+            t(`status.${statusKey}`) !== `status.${statusKey}`
+              ? t(`status.${statusKey}`)
+              : t('pages.shipments.historyClosedLabel');
           return (
             <Card key={`${tab}-${row.id || code}`} className="p-3 mb-2">
               <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -258,9 +211,11 @@ const ShipmentHistory = () => {
                     </div>
                   ) : null}
                 </div>
-                <Badge variant={sanitizeBadgeVariant(historyBadgeVariant(status, tab))}>{label}</Badge>
+                <Badge variant={sanitizeBadgeVariant(resolveBadgeVariantForStatus(status))}>
+                  {label}
+                </Badge>
               </div>
-              {code && tab !== TAB_REJECTED ? (
+              {code ? (
                 <div className="d-flex justify-content-end mt-2">
                   <Link
                     to={`/shipments/tracking/${encodeURIComponent(code)}`}
