@@ -7,8 +7,10 @@ import { isCommercialSession } from '../../utils/rbac.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
 import ReviewPromptModal from './ReviewPromptModal.jsx';
 import {
+  hydrateReviewDismissedFromServer,
   loadReviewDismissed,
   markReviewDismissed,
+  persistReviewDismissToServer,
   reviewDismissKeyFromPrompt
 } from '../../utils/reviewDismissStore.js';
 import { reviewRenderGuard, canRenderReview } from '../../utils/reviewRenderGuard.js';
@@ -23,10 +25,14 @@ const ReviewPromptHost = () => {
   const activeGuardRef = useRef(null);
 
   useEffect(() => {
-    dismissedRef.current = user?.id ? loadReviewDismissed(user.id) : new Set();
+    if (!user?.id) return;
+    dismissedRef.current = loadReviewDismissed(user.id);
+    void hydrateReviewDismissedFromServer(request, user.id).then(() => {
+      if (user?.id) dismissedRef.current = loadReviewDismissed(user.id);
+    });
     queueRef.current = [];
     setPrompt(null);
-  }, [user?.id]);
+  }, [user?.id, request]);
 
   const dismissKey = reviewDismissKeyFromPrompt;
 
@@ -99,6 +105,7 @@ const ReviewPromptHost = () => {
       const key = dismissKey(prompt);
       if (key) reviewRenderGuard(key).lock();
       markReviewDismissed(user?.id, prompt);
+      void persistReviewDismissToServer(request, prompt);
     }
     if (activeGuardRef.current) {
       activeGuardRef.current.release();

@@ -14,7 +14,11 @@ const ShipmentCard = ({ shipment, uiState = null }) => {
         {shipment.origin} → {shipment.destination}
       </div>
       <div className="small">
-        Driver: {shipment.driverName} · Vehicle: {shipment.vehicleReg}
+        Driver: {shipment.driverName}
+        {shipment.driverPhone && shipment.driverPhone !== '—' ? ` · ${shipment.driverPhone}` : ''}
+        {' · '}
+        Vehicle: {shipment.vehicleReg}
+        {shipment.vehicleType && shipment.vehicleType !== '—' ? ` (${shipment.vehicleType})` : ''}
       </div>
       <div className="small text-muted mt-1">
         Expected delivery:{' '}

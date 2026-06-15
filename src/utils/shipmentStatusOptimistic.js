@@ -66,6 +66,7 @@ export function emitShipmentStatusUpdated(ref, status, { source = 'unknown', pre
     return false;
   }
   lastEmitByRef.set(key, { status: normalized, ts: now });
+  socketStatusByRef.set(key, { status: normalized, ts: now, source });
 
   window.dispatchEvent(
     new CustomEvent('tp:shipment-status-updated', {
@@ -158,6 +159,35 @@ function inferTimelineEventStatus(ev, fallbackStatus) {
   return fallbackStatus;
 }
 
+/** Collapse duplicate status rows within a time window; enforce monotonic pipeline order. */
+export function dedupeTimelineEvents(events, { windowMs = 120_000 } = {}) {
+  const list = (Array.isArray(events) ? events : []).filter((ev) => ev && typeof ev === 'object');
+  const seen = new Map();
+  const out = [];
+  for (const ev of list) {
+    const status = inferTimelineEventStatus(ev, null);
+    const label = String(ev.event || ev.label || status || '').trim().toLowerCase();
+    const key = status || label;
+    if (!key) {
+      out.push(ev);
+      continue;
+    }
+    const ts = ev.time ? new Date(ev.time).getTime() : 0;
+    const prev = seen.get(key);
+    if (prev != null && ts && Math.abs(ts - prev) < windowMs) continue;
+    seen.set(key, ts || Date.now());
+    out.push(ev);
+  }
+  return out.sort((a, b) => {
+    const ra = statusRank(inferTimelineEventStatus(a, 'booked'));
+    const rb = statusRank(inferTimelineEventStatus(b, 'booked'));
+    if (ra !== rb) return ra - rb;
+    const ta = a.time ? new Date(a.time).getTime() : 0;
+    const tb = b.time ? new Date(b.time).getTime() : 0;
+    return ta - tb;
+  });
+}
+
 /**
  * Merge API history + optimistic timeline; terminal effective status wins over stale rows.
  */
@@ -174,7 +204,9 @@ export function mergeShipmentTimelineEvents(
     normalizeShipmentStatus(historyList[0]?.status) ||
     'booked';
   const effectiveStatus = resolveEffectiveShipmentStatus(key, baseStatus);
-  const merged = [...historyList, ...optimisticLog].filter((ev) => ev && typeof ev === 'object');
+  const merged = dedupeTimelineEvents(
+    [...historyList, ...optimisticLog].filter((ev) => ev && typeof ev === 'object')
+  );
   const events = merged.map((ev) => ({
     label: ev.event || ev.label || fallbackLabel,
     time: ev.time || '',

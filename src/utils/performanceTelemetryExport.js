@@ -7,6 +7,7 @@ import {
 } from '../hooks/usePerformanceTelemetry.js';
 import { getCoordinatorTrace } from '../hooks/useTrackingCoordinator.js';
 import api from '../services/api.js';
+import { getOrCreateTraceId } from './traceContext.js';
 
 const EXPORT_INTERVAL_MS = Number(import.meta.env.VITE_PERF_EXPORT_INTERVAL_MS || 60_000);
 let exportStarted = false;
@@ -17,6 +18,7 @@ export function buildPerformanceExportPayload() {
   return {
     schema: 'transpak.perf.v1',
     exportedAt: new Date().toISOString(),
+    traceId: getOrCreateTraceId(),
     metrics: {
       rating: {
         ...snap.rating,

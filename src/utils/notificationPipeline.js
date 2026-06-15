@@ -61,7 +61,10 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
 
   if (!isContractDispatchType(type) && !isShipmentSyncType(type)) {
     const scopes = {
-      BID_REJECTED: 'bids',
+      BID_ACCEPTED: 'loads',
+      LOAD_ACCEPTED: 'loads',
+      LOAD_BOOKED: 'loads',
+      BID_REJECTED: 'loads',
       BID_COUNTER: 'bids',
       COUNTER_OFFERED: 'bids',
       BID_SUGGESTED: 'bids',
@@ -82,8 +85,25 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
       COUNTER_OFFER_ACCEPTED: 'bids'
     };
     const scope = scopes[type];
-    if (scope) emitRealtimeRefresh(scope);
-    else emitRealtimeRefresh('all');
+    if (scope) {
+      emitRealtimeRefresh(scope);
+      if (type === 'BID_ACCEPTED' || type === 'LOAD_ACCEPTED' || type === 'BID_REJECTED') {
+        emitRealtimeRefresh('bids');
+        emitRealtimeRefresh('shipments');
+      }
+      if ((type === 'BID_ACCEPTED' || type === 'LOAD_ACCEPTED') && typeof window !== 'undefined') {
+        const loadId =
+          dispatch.payload?.loadId ||
+          dispatch.notification?.loadId ||
+          dispatch.payload?.entityId ||
+          null;
+        if (loadId) {
+          window.dispatchEvent(
+            new CustomEvent('tp:load-booked', { detail: { loadId: String(loadId) } })
+          );
+        }
+      }
+    } else emitRealtimeRefresh('all');
   }
 
   const engineItems = processDispatchEvent(dispatch);

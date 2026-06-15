@@ -124,6 +124,18 @@ export function formatUserError(err, t, options = {}) {
   if (apiCode === 'COUNTER_LIMIT_REACHED' && t) {
     return t('errors.counterLimitReached');
   }
+  if (apiCode === 'BID_ALREADY_ACCEPTED' && t) {
+    return t('pages.loads.loadAlreadyBooked') || 'This load already has an accepted carrier.';
+  }
+  if (apiCode === 'DUPLICATE_LOAD' && t) {
+    return t('pages.loads.duplicateLoad') || 'You recently posted a similar load. Please wait before posting again.';
+  }
+  if (apiCode === 'TRUCK_APPROVED_LOCKED' && t) {
+    return t('pages.truckDetailsPage.approvedNoDelete') || 'Approved trucks cannot be deleted.';
+  }
+  if (apiCode === 'LAST_APPROVED_TRUCK' && t) {
+    return t('pages.truckDetailsPage.lastApprovedTruck') || 'A truck with this registration number already exists or this is your last approved truck.';
+  }
   if (apiCode === 'PROFILE_INCOMPLETE' && t) {
     return t('pages.loads.profileRequiredBody');
   }

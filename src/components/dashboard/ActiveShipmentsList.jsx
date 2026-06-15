@@ -106,15 +106,18 @@ const ActiveShipmentsList = ({
     };
     const onShipmentsRefresh = () => bootstrap({ silent: hasLoadedRef.current });
     const onContractActivated = () => bumpActivation((n) => n + 1);
+    const onStatusUpdated = () => bootstrap({ silent: hasLoadedRef.current });
     window.addEventListener('tp:active-shipments-hydrate', onHydrate);
     window.addEventListener('tp:realtime-refresh', onRefresh);
     window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
     window.addEventListener('tp:contract-activated', onContractActivated);
+    window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
     return () => {
       window.removeEventListener('tp:active-shipments-hydrate', onHydrate);
       window.removeEventListener('tp:realtime-refresh', onRefresh);
       window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
       window.removeEventListener('tp:contract-activated', onContractActivated);
+      window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
     };
   }, [bootstrap]);
 

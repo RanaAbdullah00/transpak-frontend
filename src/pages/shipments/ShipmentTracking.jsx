@@ -13,6 +13,8 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import { useApi } from '../../hooks/useApi.js';
 import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
+import TrackingDebugOverlay from '../../components/debug/TrackingDebugOverlay.jsx';
+import CausalReplayPanel from '../../components/debug/CausalReplayPanel.jsx';
 import { getNextAllowedActions } from '../../utils/stateNormalizationEngine.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import {
@@ -333,12 +335,18 @@ const ShipmentTracking = () => {
       origin: originName || t('common.emDash'),
       destination: destinationName || t('common.emDash'),
       status: effectiveStatus,
-      driverName: t('common.emDash'),
-      vehicleReg: t('common.emDash'),
-      eta: tracking?.eta || t('common.emDash'),
+      driverName: payload?.carrierName || tracking?.driverName || t('common.emDash'),
+      driverPhone: payload?.carrierPhone || tracking?.carrierPhone || t('common.emDash'),
+      vehicleReg: payload?.vehicleReg || tracking?.vehicleReg || t('common.emDash'),
+      vehicleType: payload?.vehicleType || tracking?.vehicleType || t('common.emDash'),
+      eta: tracking?.eta
+        ? new Date(tracking.eta).toLocaleString()
+        : estimatedTravelHours
+          ? `${estimatedTravelHours}h`
+          : t('common.emDash'),
       lastUpdate: tracking?.locationUpdatedAt || payload?.history?.[0]?.time || t('common.emDash')
     }),
-    [id, payload?.refKey, tracking, payload?.history, originName, destinationName, effectiveStatus, t]
+    [id, payload?.refKey, payload?.carrierName, payload?.carrierPhone, payload?.vehicleReg, payload?.vehicleType, tracking, payload?.history, originName, destinationName, effectiveStatus, estimatedTravelHours, t]
   );
 
   const timelineEvents = useMemo(() => {
@@ -525,6 +533,12 @@ const ShipmentTracking = () => {
         estimatedHours={estimatedTravelHours}
         checkpoints={checkpoints}
       />
+      {import.meta.env.DEV ? (
+        <>
+          <CausalReplayPanel shipmentId={id} />
+          <TrackingDebugOverlay payload={payload} shipmentId={id} />
+        </>
+      ) : null}
     </div>
     </TrackingSafeBoundary>
   );

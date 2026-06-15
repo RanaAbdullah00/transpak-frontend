@@ -8,6 +8,7 @@ import { getAuthToken } from '../utils/authTokenStorage.js';
 import { createTrackedSignal } from '../utils/inflightRequests.js';
 import { dispatchAuthUnauthorized } from '../utils/authUnauthorized.js';
 import { readWorkspaceContext } from '../utils/workspaceContext.js';
+import { getOrCreateTraceId } from '../utils/traceContext.js';
 const BASE_URL = getApiRoot();
 
 const ALLOWED_API_PREFIXES = [
@@ -103,6 +104,8 @@ api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
   }
+
+  config.headers['X-Trace-Id'] = getOrCreateTraceId();
 
   if (!config.signal) {
     config.signal = createTrackedSignal();

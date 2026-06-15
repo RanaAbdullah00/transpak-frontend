@@ -69,8 +69,16 @@ export function useDashboardMetrics() {
       refreshOps();
       refreshActivity();
     };
+    const onStatusUpdated = () => {
+      refreshOps();
+      refreshActivity();
+    };
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
+    };
   }, [refreshOps, refreshActivity]);
 
   const activityRows = useMemo(() => activities, [activities]);

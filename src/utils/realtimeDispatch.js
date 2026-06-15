@@ -16,7 +16,7 @@ export const SCOPE_REFRESH = {
   BID_CREATED: 'bids',
   BID_UPDATED: 'bids',
   BID_RECEIVED: 'bids',
-  BID_ACCEPTED: 'bids',
+  BID_ACCEPTED: 'loads',
   BID_REJECTED: 'bids',
   BID_COUNTER: 'bids',
   COUNTER_OFFERED: 'bids',

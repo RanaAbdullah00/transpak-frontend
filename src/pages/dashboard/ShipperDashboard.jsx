@@ -55,13 +55,19 @@ const ShipperDashboard = () => {
     const onShipmentsRefresh = () => {
       refreshBids();
     };
+    const onStatusUpdated = () => {
+      refreshLoads();
+      refreshBids();
+    };
     window.addEventListener('tp:realtime-refresh', onRefresh);
     window.addEventListener('tp:contract-activated', onContractActivated);
     window.addEventListener('tp:shipments-refresh', onShipmentsRefresh);
+    window.addEventListener('tp:shipment-status-updated', onStatusUpdated);
     return () => {
       window.removeEventListener('tp:realtime-refresh', onRefresh);
       window.removeEventListener('tp:contract-activated', onContractActivated);
       window.removeEventListener('tp:shipments-refresh', onShipmentsRefresh);
+      window.removeEventListener('tp:shipment-status-updated', onStatusUpdated);
     };
   }, [refreshLoads, refreshBids]);
 
@@ -128,19 +134,13 @@ const ShipperDashboard = () => {
 
       <div className="mt-3 row g-3">
         <div className="col-12 col-lg-7">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h6 className="mb-0">{t('pages.dashboard.openLoads')}</h6>
-            <Link to="/loads/manage" className="small text-decoration-none">
-              {t('common.viewAll')}
+          <div className="rounded-3 border border-dashed p-4 text-center tp-empty-state">
+            <h6 className="mb-2">{t('pages.dashboard.openLoads')}</h6>
+            <p className="small text-muted mb-3">{t('pages.dashboard.loadsHubHint')}</p>
+            <Link to="/loads/manage" className="btn btn-outline-primary btn-sm rounded-lg">
+              {t('loadsHub.title')}
             </Link>
           </div>
-          {loadingLoads ? (
-            <div className="text-center py-4">
-              <Loader />
-            </div>
-          ) : (
-            <LoadList loads={openLoads} />
-          )}
         </div>
         <div className="col-12 col-lg-5">
           <ActivityFeed activities={activities} />

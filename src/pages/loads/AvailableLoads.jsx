@@ -14,6 +14,7 @@ import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
 import CitySelect from '../../components/ui/CitySearchSelect.jsx';
+import { filterOpenLoads } from '../../utils/loadBidding.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 
 const AvailableLoads = ({ embedded = false }) => {
@@ -63,7 +64,7 @@ const AvailableLoads = ({ embedded = false }) => {
         },
         skipGlobalErrorToast: true
       });
-      setLoads(normalizeLoads(ensureArray(data)));
+      setLoads(filterOpenLoads(normalizeLoads(ensureArray(data))));
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
       setLoads([]);
@@ -78,10 +79,21 @@ const AvailableLoads = ({ embedded = false }) => {
     const onRefresh = (e) => {
       const scope = e?.detail?.scope;
       if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids') return;
-      fetchAvailableLoads().catch(() => {});
+      fetchAvailableLoads();
+    };
+    const onLoadBooked = (e) => {
+      const loadId = e?.detail?.loadId;
+      if (loadId) {
+        setLoads((prev) => prev.filter((l) => String(l.id) !== String(loadId)));
+      }
+      fetchAvailableLoads();
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:load-booked', onLoadBooked);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:load-booked', onLoadBooked);
+    };
   }, [fetchAvailableLoads]);
 
   const handleBid = (load) => {

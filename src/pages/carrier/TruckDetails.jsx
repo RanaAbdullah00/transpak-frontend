@@ -449,6 +449,7 @@ const TruckDetails = () => {
                               {t('pages.truckDetailsPage.setDefault')}
                             </Button>
                           ) : null}
+                          {!isApproved ? (
                           <Button
                             variant="outline-danger"
                             size="sm"
@@ -457,6 +458,7 @@ const TruckDetails = () => {
                           >
                             {t('pages.truckDetailsPage.delete')}
                           </Button>
+                          ) : null}
                         </div>
                       </div>
                     </div>
