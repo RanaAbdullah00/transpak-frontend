@@ -313,7 +313,7 @@ export const translations = {
     },
     deploy: {
       mismatchTitle: 'System updated',
-      mismatchBody: 'Please refresh the page to continue.',
+      mismatchBody: 'Backend may be updating. Try again shortly.',
       serverStartingTitle: 'Server starting',
       serverStarting: 'Server is starting. You can try signing in again in a moment.',
       serverUnavailableTitle: 'Server temporarily unavailable',
@@ -1852,7 +1852,7 @@ export const translations = {
     },
     deploy: {
       mismatchTitle: 'سسٹم اپ ڈیٹ ہو گیا',
-      mismatchBody: 'جاری رکھنے کے لیے صفحہ ریفریش کریں۔',
+      mismatchBody: 'بیک اینڈ اپ ڈیٹ ہو سکتا ہے۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔',
       serverStartingTitle: 'سرور شروع ہو رہا ہے',
       serverStarting: 'سرور شروع ہو رہا ہے۔ تھوڑی دیر بعد دوبارہ سائن ان کی کوشش کریں۔',
       serverUnavailableTitle: 'سرور عارضی طور پر دستیاب نہیں',
