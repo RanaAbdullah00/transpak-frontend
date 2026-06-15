@@ -15,6 +15,7 @@ import { AppContext } from '../../context/AppContext.jsx';
 import { canAccessAdminRoutes } from '../../utils/authSession.js';
 import { describeAdminWidgetError } from '../../utils/adminWidgetErrors.js';
 import { formatStatValue } from '../../utils/formatStat.js';
+import { fetchBackendDeployDrift } from '../../utils/deployDrift.js';
 
 const POLL_DISCONNECTED_MS = 15000;
 const HEARTBEAT_MS = 60000;
@@ -97,10 +98,28 @@ const AdminDashboardPage = () => {
   const { socketStatus } = useContext(AppContext) || {};
   const { activity, auditEvents, markLivePulse } = useAdminLiveFeed({ live, widgetFailed, t, locale });
   const [retryCountdown, setRetryCountdown] = useState(0);
+  const [backendDeployDrift, setBackendDeployDrift] = useState(false);
   const autoRetryRef = useRef(null);
 
   const adminReady =
     canAccessAdminRoutes(user) && user?.activeRole === 'admin' && !roleSwitching;
+
+  useEffect(() => {
+    if (!adminReady) return;
+    let cancelled = false;
+    (async () => {
+      const { drift } = await fetchBackendDeployDrift();
+      if (!cancelled) setBackendDeployDrift(Boolean(drift));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [adminReady]);
+
+  const refreshDashboard = useCallback(() => {
+    void fetchBackendDeployDrift().then(({ drift }) => setBackendDeployDrift(Boolean(drift)));
+    void loadAll();
+  }, [loadAll]);
 
   const refreshForScope = useCallback(
     (scope) => {
@@ -145,7 +164,7 @@ const AdminDashboardPage = () => {
   }, [refreshForScope]);
 
   useSafeInterval(() => loadAll(), POLL_DISCONNECTED_MS, {
-    enabled: adminReady && socketStatus !== 'connected'
+    enabled: adminReady && socketStatus !== 'connected' && !backendDeployDrift
   });
 
   useSafeInterval(
@@ -155,7 +174,7 @@ const AdminDashboardPage = () => {
   );
 
   useEffect(() => {
-    if (!adminReady || !allFailed || authRequired) {
+    if (!adminReady || !allFailed || authRequired || backendDeployDrift) {
       setRetryCountdown(0);
       if (autoRetryRef.current) {
         window.clearInterval(autoRetryRef.current);
@@ -181,7 +200,7 @@ const AdminDashboardPage = () => {
         autoRetryRef.current = null;
       }
     };
-  }, [adminReady, allFailed, authRequired, loadAll]);
+  }, [adminReady, allFailed, authRequired, backendDeployDrift, loadAll]);
 
   const stats = live?.stats;
   const meta = live?.meta;
@@ -243,11 +262,18 @@ const AdminDashboardPage = () => {
   };
 
   const connectionBanner =
-    allFailed && !authRequired
-      ? t('pages.admin.liveFeedReconnecting')
-      : connectionState === 'offline'
-        ? t('pages.admin.liveFeedOffline')
-        : null;
+    backendDeployDrift && allFailed && !authRequired
+      ? t('pages.admin.backendUpdateInProgress')
+      : allFailed && !authRequired
+        ? t('pages.admin.liveFeedReconnecting')
+        : connectionState === 'offline'
+          ? t('pages.admin.liveFeedOffline')
+          : null;
+
+  const connectionBannerHint =
+    backendDeployDrift && allFailed && !authRequired
+      ? t('pages.admin.backendUpdateInProgressHint')
+      : null;
 
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--admin">
@@ -264,7 +290,7 @@ const AdminDashboardPage = () => {
         <button
           type="button"
           className="btn btn-outline-primary btn-sm rounded-lg"
-          onClick={() => loadAll()}
+          onClick={refreshDashboard}
           disabled={initialLoading}
         >
           {t('pages.admin.refreshNow')}
@@ -275,13 +301,16 @@ const AdminDashboardPage = () => {
         <div className="alert alert-warning rounded-3 border-0 shadow-sm mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
           <div>
             <div className="fw-semibold mb-0">{connectionBanner}</div>
-            {retryCountdown > 0 ? (
+            {connectionBannerHint ? (
+              <p className="small text-muted mb-0 mt-1">{connectionBannerHint}</p>
+            ) : null}
+            {retryCountdown > 0 && !backendDeployDrift ? (
               <p className="small text-muted mb-0 mt-1">
                 {t('pages.admin.tryAgain')} ({retryCountdown}s)
               </p>
             ) : null}
           </div>
-          <button type="button" className="btn btn-sm btn-outline-primary rounded-lg" onClick={() => loadAll()}>
+          <button type="button" className="btn btn-sm btn-outline-primary rounded-lg" onClick={refreshDashboard}>
             {t('pages.admin.tryAgain')}
           </button>
         </div>

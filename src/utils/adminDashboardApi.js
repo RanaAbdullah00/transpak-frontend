@@ -329,7 +329,13 @@ export function mergeAdminDashboardWidgets(widgetState) {
     allFailed &&
     ADMIN_DASHBOARD_WIDGETS.every((w) => {
       const st = widgetState?.[w];
-      return st?.httpStatus === 401 || st?.code === 'UNAUTHORIZED' || st?.code === 'INVALID_TOKEN';
+      const code = String(st?.code || '').toUpperCase();
+      return (
+        st?.httpStatus === 401 ||
+        code === 'UNAUTHORIZED' ||
+        code === 'INVALID_TOKEN' ||
+        code === 'AUTH_INVALID'
+      );
     });
 
   return coerceAdminDashboardLive({

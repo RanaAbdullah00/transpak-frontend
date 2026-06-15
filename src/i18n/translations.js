@@ -1298,6 +1298,10 @@ export const translations = {
         widgetNetworkError: 'Unable to load this section. Check your connection and try again.',
         liveFeedReconnecting: 'Live data temporarily unavailable — retrying…',
         liveFeedOffline: 'Live feed connection lost — reconnecting…',
+        backendUpdateInProgress:
+          'Backend update in progress. Data temporarily unavailable.',
+        backendUpdateInProgressHint:
+          'The server is being updated to match the latest release. Try again after the deploy completes, or refresh this page in a few minutes.',
         liveBadge: 'LIVE',
         feedToday: 'Today',
         feedYesterday: 'Yesterday',
@@ -2815,6 +2819,9 @@ export const translations = {
         widgetNetworkError: 'یہ حصہ لوڈ نہیں ہو سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
         liveFeedReconnecting: 'لائیو ڈیٹا عارضی طور پر دستیاب نہیں — دوبارہ کوشش…',
         liveFeedOffline: 'لائیو فیڈ کنکشن منقطع — دوبارہ منسلک ہو رہا ہے…',
+        backendUpdateInProgress: 'بیک اینڈ اپ ڈیٹ جاری ہے۔ ڈیٹا عارضی طور پر دستیاب نہیں۔',
+        backendUpdateInProgressHint:
+          'سرور تازہ ترین ریلیز پر اپ ڈیٹ ہو رہا ہے۔ ڈیپلائے مکمل ہونے کے بعد دوبارہ کوشش کریں یا چند منٹ بعد صفحہ ریفریش کریں۔',
         liveBadge: 'لائیو',
         feedToday: 'آج',
         feedYesterday: 'کل',

@@ -10,7 +10,7 @@ export function describeAdminWidgetError(state, t) {
   const code = String(state?.code || '').toUpperCase();
   const rawMsg = sanitizeProductText(state?.error);
 
-  if (status === 401 || code === 'UNAUTHORIZED' || code === 'INVALID_TOKEN') {
+  if (status === 401 || code === 'UNAUTHORIZED' || code === 'INVALID_TOKEN' || code === 'AUTH_INVALID') {
     return t('pages.admin.widgetAuthError');
   }
   if (status === 403 || code === 'FORBIDDEN' || code === 'FORBIDDEN_ROLE') {
