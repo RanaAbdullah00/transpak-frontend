@@ -70,7 +70,7 @@ function messageFromStatusAndType(structured, t, fallback) {
   if (status === 403 || type === 'FORBIDDEN') {
     return t ? t('errors.forbidden') : walkLocale('errors.forbidden', 'en') || 'You do not have permission for this action.';
   }
-  if (status === 502 || status === 504 || status >= 500 || type === 'SERVER') {
+  if (status === 502 || status === 504 || status === 503 || status >= 500 || type === 'SERVER') {
     return serverUnavailableMessage(t);
   }
   if (type === 'NETWORK' || type === 'TIMEOUT' || type === 'CORS') {
@@ -151,6 +151,9 @@ export function formatUserError(err, t, options = {}) {
 
   const { displayMessage, message } = unwrapErrorDetail(err);
   const status = err?.response?.status;
+  if (status === 503 && !sanitizeProductText(displayMessage || message)) {
+    return serverUnavailableMessage(t);
+  }
   if ((status === 502 || status === 504) && !message) {
     return serverUnavailableMessage(t);
   }

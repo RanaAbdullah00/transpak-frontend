@@ -313,7 +313,11 @@ export const translations = {
     },
     deploy: {
       mismatchTitle: 'System updated',
-      mismatchBody: 'Please refresh the page to continue.'
+      mismatchBody: 'Please refresh the page to continue.',
+      serverStartingTitle: 'Server starting',
+      serverStarting: 'Server is starting. You can try signing in again in a moment.',
+      serverUnavailableTitle: 'Server temporarily unavailable',
+      serverUnavailable: 'Server temporarily unavailable. Try again shortly.'
     },
     reviews: {
       rateUsersHint:
@@ -1848,7 +1852,11 @@ export const translations = {
     },
     deploy: {
       mismatchTitle: 'سسٹم اپ ڈیٹ ہو گیا',
-      mismatchBody: 'جاری رکھنے کے لیے صفحہ ریفریش کریں۔'
+      mismatchBody: 'جاری رکھنے کے لیے صفحہ ریفریش کریں۔',
+      serverStartingTitle: 'سرور شروع ہو رہا ہے',
+      serverStarting: 'سرور شروع ہو رہا ہے۔ تھوڑی دیر بعد دوبارہ سائن ان کی کوشش کریں۔',
+      serverUnavailableTitle: 'سرور عارضی طور پر دستیاب نہیں',
+      serverUnavailable: 'سرور عارضی طور پر دستیاب نہیں۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔'
     },
     reviews: {
       rateUsersHint:

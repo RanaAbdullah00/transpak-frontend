@@ -4,19 +4,38 @@ import { resolveViteApiOrigin } from '../../config/apiConfig.js';
 
 const RECHECK_MS = Number(import.meta.env.VITE_HEALTH_RECHECK_MS || 30000);
 
+/** @typedef {'booting' | 'unavailable' | 'deploy-drift'} BannerMode */
+
 const DeployMismatchBanner = () => {
   const { t } = useLanguage();
-  const [mismatch, setMismatch] = useState(false);
+  /** @type {[BannerMode | null, Function]} */
+  const [mode, setMode] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
+
   useEffect(() => {
+    const onBooting = () => {
+      setDismissed(false);
+      setMode('booting');
+    };
+    const onUnavailable = () => {
+      setDismissed(false);
+      setMode('unavailable');
+    };
     const onMismatch = () => {
-      setMismatch(true);
+      setDismissed(false);
+      setMode('deploy-drift');
     };
     const onOk = () => {
-      setMismatch(false);
+      setMode(null);
+      setDismissed(false);
     };
+    window.addEventListener('tp:service-booting', onBooting);
+    window.addEventListener('tp:service-unavailable', onUnavailable);
     window.addEventListener('tp:deploy-mismatch', onMismatch);
     window.addEventListener('tp:deploy-ok', onOk);
     return () => {
+      window.removeEventListener('tp:service-booting', onBooting);
+      window.removeEventListener('tp:service-unavailable', onUnavailable);
       window.removeEventListener('tp:deploy-mismatch', onMismatch);
       window.removeEventListener('tp:deploy-ok', onOk);
     };
@@ -35,13 +54,11 @@ const DeployMismatchBanner = () => {
         const db = body?.data?.db;
         const schema = body?.data?.schema;
         if (db === 'ready' && schema?.ok === true) {
-          setMismatch(false);
-        }
-        if (db === 'connecting' || schema?.booting === true) {
-          setMismatch(false);
+          setMode(null);
+          setDismissed(false);
         }
       } catch {
-        /* ignore */
+        /* ignore — verifyDeploy handles unreachable API */
       }
     };
 
@@ -49,15 +66,38 @@ const DeployMismatchBanner = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  if (!mismatch) return null;
+  if (!mode || dismissed) return null;
+
+  const title =
+    mode === 'booting'
+      ? t('deploy.serverStartingTitle')
+      : mode === 'unavailable'
+        ? t('deploy.serverUnavailableTitle')
+        : t('deploy.mismatchTitle');
+
+  const body =
+    mode === 'booting'
+      ? t('deploy.serverStarting')
+      : mode === 'unavailable'
+        ? t('deploy.serverUnavailable')
+        : t('deploy.mismatchBody');
 
   return (
     <div
-      className="alert alert-warning border-0 rounded-0 mb-0 text-center small py-2 px-3"
+      className="alert alert-warning border-0 rounded-0 mb-0 text-center small py-2 px-3 d-flex flex-wrap justify-content-center align-items-center gap-2"
       role="alert"
     >
-      <strong>{t('deploy.mismatchTitle')}</strong>
-      <span className="d-block mt-1">{t('deploy.mismatchBody')}</span>
+      <div className="flex-grow-1">
+        <strong>{title}</strong>
+        <span className="d-block mt-1">{body}</span>
+      </div>
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-secondary"
+        onClick={() => setDismissed(true)}
+      >
+        {t('common.close')}
+      </button>
     </div>
   );
 };

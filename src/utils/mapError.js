@@ -25,6 +25,9 @@ function resolveCategory(err, structured, code, status) {
     return 'ROLE';
   }
   if (status === 422 || c === 'VALIDATION_ERROR') return 'VALIDATION';
+  if (status === 503 || c === 'SERVICE_BOOTING' || c === 'DATABASE_UNAVAILABLE' || c === 'DATABASE_TIMEOUT') {
+    return 'SERVER';
+  }
   if (status >= 500 || c === 'SERVER_ERROR') return 'SERVER';
   if (
     c === 'ERR_NETWORK' ||

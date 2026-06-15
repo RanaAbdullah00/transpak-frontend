@@ -3,18 +3,25 @@ import { resolveViteApiOrigin } from '../config/apiConfig.js';
 const RECHECK_MS = Number(import.meta.env.VITE_HEALTH_RECHECK_MS || 30000);
 const MAX_RECHECKS = Number(import.meta.env.VITE_HEALTH_MAX_RECHECKS || 8);
 
-function emitMismatch(message) {
+function emitEvent(name, detail = {}) {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(
-    new CustomEvent('tp:deploy-mismatch', {
-      detail: { message }
-    })
-  );
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
+function emitMismatch(message) {
+  emitEvent('tp:deploy-mismatch', { message, mode: 'deploy-drift' });
+}
+
+function emitServiceBooting(message) {
+  emitEvent('tp:service-booting', { message, mode: 'booting' });
+}
+
+function emitServiceUnavailable(message) {
+  emitEvent('tp:service-unavailable', { message, mode: 'unavailable' });
 }
 
 function emitDeployOk(payload) {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('tp:deploy-ok', { detail: payload }));
+  emitEvent('tp:deploy-ok', payload);
 }
 
 function schemaMismatchMessage(schema, dbStatus) {
@@ -101,6 +108,16 @@ export async function verifyProductionDeploy() {
       };
     }
 
+    if (isBooting(dbStatus, schema, body)) {
+      emitServiceBooting('API is starting');
+      return { done: false, ok: false, dbStatus, schema };
+    }
+
+    if (dbStatus === 'unavailable' && !isHardMismatch(dbStatus, schema, body)) {
+      emitServiceUnavailable('API database is temporarily unavailable');
+      return { done: false, ok: false, dbStatus, schema };
+    }
+
     if (!schema && dbStatus === 'unavailable' && body?.data?.dbPing === 'skipped') {
       emitMismatch(
         `Backend deploy is stale (build ${apiBuild || 'unknown'}) — missing live health/schema checks. Redeploy Render from latest commit.`
@@ -124,12 +141,11 @@ export async function verifyProductionDeploy() {
       return { done: true, ok: true };
     }
 
-    if (isHardMismatch(dbStatus, schema)) {
+    if (isHardMismatch(dbStatus, schema, body)) {
       emitMismatch(schemaMismatchMessage(schema, dbStatus));
       return { done: true, ok: false };
     }
 
-    // connecting / unavailable during cold start — retry, do not show permanent banner yet
     return { done: false, ok: false, dbStatus, schema };
   };
 
@@ -144,7 +160,11 @@ export async function verifyProductionDeploy() {
       if (attempt > MAX_RECHECKS) {
         const stillBooting = isBooting(body?.data?.db, body?.data?.schema, body);
         if (stillBooting) {
-          console.warn('[TransPak deploy] API still booting after rechecks — not showing mismatch banner.');
+          emitServiceBooting('API is still starting after rechecks');
+          return;
+        }
+        if (body?.data?.db === 'unavailable') {
+          emitServiceUnavailable('API is temporarily unavailable');
           return;
         }
         emitMismatch(schemaMismatchMessage(body?.data?.schema, body?.data?.db));
@@ -155,6 +175,6 @@ export async function verifyProductionDeploy() {
     }
   } catch (err) {
     console.error('[TransPak deploy] Cannot reach API health:', err?.message || err);
-    emitMismatch('Cannot reach the API server. Check VITE_API_URL and Render status.');
+    emitServiceUnavailable('Cannot reach the API server');
   }
 }

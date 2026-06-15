@@ -9,7 +9,7 @@ import PasswordField from '../ui/PasswordField.jsx';
 import { mapAuthError, notifyAuthError, notifyUserError } from '../../utils/notifySystem.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { unwrapErrorCode } from '../../utils/unwrapApi.js';
-import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath } from '../../utils/authApiSafe.js';
+import { safeUnwrapAuthResponse, blockNativeFormSubmit, safeDashboardPath, loginWithTransientRetry } from '../../utils/authApiSafe.js';
 import { canAccessAdminRoutes, clearAuthStorage } from '../../utils/authSession.js';
 import { isAdminSmartLoginEmail } from '../../utils/adminSmartLogin.js';
 import { FaEnvelope } from 'react-icons/fa';
@@ -61,7 +61,7 @@ const LoginForm = () => {
     setFormError('');
     clearAuthStorage();
     try {
-      const res = await loginApi({
+      const res = await loginWithTransientRetry(loginApi, {
         email: form.email,
         password: form.password,
         roleHint: smartAdmin ? 'admin' : uiRolePref

@@ -318,6 +318,12 @@ export function mapAuthError(err, t, flow = 'login') {
     return t('errors.databaseUnavailable');
   }
   if (code === 'DATABASE_AUTH_FAILED') return t('errors.databaseUnavailable');
+  if (code === 'SERVICE_BOOTING' || code === 'TIMEOUT') {
+    return t('errors.serverUnavailable');
+  }
+  if (err?.response?.status === 503) {
+    return t('errors.serverUnavailable');
+  }
   if (code === 'LOGIN_SERVER_ERROR') return t('errors.loginServer');
 
   return msg || t('errors.unexpectedAuth') || AUTH_UNEXPECTED_ERROR;

@@ -24,6 +24,12 @@ function authHeaders() {
 }
 
 function normalizeAuthError(err, method) {
+  if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+    err.code = 'TIMEOUT';
+    if (!err.response) {
+      err.response = { status: 503, data: { code: 'TIMEOUT', message: 'Request timed out' } };
+    }
+  }
   enrichAuthAxiosError(err);
   const body = err?.response?.data;
   if (body && typeof body === 'object') {
@@ -87,7 +93,8 @@ async function authRequest(method, authPath, body = undefined) {
       method: httpMethod,
       url,
       headers: authHeaders(),
-      withCredentials: true
+      withCredentials: true,
+      timeout: Number(import.meta.env.VITE_AUTH_TIMEOUT_MS || 8000)
     };
     if (body !== undefined && httpMethod !== 'GET') {
       config.data = body;
