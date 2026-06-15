@@ -1,20 +1,24 @@
-import React, { useCallback, useContext, useEffect, useMemo } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeInterval } from '../../hooks/useSafeInterval.js';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonStatCards } from '../../components/ui/Skeleton.jsx';
 import AdminDemoVideoManager from '../../components/admin/AdminDemoVideoManager.jsx';
 import AdminWidgetShell from '../../components/admin/AdminWidgetShell.jsx';
+import AdminActivityCard from '../../components/admin/AdminActivityCard.jsx';
+import AdminLiveFeedPanel from '../../components/admin/AdminLiveFeedPanel.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useAdminDashboardWidgets } from '../../hooks/useAdminDashboardWidgets.js';
+import { useAdminLiveFeed, formatWhen } from '../../hooks/useAdminLiveFeed.js';
 import { AppContext } from '../../context/AppContext.jsx';
 import { canAccessAdminRoutes } from '../../utils/authSession.js';
-import { formatLoadDisplayId } from '../../utils/displayId.js';
 import { describeAdminWidgetError } from '../../utils/adminWidgetErrors.js';
 import { formatStatValue } from '../../utils/formatStat.js';
 
-const POLL_MS = 28000;
+const POLL_DISCONNECTED_MS = 15000;
+const HEARTBEAT_MS = 60000;
+const AUTO_RETRY_MS = 8000;
 
 const CARD_WIDGET = {
   users: 'users',
@@ -46,17 +50,29 @@ const CARD_LINK = {
   trucks: '/admin/fleet'
 };
 
-function formatWhen(iso, locale) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString(locale, {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    });
-  } catch {
-    return String(iso);
-  }
-}
+const CARD_ICONS = {
+  users: '👥',
+  activeUsers: '✓',
+  loads: '📦',
+  openLoads: '📂',
+  bids: '💰',
+  shipments: '🚚',
+  completed: '✅',
+  disputes: '⚠️',
+  shippers: '🏢',
+  carriers: '🛻',
+  profiles: '📝',
+  trucks: '🚛'
+};
+
+const SCOPE_WIDGETS = {
+  loads: ['loads'],
+  bids: ['bids'],
+  shipments: ['shipments', 'audit'],
+  space: ['audit'],
+  admin: ['users', 'observability', 'audit'],
+  all: null
+};
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
@@ -64,12 +80,39 @@ const AdminDashboardPage = () => {
   const { request } = useApi();
   const { t, isUrdu } = useLanguage();
   const locale = isUrdu ? 'ur-PK' : 'en-PK';
-  const { live, widgetState, initialLoading, loadAll, retryWidget, widgetFailed, widgetLoading, anyOk, authRequired } =
-    useAdminDashboardWidgets(request);
+  const {
+    live,
+    widgetState,
+    initialLoading,
+    loadAll,
+    loadWidgets,
+    retryWidget,
+    widgetFailed,
+    widgetLoading,
+    connectionState,
+    anyOk,
+    authRequired,
+    allFailed
+  } = useAdminDashboardWidgets(request);
   const { socketStatus } = useContext(AppContext) || {};
+  const { activity, auditEvents, markLivePulse } = useAdminLiveFeed({ live, widgetFailed, t, locale });
+  const [retryCountdown, setRetryCountdown] = useState(0);
+  const autoRetryRef = useRef(null);
 
   const adminReady =
     canAccessAdminRoutes(user) && user?.activeRole === 'admin' && !roleSwitching;
+
+  const refreshForScope = useCallback(
+    (scope) => {
+      const widgets = SCOPE_WIDGETS[scope];
+      if (!widgets) {
+        void loadAll();
+        return;
+      }
+      void loadWidgets(widgets);
+    },
+    [loadAll, loadWidgets]
+  );
 
   useEffect(() => {
     if (!adminReady) return;
@@ -77,29 +120,68 @@ const AdminDashboardPage = () => {
   }, [loadAll, adminReady]);
 
   useEffect(() => {
-    const onAudit = () => loadAll();
+    const onAudit = (e) => {
+      const events = e?.detail?.events;
+      if (Array.isArray(events) && events.length) return;
+      refreshForScope('admin');
+    };
     window.addEventListener('tp:admin-audit-sync', onAudit);
     return () => window.removeEventListener('tp:admin-audit-sync', onAudit);
-  }, [loadAll]);
+  }, [refreshForScope]);
 
   useEffect(() => {
     let timer = null;
     const onRefresh = (e) => {
-      const scope = e?.detail?.scope;
-      if (scope && scope !== 'all' && scope !== 'loads' && scope !== 'bids' && scope !== 'shipments' && scope !== 'space') {
-        return;
-      }
+      const scope = e?.detail?.scope || 'all';
+      if (scope !== 'all' && !SCOPE_WIDGETS[scope]) return;
       if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(() => loadAll(), 1200);
+      timer = window.setTimeout(() => refreshForScope(scope), 800);
     };
     window.addEventListener('tp:realtime-refresh', onRefresh);
     return () => {
       if (timer) window.clearTimeout(timer);
       window.removeEventListener('tp:realtime-refresh', onRefresh);
     };
-  }, [loadAll]);
+  }, [refreshForScope]);
 
-  useSafeInterval(() => loadAll(), POLL_MS, { enabled: adminReady && socketStatus !== 'connected' });
+  useSafeInterval(() => loadAll(), POLL_DISCONNECTED_MS, {
+    enabled: adminReady && socketStatus !== 'connected'
+  });
+
+  useSafeInterval(
+    () => loadWidgets(['observability', 'loads', 'bids', 'shipments']),
+    HEARTBEAT_MS,
+    { enabled: adminReady && socketStatus === 'connected' }
+  );
+
+  useEffect(() => {
+    if (!adminReady || !allFailed || authRequired) {
+      setRetryCountdown(0);
+      if (autoRetryRef.current) {
+        window.clearInterval(autoRetryRef.current);
+        autoRetryRef.current = null;
+      }
+      return undefined;
+    }
+
+    setRetryCountdown(Math.ceil(AUTO_RETRY_MS / 1000));
+    autoRetryRef.current = window.setInterval(() => {
+      setRetryCountdown((c) => {
+        if (c <= 1) {
+          void loadAll();
+          return Math.ceil(AUTO_RETRY_MS / 1000);
+        }
+        return c - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (autoRetryRef.current) {
+        window.clearInterval(autoRetryRef.current);
+        autoRetryRef.current = null;
+      }
+    };
+  }, [adminReady, allFailed, authRequired, loadAll]);
 
   const stats = live?.stats;
   const meta = live?.meta;
@@ -142,51 +224,6 @@ const AdminDashboardPage = () => {
     [stats, t]
   );
 
-  const activity = useMemo(() => {
-    const items = [];
-    const loadsOk = !widgetFailed('loads');
-    const bidsOk = !widgetFailed('bids');
-    const shipmentsOk = !widgetFailed('shipments');
-
-    if (loadsOk) {
-      (live?.recentLoads || []).forEach((r) => {
-        items.push({
-          id: `load-${r.id}`,
-          ts: r.createdAt,
-          label: t('pages.admin.activityLoadPosted'),
-          detail: `${formatLoadDisplayId(r)} · ${r.origin} → ${r.destination}`,
-          meta: r.shipperName
-        });
-      });
-    }
-    if (bidsOk) {
-      (live?.recentBids || []).forEach((r) => {
-        items.push({
-          id: `bid-${r.id}`,
-          ts: r.createdAt,
-          label: t('pages.admin.activityBid'),
-          detail: `${formatLoadDisplayId({ code: r.loadCode })} · PKR ${r.amount}`,
-          meta: r.carrierName
-        });
-      });
-    }
-    if (shipmentsOk) {
-      (live?.recentShipments || []).forEach((r) => {
-        items.push({
-          id: `shp-${r.id}`,
-          ts: r.updatedAt,
-          label: t('pages.admin.activityShipment'),
-          detail: `${formatLoadDisplayId({ code: r.loadCode })} · ${r.status}`,
-          meta: null
-        });
-      });
-    }
-    return items
-      .filter((x) => x.ts)
-      .sort((a, b) => new Date(b.ts) - new Date(a.ts))
-      .slice(0, 20);
-  }, [live, t, widgetFailed]);
-
   const activityWidgetsFailed =
     widgetFailed('loads') && widgetFailed('bids') && widgetFailed('shipments');
   const activityLoading =
@@ -204,6 +241,13 @@ const AdminDashboardPage = () => {
     const to = CARD_LINK[key];
     if (to) navigate(to);
   };
+
+  const connectionBanner =
+    allFailed && !authRequired
+      ? t('pages.admin.liveFeedReconnecting')
+      : connectionState === 'offline'
+        ? t('pages.admin.liveFeedOffline')
+        : null;
 
   return (
     <div className="container py-3 tp-dashboard tp-dashboard--admin">
@@ -226,6 +270,22 @@ const AdminDashboardPage = () => {
           {t('pages.admin.refreshNow')}
         </button>
       </div>
+
+      {connectionBanner ? (
+        <div className="alert alert-warning rounded-3 border-0 shadow-sm mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+          <div>
+            <div className="fw-semibold mb-0">{connectionBanner}</div>
+            {retryCountdown > 0 ? (
+              <p className="small text-muted mb-0 mt-1">
+                {t('pages.admin.tryAgain')} ({retryCountdown}s)
+              </p>
+            ) : null}
+          </div>
+          <button type="button" className="btn btn-sm btn-outline-primary rounded-lg" onClick={() => loadAll()}>
+            {t('pages.admin.tryAgain')}
+          </button>
+        </div>
+      ) : null}
 
       {authRequired ? (
         <div className="alert alert-warning rounded-3 border-0 shadow-sm mb-3" role="alert">
@@ -267,7 +327,12 @@ const AdminDashboardPage = () => {
               >
                 <div className="card-body py-3">
                   <div className="d-flex justify-content-between align-items-start gap-1">
-                    <div className="text-muted small mb-1">{c.title}</div>
+                    <div className="d-flex align-items-center gap-2 min-w-0">
+                      <span className="tp-admin-stat-card__icon" aria-hidden="true">
+                        {CARD_ICONS[c.key]}
+                      </span>
+                      <div className="text-muted small mb-0 text-truncate">{c.title}</div>
+                    </div>
                     {failed ? (
                       <button
                         type="button"
@@ -302,7 +367,7 @@ const AdminDashboardPage = () => {
         })}
       </div>
 
-      <div className="card border-0 shadow-sm rounded-3 mb-4">
+      <div className="card border-0 shadow-sm rounded-3 mb-4 tp-admin-stat-card">
         <div className="card-body py-3">
           <AdminWidgetShell
             title={t('pages.admin.observabilityTitle')}
@@ -324,15 +389,13 @@ const AdminDashboardPage = () => {
                   <span className="fw-semibold">{live.observability.websocketConnections ?? 0}</span>
                 </div>
                 <div className="col-6 col-md-3">
+                  <span className="text-muted d-block">{t('pages.admin.onlineCarriers')}</span>
+                  <span className="fw-semibold">{live.observability.onlineCarriers ?? 0}</span>
+                </div>
+                <div className="col-6 col-md-3">
                   <span className="text-muted d-block">{t('pages.admin.openLoads')}</span>
                   <span className="fw-semibold">
                     {formatStatValue(stats?.openLoads, { failed: widgetFailed('loads') })}
-                  </span>
-                </div>
-                <div className="col-6 col-md-3">
-                  <span className="text-muted d-block">{t('pages.admin.completedShipments')}</span>
-                  <span className="fw-semibold">
-                    {formatStatValue(stats?.completedShipments, { failed: widgetFailed('shipments') })}
                   </span>
                 </div>
               </div>
@@ -343,7 +406,7 @@ const AdminDashboardPage = () => {
 
       <div className="row g-3 mb-4">
         <div className="col-lg-7">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
+          <div className="card border-0 shadow-sm rounded-3 h-100 tp-admin-stat-card">
             <div className="card-body">
               <AdminWidgetShell
                 title={t('pages.admin.auditLogTitle')}
@@ -351,26 +414,20 @@ const AdminDashboardPage = () => {
                 error={widgetFailed('audit') ? describeAdminWidgetError(widgetState?.audit, t) : null}
                 onRetry={() => retryWidget('audit')}
               >
-                {(live?.auditEvents ?? []).length === 0 ? (
+                {!auditEvents.length ? (
                   <p className="small text-muted mb-0">{t('pages.admin.auditLogEmpty')}</p>
                 ) : (
-                  <ul className="list-group list-group-flush tp-admin-activity-list mb-0">
-                    {(live?.auditEvents ?? []).map((ev) => (
-                      <li key={ev.id} className="list-group-item px-0 border-0 border-bottom tp-border-theme">
-                        <div className="d-flex justify-content-between gap-2">
-                          <div className="min-w-0">
-                            <div className="small fw-semibold text-break">{ev.action}</div>
-                            <div className="small text-muted">
-                              {ev.targetEntity}
-                              {ev.targetId ? ` · ${String(ev.targetId).slice(0, 8)}` : ''}
-                            </div>
-                            <div className="small text-body-secondary">{ev.actorName}</div>
-                          </div>
-                          <div className="small text-muted text-nowrap flex-shrink-0">
-                            {formatWhen(ev.createdAt, locale)}
-                          </div>
-                        </div>
-                      </li>
+                  <ul className="list-unstyled tp-admin-activity-list mb-0">
+                    {auditEvents.map((ev) => (
+                      <AdminActivityCard
+                        key={ev.id}
+                        label={ev.action}
+                        detail={`${ev.targetEntity}${ev.targetId ? ` · ${String(ev.targetId).slice(0, 8)}` : ''}`}
+                        meta={ev.actorName}
+                        timestamp={formatWhen(ev.createdAt, locale)}
+                        variant="system"
+                        icon="📋"
+                      />
                     ))}
                   </ul>
                 )}
@@ -379,10 +436,14 @@ const AdminDashboardPage = () => {
           </div>
         </div>
         <div className="col-lg-5">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
+          <div className="card border-0 shadow-sm rounded-3 h-100 tp-admin-stat-card">
             <div className="card-body">
-              <AdminWidgetShell
+              <AdminLiveFeedPanel
                 title={t('pages.admin.recentActivity')}
+                items={activity}
+                locale={locale}
+                t={t}
+                connectionState={connectionState}
                 loading={activityLoading && !activity.length}
                 error={
                   activityWidgetsFailed
@@ -397,28 +458,9 @@ const AdminDashboardPage = () => {
                     : null
                 }
                 onRetry={retryActivity}
-              >
-                {!activity.length ? (
-                  <p className="small text-muted mb-0">{t('pages.admin.noRecentActivity')}</p>
-                ) : (
-                  <ul className="list-group list-group-flush tp-admin-activity-list">
-                    {activity.map((item) => (
-                      <li key={item.id} className="list-group-item px-0 border-0 border-bottom tp-border-theme">
-                        <div className="d-flex justify-content-between gap-2">
-                          <div className="min-w-0">
-                            <div className="small fw-semibold">{item.label}</div>
-                            <div className="small text-muted text-truncate">{item.detail}</div>
-                            {item.meta ? <div className="small text-body-secondary">{item.meta}</div> : null}
-                          </div>
-                          <div className="small text-muted text-nowrap flex-shrink-0">
-                            {formatWhen(item.ts, locale)}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </AdminWidgetShell>
+                markLivePulse={markLivePulse}
+                emptyMessage={t('pages.admin.noRecentActivity')}
+              />
             </div>
           </div>
         </div>

@@ -36,6 +36,57 @@ export function useAdminDashboardWidgets(request) {
   }, []);
 
   const loadInFlightRef = useRef(null);
+  const partialInFlightRef = useRef(null);
+
+  const applyWidgetUpdates = useCallback(
+    (widgets) => {
+      setWidgetState((prev) => {
+        const next = { ...prev };
+        for (const w of widgets) {
+          next[w] = { ...next[w], loading: true, error: null };
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const loadWidgets = useCallback(
+    async (widgets) => {
+      const list = (widgets || []).filter((w) => ADMIN_DASHBOARD_WIDGETS.includes(w));
+      if (!list.length) return;
+      if (partialInFlightRef.current) return partialInFlightRef.current;
+
+      const run = (async () => {
+        applyWidgetUpdates(list);
+        try {
+          await fetchAdminDashboardResilient(request, {
+            widgets: list,
+            skipFallback: true,
+            onWidget: (widget, state) => {
+              if (!mountedRef.current) return;
+              patchWidget(widget, {
+                loading: Boolean(state.loading),
+                data: state.data ?? null,
+                error: state.error ?? null,
+                code: state.code ?? null,
+                httpStatus: state.httpStatus ?? null,
+                endpoint: state.endpoint ?? null,
+                errorType: state.errorType ?? null,
+                attempts: state.attempts ?? 0
+              });
+            }
+          });
+        } finally {
+          partialInFlightRef.current = null;
+        }
+      })();
+
+      partialInFlightRef.current = run;
+      return run;
+    },
+    [request, patchWidget, applyWidgetUpdates]
+  );
 
   const loadAll = useCallback(async () => {
     if (loadInFlightRef.current) {
@@ -121,14 +172,25 @@ export function useAdminDashboardWidgets(request) {
 
   const widgetLoading = useCallback((id) => Boolean(widgetState?.[id]?.loading), [widgetState]);
 
+  const connectionState = useMemo(() => {
+    if (safeLive.authRequired) return 'offline';
+    if (initialLoading && !safeLive.anyOk) return 'retrying';
+    if (safeLive.allFailed) return 'offline';
+    if (safeLive.meta?.partialFailure) return 'degraded';
+    if (safeLive.anyOk) return 'live';
+    return 'retrying';
+  }, [safeLive, initialLoading]);
+
   return {
     widgetState,
     live: safeLive,
     initialLoading,
     loadAll,
+    loadWidgets,
     retryWidget,
     widgetFailed,
     widgetLoading,
+    connectionState,
     anyOk: safeLive.anyOk,
     allFailed: safeLive.allFailed,
     authRequired: safeLive.authRequired

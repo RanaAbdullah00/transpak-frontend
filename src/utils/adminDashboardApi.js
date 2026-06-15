@@ -49,9 +49,33 @@ export function coerceAdminDashboardLive(raw) {
 }
 
 const WIDGET_RETRY_MS = [0, 450, 900];
+const FALLBACK_RETRY_MS = [0, 800];
+const WIDGET_BATCHES = [
+  ['users', 'observability'],
+  ['loads', 'bids'],
+  ['shipments', 'audit']
+];
+
+const widgetInflight = new Map();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isNetworkError(err) {
+  const code = String(err?.code || unwrapErrorCode(err) || '').toUpperCase();
+  const type = String(err?.errorType || '').toUpperCase();
+  const msg = String(err?.message || '').toLowerCase();
+  return (
+    code === 'ERR_NETWORK' ||
+    code === 'ECONNABORTED' ||
+    code === 'TIMEOUT' ||
+    type === 'NETWORK' ||
+    type === 'TIMEOUT' ||
+    type === 'CORS' ||
+    msg.includes('network') ||
+    msg.includes('timeout')
+  );
 }
 
 /** Strip widget envelope — keep stats/lists for merge. */
@@ -145,6 +169,12 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
     throw new Error(`Unknown admin widget: ${id}`);
   }
 
+  const inflightKey = `widget:${id}`;
+  if (widgetInflight.has(inflightKey)) {
+    return widgetInflight.get(inflightKey);
+  }
+
+  const run = (async () => {
   let lastError = null;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (WIDGET_RETRY_MS[attempt]) await sleep(WIDGET_RETRY_MS[attempt]);
@@ -191,33 +221,62 @@ export async function fetchAdminWidget(request, widget, { maxAttempts = 3 } = {}
   }
 
   throw lastError || new Error('Widget fetch failed');
+  })();
+
+  widgetInflight.set(inflightKey, run);
+  try {
+    return await run;
+  } finally {
+    widgetInflight.delete(inflightKey);
+  }
 }
 
-export async function fetchAllAdminWidgets(request, { onWidget } = {}) {
+async function fetchWidgetWithHandler(request, widget, onWidget) {
+  const base = { widget, loading: false, data: null, error: null, attempts: 0 };
+  if (onWidget) onWidget(widget, { ...base, loading: true });
+  try {
+    const out = await fetchAdminWidget(request, widget);
+    const result = { ...base, data: out.data, attempts: out.attempts };
+    if (onWidget) onWidget(widget, result);
+    return { widget, result };
+  } catch (err) {
+    const classified = classifyWidgetError(err);
+    const result = {
+      ...base,
+      error: classified.message,
+      code: classified.code,
+      httpStatus: classified.httpStatus,
+      endpoint: classified.endpoint,
+      errorType: classified.errorType,
+      attempts: err?.attempt || 0
+    };
+    if (onWidget) onWidget(widget, result);
+    return { widget, result };
+  }
+}
+
+export async function fetchAllAdminWidgets(request, { onWidget, widgets } = {}) {
   const results = {};
-  await Promise.all(
-    ADMIN_DASHBOARD_WIDGETS.map(async (widget) => {
-      const base = { widget, loading: false, data: null, error: null, attempts: 0 };
-      if (onWidget) onWidget(widget, { ...base, loading: true });
-      try {
-        const out = await fetchAdminWidget(request, widget);
-        results[widget] = { ...base, data: out.data, attempts: out.attempts };
-        if (onWidget) onWidget(widget, results[widget]);
-      } catch (err) {
-        const classified = classifyWidgetError(err);
-        results[widget] = {
-          ...base,
-          error: classified.message,
-          code: classified.code,
-          httpStatus: classified.httpStatus,
-          endpoint: classified.endpoint,
-          errorType: classified.errorType,
-          attempts: err?.attempt || 0
-        };
-        if (onWidget) onWidget(widget, results[widget]);
-      }
-    })
-  );
+  const targetWidgets =
+    widgets && widgets.length
+      ? widgets.filter((w) => ADMIN_DASHBOARD_WIDGETS.includes(w))
+      : ADMIN_DASHBOARD_WIDGETS;
+
+  const batches =
+    widgets && widgets.length
+      ? [targetWidgets]
+      : WIDGET_BATCHES;
+
+  for (const batch of batches) {
+    const batchWidgets = batch.filter((w) => targetWidgets.includes(w));
+    if (!batchWidgets.length) continue;
+    const settled = await Promise.all(
+      batchWidgets.map((widget) => fetchWidgetWithHandler(request, widget, onWidget))
+    );
+    for (const { widget, result } of settled) {
+      results[widget] = result;
+    }
+  }
   return results;
 }
 
@@ -301,17 +360,23 @@ export async function fetchAdminDashboard(request) {
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i];
     const isLegacy = path === '/admin/stats';
-    try {
-      const data = await request({ url: path, skipGlobalErrorToast: true });
-      if (isLegacy) return coerceAdminDashboardLive(legacyStatsPayload(data));
-      return coerceAdminDashboardLive(data);
-    } catch (err) {
-      lastError = err;
-      const status = err?.response?.status;
-      const code = unwrapErrorCode(err);
-      const isNotFound = status === 404 || code === 'NOT_FOUND';
-      if (!isNotFound && !isLegacy) throw err;
-      if (isLegacy) throw err;
+
+    for (let attempt = 0; attempt < FALLBACK_RETRY_MS.length; attempt++) {
+      if (FALLBACK_RETRY_MS[attempt]) await sleep(FALLBACK_RETRY_MS[attempt]);
+      try {
+        const data = await request({ url: path, skipGlobalErrorToast: true });
+        if (isLegacy) return coerceAdminDashboardLive(legacyStatsPayload(data));
+        return coerceAdminDashboardLive(data);
+      } catch (err) {
+        lastError = err;
+        const status = err?.response?.status;
+        const code = unwrapErrorCode(err);
+        const isNotFound = status === 404 || code === 'NOT_FOUND';
+        if (isNotFound && !isLegacy) break;
+        if (isLegacy) break;
+        if (isNetworkError(err) && attempt + 1 < FALLBACK_RETRY_MS.length) continue;
+        if (!isNetworkError(err) && !isNotFound) break;
+      }
     }
   }
 
@@ -321,10 +386,10 @@ export async function fetchAdminDashboard(request) {
 /**
  * Preferred Phase 3 loader — parallel isolated widgets with monolithic fallback.
  */
-export async function fetchAdminDashboardResilient(request, { onWidget } = {}) {
-  const widgetState = await fetchAllAdminWidgets(request, { onWidget });
+export async function fetchAdminDashboardResilient(request, { onWidget, widgets, skipFallback = false } = {}) {
+  const widgetState = await fetchAllAdminWidgets(request, { onWidget, widgets });
   const merged = mergeAdminDashboardWidgets(widgetState);
-  if (merged.anyOk) {
+  if (merged.anyOk || skipFallback) {
     return merged;
   }
   if (merged.authRequired) {
