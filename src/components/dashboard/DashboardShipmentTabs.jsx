@@ -179,7 +179,7 @@ const DashboardShipmentTabs = ({
 
       {mountedTabs.has(TAB_TRANSIT) ? (
         <div className={tab === TAB_TRANSIT ? '' : 'd-none'} aria-hidden={tab !== TAB_TRANSIT}>
-          <ErrorBoundary compact>
+        <ErrorBoundary compact>
             <ActiveShipmentsList
               carrierMode={carrierMode}
               statusFilter="in_transit"
@@ -191,13 +191,13 @@ const DashboardShipmentTabs = ({
               }
               onRowCount={(n) => reportTabCount(TAB_TRANSIT, n)}
             />
-          </ErrorBoundary>
+        </ErrorBoundary>
         </div>
       ) : null}
 
       {mountedTabs.has(TAB_COMPLETED) ? (
         <div className={tab === TAB_COMPLETED ? '' : 'd-none'} aria-hidden={tab !== TAB_COMPLETED}>
-          <ErrorBoundary compact>
+        <ErrorBoundary compact>
             <ShipmentHistoryPanel
               carrierMode={carrierMode}
               limit={historyLimit}
@@ -205,7 +205,7 @@ const DashboardShipmentTabs = ({
               searchQuery={search}
               onRowCount={(n) => reportTabCount(TAB_COMPLETED, n)}
             />
-          </ErrorBoundary>
+        </ErrorBoundary>
         </div>
       ) : null}
     </div>
