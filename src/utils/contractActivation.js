@@ -177,6 +177,7 @@ export async function handleShipmentActivationSync(loadCode, { force = false, fa
       if (hasValid) {
         cancelRetries(refKey);
         publishActiveShipmentsHydrate(rows, { loadCode: ref, authoritative: true });
+        if (ref) reconcileOptimisticActivation(ref);
         return { rows, matched, hasValid };
       }
 

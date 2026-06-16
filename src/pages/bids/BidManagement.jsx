@@ -25,6 +25,7 @@ import {
   commitOptimisticBidReject,
   commitOptimisticBidSuggest
 } from '../../utils/contractActivationLayer.js';
+import { createDebouncedRefresh } from '../../utils/refreshDebounce.js';
 
 // Screen summarising bids across loads.
 const BidManagement = () => {
@@ -44,13 +45,20 @@ const BidManagement = () => {
         return isActiveBidStatus(st) && !isCounterOffered(st) && !isBidExpired(bid);
       }
       if (tab === 'counter') return isCounterOffered(st) && !isBidExpired(bid);
-      if (tab === 'active') return st === BID_STATUS.ACCEPTED;
+      if (tab === 'active') {
+        if (st !== BID_STATUS.ACCEPTED) return false;
+        const loadStatus = String(loadMetaByLoad[bid.loadId]?.load?.status || '').toLowerCase();
+        if (['booked', 'assigned', 'in_transit', 'delivered', 'closed', 'completed'].includes(loadStatus)) {
+          return false;
+        }
+        return true;
+      }
       if (tab === 'history') {
         return isTerminalBidStatus(st) || isBidExpired(bid);
       }
       return true;
     });
-  }, [bids, tab]);
+  }, [bids, tab, loadMetaByLoad]);
 
   const fetchBidsData = useCallback(async () => {
     try {
@@ -162,9 +170,9 @@ const BidManagement = () => {
   }, [bidsWithDistance]);
 
   useEffect(() => {
-    const reconcile = () => {
+    const reconcile = createDebouncedRefresh(() => {
       void fetchBidsData();
-    };
+    });
     const onBidsRefresh = () => reconcile();
     const onLegacyRefresh = (e) => {
       const scope = e?.detail?.scope;

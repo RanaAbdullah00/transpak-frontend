@@ -1,4 +1,5 @@
 import { normalizeActiveShipmentList, normalizeActiveShipmentRow } from './activeShipmentModel.js';
+import { trackingRefsMatch } from './trackingRefResolver.js';
 import {
   hasOptimisticActivation,
   shouldSuppressStaleRestRow
@@ -27,12 +28,24 @@ function rebuildSnapshot() {
 }
 
 function rowKey(row = {}) {
-  return (
-    String(row.shipmentId || '').trim() ||
-    String(row.trackRef || row.code || '').trim() ||
-    String(row.id || '').trim() ||
-    ''
-  );
+  const ref = String(
+    row.trackRef || row.code || row.loadCode || row.booking_reference || ''
+  ).trim();
+  if (ref) return ref;
+  return String(row.shipmentId || row.id || '').trim();
+}
+
+function removeDuplicateKeysForRow(normalized) {
+  const ref = rowRef(normalized) || rowKey(normalized);
+  if (!ref) return;
+  const targetKey = rowKey(normalized);
+  for (const [k, existing] of [...rowsByKey.entries()]) {
+    if (k === targetKey) continue;
+    const existingRef = rowRef(existing) || rowKey(existing);
+    if (trackingRefsMatch(existingRef, ref)) {
+      rowsByKey.delete(k);
+    }
+  }
 }
 
 function rowVersion(row = {}) {
@@ -74,6 +87,8 @@ function upsertRow(row, { source = 'hydrate' } = {}) {
   if (existing && nextVer < prevVer && source !== 'bootstrap') {
     return false;
   }
+
+  removeDuplicateKeysForRow(normalized);
 
   if (
     existing?._storeSource === 'bootstrap' &&
@@ -124,7 +139,18 @@ export function upsertActiveShipmentRows(rows = [], { authoritative = false, sou
     if (upsertRow(row, { source })) changed = true;
   });
 
-  if (changed || authoritative) notify();
+  if (changed || authoritative) {
+    if (authoritative) {
+      for (const row of incoming) {
+        const ref = rowRef(row) || rowKey(row);
+        if (ref) {
+          const { reconcileOptimisticActivation } = require('./contractActivationLayer.js');
+          reconcileOptimisticActivation(ref);
+        }
+      }
+    }
+    notify();
+  }
   return getActiveShipmentList();
 }
 

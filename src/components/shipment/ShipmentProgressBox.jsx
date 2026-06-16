@@ -7,8 +7,17 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 const ShipmentProgressBox = ({ status, uiState = null, eta }) => {
   const { t } = useLanguage();
   const cur = uiState?.status || normalizeShipmentStatus(status) || 'posted';
-  const idx = Math.max(0, SHIPMENT_ORDER.indexOf(cur));
-  const n = SHIPMENT_ORDER.length;
+  const displayOrder = useMemo(() => {
+    const curNorm = normalizeShipmentStatus(cur) || 'posted';
+    const bookedIdx = SHIPMENT_ORDER.indexOf('booked');
+    const curIdx = SHIPMENT_ORDER.indexOf(curNorm);
+    if (curIdx >= bookedIdx && bookedIdx >= 0) {
+      return SHIPMENT_ORDER.slice(bookedIdx);
+    }
+    return SHIPMENT_ORDER;
+  }, [cur]);
+  const idx = Math.max(0, displayOrder.indexOf(cur));
+  const n = displayOrder.length;
   const fillPct = n <= 1 ? 0 : (idx / (n - 1)) * 100;
 
   const labelFor = useMemo(
@@ -37,7 +46,7 @@ const ShipmentProgressBox = ({ status, uiState = null, eta }) => {
       </div>
       <div className="tp-progress-lane px-1">
         <div className="tp-progress-lane__labels d-flex justify-content-between gap-1">
-          {SHIPMENT_ORDER.map((step, i) => (
+          {displayOrder.map((step, i) => (
             <div key={step} className="tp-progress-lane__label-cell flex-fill text-center">
               <span className={`tp-progress-lane__label tp-progress-lane__label--${stepClass(i)}`}>
                 {labelFor[step] || step}
@@ -49,7 +58,7 @@ const ShipmentProgressBox = ({ status, uiState = null, eta }) => {
           <div className="tp-progress-lane__bar-bg rounded-pill" />
           <div className="tp-progress-lane__bar-fill rounded-pill" style={{ width: `${fillPct}%` }} />
           <div className="tp-progress-lane__nodes d-flex justify-content-between align-items-center position-relative">
-            {SHIPMENT_ORDER.map((step, i) => (
+            {displayOrder.map((step, i) => (
               <div
                 key={step}
                 className={`tp-progress-lane__node tp-progress-lane__node--${stepClass(i)}`}

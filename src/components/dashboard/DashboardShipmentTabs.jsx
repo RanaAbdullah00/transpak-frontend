@@ -184,6 +184,7 @@ const DashboardShipmentTabs = ({
               carrierMode={carrierMode}
               statusFilter="in_transit"
               searchQuery={search}
+              skipBootstrap
               emptyState={
                 transitEmptyState ?? (
                   <div className="text-muted text-center py-4 small">{t('pages.dashboard.emptyNoInTransit')}</div>

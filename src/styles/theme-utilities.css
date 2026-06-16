@@ -281,6 +281,12 @@ body.dark-mode .tp-dashboard--admin .tp-admin-activity-list .list-group-item-act
   margin-top: 0.25rem;
 }
 
+.tp-admin-dashboard-feed__body {
+  min-height: 14rem;
+  max-height: 14rem;
+  overflow: hidden;
+}
+
 .tp-admin-live-feed__scroll {
   max-height: 22rem;
   overflow-y: auto;

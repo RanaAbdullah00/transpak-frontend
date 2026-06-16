@@ -87,8 +87,15 @@ const CapacityMarketplace = ({ hubLayout = false, children = null }) => {
       if (scope && scope !== 'all' && scope !== 'space' && scope !== 'loads') return;
       refreshMarketplace();
     };
+    const onScoped = () => refreshMarketplace();
     window.addEventListener('tp:realtime-refresh', onRefresh);
-    return () => window.removeEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:loads-refresh', onScoped);
+    window.addEventListener('tp:space-refresh', onScoped);
+    return () => {
+      window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:loads-refresh', onScoped);
+      window.removeEventListener('tp:space-refresh', onScoped);
+    };
   }, [refreshMarketplace]);
 
   const activeFilterBadges = useMemo(() => {

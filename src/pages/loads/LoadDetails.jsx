@@ -40,7 +40,6 @@ const LoadDetails = () => {
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
-  const [activeShipmentRow, setActiveShipmentRow] = useState(null);
 
   const activeRole = user?.activeRole ?? user?.roles?.[0];
   const uid = user?.id || user?._id;

@@ -451,19 +451,21 @@ const AdminDashboardPage = () => {
                 {!auditEvents.length ? (
                   <p className="small text-muted mb-0">{t('pages.admin.auditLogEmpty')}</p>
                 ) : (
-                  <ul className="list-unstyled tp-admin-activity-list mb-0">
-                    {auditEvents.slice(0, 5).map((ev) => (
-                      <AdminActivityCard
-                        key={ev.id}
-                        label={ev.action}
-                        detail={`${ev.targetEntity}${ev.targetId ? ` · ${String(ev.targetId).slice(0, 8)}` : ''}`}
-                        meta={ev.actorName}
-                        timestamp={formatWhen(ev.createdAt, locale)}
-                        variant="system"
-                        icon="📋"
-                      />
-                    ))}
-                  </ul>
+                  <div className="tp-admin-dashboard-feed__body">
+                    <ul className="list-unstyled tp-admin-activity-list mb-0">
+                      {auditEvents.slice(0, 5).map((ev) => (
+                        <AdminActivityCard
+                          key={ev.id}
+                          label={ev.action}
+                          detail={`${ev.targetEntity}${ev.targetId ? ` · ${String(ev.targetId).slice(0, 8)}` : ''}`}
+                          meta={ev.actorName}
+                          timestamp={formatWhen(ev.createdAt, locale)}
+                          variant="system"
+                          icon="📋"
+                        />
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </AdminWidgetShell>
             </div>
@@ -482,7 +484,6 @@ const AdminDashboardPage = () => {
                 items={activity.slice(0, 5)}
                 locale={locale}
                 t={t}
-                connectionState={connectionState}
                 loading={activityLoading && !activity.length}
                 error={
                   activityWidgetsFailed
@@ -497,7 +498,6 @@ const AdminDashboardPage = () => {
                     : null
                 }
                 onRetry={retryActivity}
-                markLivePulse={markLivePulse}
                 emptyMessage={t('pages.admin.noRecentActivity')}
               />
             </div>

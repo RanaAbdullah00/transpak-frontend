@@ -768,7 +768,9 @@ export const translations = {
         statusUpdated: 'Shipment status updated',
         trackingNotActiveYet:
           'Live tracking starts after the bid is accepted and the shipment is booked.',
-        waitingForData: 'Waiting for tracking data…'
+        waitingForData: 'Waiting for tracking data…',
+        viewCarrierProfile: 'View carrier profile',
+        viewShipperProfile: 'View shipper profile'
       },
       shipments: {
         tracking: 'Shipment Tracking',
@@ -2262,7 +2264,9 @@ export const translations = {
         statusUpdated: 'شپمنٹ کی حیثیت اپ ڈیٹ ہو گئی',
         trackingNotActiveYet:
           'لائیو ٹریکنگ اس وقت شروع ہوتی ہے جب بولی قبول ہو اور شپمنٹ بک ہو جائے۔',
-        waitingForData: 'ٹریکنگ ڈیٹا کا انتظار…'
+        waitingForData: 'ٹریکنگ ڈیٹا کا انتظار…',
+        viewCarrierProfile: 'کیریئر پروفائل دیکھیں',
+        viewShipperProfile: 'شپر پروفائل دیکھیں'
       },
       supportPage: {
         title: 'مدد',

@@ -2,8 +2,7 @@ import React from 'react';
 import Card from '../ui/Card.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
-// Summary card for a shipment.
-const ShipmentCard = ({ shipment, uiState = null }) => {
+const ShipmentCard = ({ shipment, uiState = null, profileLink = null }) => {
   return (
     <Card>
       <div className="d-flex justify-content-between align-items-center mb-1">
@@ -13,13 +12,7 @@ const ShipmentCard = ({ shipment, uiState = null }) => {
       <div className="small text-muted mb-1">
         {shipment.origin} → {shipment.destination}
       </div>
-      <div className="small">
-        Driver: {shipment.driverName}
-        {shipment.driverPhone && shipment.driverPhone !== '—' ? ` · ${shipment.driverPhone}` : ''}
-        {' · '}
-        Vehicle: {shipment.vehicleReg}
-        {shipment.vehicleType && shipment.vehicleType !== '—' ? ` (${shipment.vehicleType})` : ''}
-      </div>
+      {profileLink ? <div className="small mb-1">{profileLink}</div> : null}
       <div className="small text-muted mt-1">
         Expected delivery:{' '}
         {shipment.eta != null && String(shipment.eta).trim() !== '' ? shipment.eta : 'Not set'}. Last update:{' '}
@@ -30,4 +23,3 @@ const ShipmentCard = ({ shipment, uiState = null }) => {
 };
 
 export default ShipmentCard;
-

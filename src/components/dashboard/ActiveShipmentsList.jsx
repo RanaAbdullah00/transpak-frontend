@@ -17,6 +17,7 @@ import {
   getUnifiedShipmentSnapshot
 } from '../../utils/shipmentUIState.js';
 import { subscribeOptimisticActivation } from '../../utils/contractActivationLayer.js';
+import { runActiveShipmentBootstrap } from '../../utils/activeShipmentBootstrap.js';
 import { normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
 
 function matchesStatusFilter(rawStatus, filter) {
@@ -54,7 +55,8 @@ const ActiveShipmentsList = ({
   emptyState = null,
   statusFilter = null,
   searchQuery = '',
-  onRowCount
+  onRowCount,
+  skipBootstrap = false
 }) => {
   const { t } = useLanguage();
   const { request } = useApi();
@@ -91,8 +93,9 @@ const ActiveShipmentsList = ({
   );
 
   useEffect(() => {
-    bootstrap();
-  }, [bootstrap]);
+    if (skipBootstrap) return;
+    void runActiveShipmentBootstrap(() => bootstrap());
+  }, [bootstrap, skipBootstrap]);
 
   useEffect(() => {
     const onHydrate = () => {

@@ -18,6 +18,7 @@ import {
   commitOptimisticBidSuggest,
   emitScopedRefresh
 } from '../../utils/contractActivationLayer.js';
+import { createDebouncedRefresh } from '../../utils/refreshDebounce.js';
 
 import { isTruckMatchingEligible } from '../../utils/fleetApi.js';
 import {
@@ -86,9 +87,9 @@ const MyBids = () => {
   }, [fetchBidsData]);
 
   useEffect(() => {
-    const reconcile = () => {
+    const reconcile = createDebouncedRefresh(() => {
       void fetchBidsData();
-    };
+    });
     const onBidsRefresh = () => reconcile();
     const onLegacyRefresh = (e) => {
       const scope = e?.detail?.scope;

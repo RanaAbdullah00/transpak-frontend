@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import TrackingMap from '../../components/shipment/TrackingMap.jsx';
-import RouteInfo from '../../components/shipment/RouteInfo.jsx';
 import ShipmentCard from '../../components/shipment/ShipmentCard.jsx';
+import ProfileLink from '../../components/profile/ProfileLink.jsx';
 import StatusTimeline from '../../components/shipment/StatusTimeline.jsx';
 import ShipmentProgressBox from '../../components/shipment/ShipmentProgressBox.jsx';
 import LifecycleBadge from '../../components/shipment/LifecycleBadge.jsx';
@@ -37,6 +37,7 @@ import {
 } from '../../utils/activeShipmentStore.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
 import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
+import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import { FLOW_TYPE } from '../../utils/flowSession.js';
 import {
   buildOptimisticTrackingRow,
@@ -275,12 +276,44 @@ const ShipmentTracking = () => {
       });
       await triggerStatusActivationSync(id);
       emitShipmentStatusUpdated(id, upcomingStatus, { source: 'api' });
+      if (upcomingStatus === 'closed') {
+        const counterpartyId =
+          workspaceRole === 'carrier'
+            ? payload?.shipperId || rowForTracking?.shipperId
+            : payload?.carrierId || rowForTracking?.assignedCarrierId || rowForTracking?.carrierId;
+        if (counterpartyId) {
+          emitReviewPrompt({
+            toUserId: counterpartyId,
+            shipmentRef: id,
+            shipmentId: payload?.shipmentId || rowForTracking?.shipmentId || null,
+            loadId: payload?.loadId || rowForTracking?.loadId || null,
+            roleType: workspaceRole === 'carrier' ? 'shipper' : 'carrier'
+          });
+        }
+      }
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.tracking.loadFailed') }));
     } finally {
       setAdvancing(false);
     }
-  }, [id, primaryAction, canEnableButton, request, t, workspaceRole]);
+  }, [id, primaryAction, canEnableButton, request, t, workspaceRole, payload, rowForTracking]);
+
+  const counterpartyProfileLink = useMemo(() => {
+    const shipperId = payload?.shipperId || rowForTracking?.shipperId;
+    const carrierId =
+      payload?.carrierId || rowForTracking?.assignedCarrierId || rowForTracking?.carrierId;
+    if (workspaceRole === 'shipper' && carrierId) {
+      return (
+        <ProfileLink userId={carrierId} name={payload?.carrierName || t('pages.tracking.viewCarrierProfile')} />
+      );
+    }
+    if (workspaceRole === 'carrier' && shipperId) {
+      return (
+        <ProfileLink userId={shipperId} name={payload?.shipperName || t('pages.tracking.viewShipperProfile')} />
+      );
+    }
+    return null;
+  }, [workspaceRole, payload, rowForTracking, t]);
 
   const tracking = payload?.tracking;
   const mapFields = useMemo(() => {
@@ -335,10 +368,6 @@ const ShipmentTracking = () => {
       origin: originName || t('common.emDash'),
       destination: destinationName || t('common.emDash'),
       status: effectiveStatus,
-      driverName: payload?.carrierName || tracking?.driverName || t('common.emDash'),
-      driverPhone: payload?.carrierPhone || tracking?.carrierPhone || t('common.emDash'),
-      vehicleReg: payload?.vehicleReg || tracking?.vehicleReg || t('common.emDash'),
-      vehicleType: payload?.vehicleType || tracking?.vehicleType || t('common.emDash'),
       eta: tracking?.eta
         ? new Date(tracking.eta).toLocaleString()
         : estimatedTravelHours
@@ -346,7 +375,7 @@ const ShipmentTracking = () => {
           : t('common.emDash'),
       lastUpdate: tracking?.locationUpdatedAt || payload?.history?.[0]?.time || t('common.emDash')
     }),
-    [id, payload?.refKey, payload?.carrierName, payload?.carrierPhone, payload?.vehicleReg, payload?.vehicleType, tracking, payload?.history, originName, destinationName, effectiveStatus, estimatedTravelHours, t]
+    [id, payload?.refKey, tracking, payload?.history, originName, destinationName, effectiveStatus, estimatedTravelHours, t]
   );
 
   const timelineEvents = useMemo(() => {
@@ -361,22 +390,6 @@ const ShipmentTracking = () => {
       return [];
     }
   }, [payload?.history, id, effectiveStatus, t]);
-
-  const checkpoints = useMemo(() => {
-    const originLabel = originName?.trim() || '';
-    const destLabel = destinationName?.trim() || '';
-    if (originLabel && destLabel) {
-      return [t('pages.tracking.originCity') + `: ${originLabel}`, t('pages.tracking.destinationCity') + `: ${destLabel}`];
-    }
-    if (coords.length >= 2) {
-      return [
-        originLabel || t('pages.tracking.originCity'),
-        destLabel || t('pages.tracking.destinationCity')
-      ];
-    }
-    if (coords.length === 1) return [t('pages.tracking.lastReportedPosition')];
-    return [];
-  }, [coords, originName, destinationName, t]);
 
   const trackingDataForMap = useMemo(
     () => ({
@@ -491,7 +504,7 @@ const ShipmentTracking = () => {
           <TranslatedText text={userError} as="span" />
         </p>
       ) : null}
-      <ShipmentCard shipment={shipment} uiState={ui} />
+      <ShipmentCard shipment={shipment} uiState={ui} profileLink={counterpartyProfileLink} />
       <div className="tp-tracking-progress mb-3">
         <ShipmentProgressBox uiState={ui} eta={shipment.eta} />
       </div>
@@ -528,11 +541,6 @@ const ShipmentTracking = () => {
           </Button>
         </div>
       ) : null}
-      <RouteInfo
-        distance={routeDistanceKm}
-        estimatedHours={estimatedTravelHours}
-        checkpoints={checkpoints}
-      />
       {import.meta.env.DEV ? (
         <>
           <CausalReplayPanel shipmentId={id} />

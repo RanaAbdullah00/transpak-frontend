@@ -76,10 +76,8 @@ const BidList = memo(({
     const seen = new Set();
     return collectSnapshotBids(bidSnapshot).filter((b) => {
       const bidId = String(b?.id || '').trim();
-      const updatedAt = String(b?.updatedAt ?? b?.updated_at ?? '').trim();
-      const dedupeKey = `${bidId}:${updatedAt}`;
-      if (!bidId || seen.has(dedupeKey)) return false;
-      seen.add(dedupeKey);
+      if (!bidId || seen.has(bidId)) return false;
+      seen.add(bidId);
       return true;
     });
   }, [bidSnapshot]);
