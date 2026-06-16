@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PostLoadForm from '../../components/loadboard/PostLoadForm.jsx';
-import Loader from '../../components/ui/Loader.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
@@ -10,7 +9,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { logApiSuccess, logApiFailure } from '../../utils/apiDevLog.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
-import { tonsToKg, kgToTons } from '../../utils/weightUnits.js';
+import { tonsToKg } from '../../utils/weightUnits.js';
 
 const PostLoad = () => {
   const { user } = useAuth();
@@ -18,13 +17,7 @@ const PostLoad = () => {
   const { request } = useApi();
   const { t } = useLanguage();
 
-  useEffect(() => {
-    if (shouldUseAdminShell(user)) {
-      navigate('/admin/dashboard', { replace: true });
-    }
-  }, [user, navigate]);
-
-  const profileBlocked = user && user.profileComplete === false && !shouldUseAdminShell(user);
+  const profileBlocked = user && user.profileComplete === false;
   const [formKey, setFormKey] = React.useState(0);
   const [posting, setPosting] = React.useState(false);
 
@@ -67,14 +60,6 @@ const PostLoad = () => {
       setPosting(false);
     }
   };
-
-  if (shouldUseAdminShell(user)) {
-    return (
-      <div className="container py-5 text-center">
-        <Loader />
-      </div>
-    );
-  }
 
   if (profileBlocked) {
     return (

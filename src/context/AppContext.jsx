@@ -36,6 +36,15 @@ import { recordTrackingEventDeduped } from '../hooks/usePerformanceTelemetry.js'
 
 export const AppContext = createContext(null);
 
+function scheduleIdleWork(fn, { timeout = 2000, fallbackMs = 150 } = {}) {
+  if (typeof requestIdleCallback === 'function') {
+    const id = requestIdleCallback(fn, { timeout });
+    return () => cancelIdleCallback(id);
+  }
+  const timerId = setTimeout(fn, fallbackMs);
+  return () => clearTimeout(timerId);
+}
+
 function normalizeNotificationsPayload(data) {
   if (Array.isArray(data)) return { items: data, nextCursor: null, hasMore: false };
   if (data && Array.isArray(data.items)) {
@@ -181,38 +190,45 @@ export const AppProvider = ({ children }) => {
     setNotificationsCursor(null);
     setNotificationsHasMore(false);
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await api.get('/notifications', {
-          params: notificationQueryParams(user, { limit: 30 }),
-          skipGlobalErrorToast: true
-        });
-        if (cancelled) return;
-        const page = normalizeNotificationsPayload(unwrapResponseData(res));
-        const items = ensureArray(page.items).map(mapNotificationRow);
-        setNotifications(items);
-        setNotificationsCursor(page.nextCursor);
-        setNotificationsHasMore(page.hasMore);
-        const welcome = items.find(
-          (n) => String(n.type || n.title || '').toUpperCase() === 'LOGIN_SUCCESS' && !n.read
-        );
-        if (welcome && !welcomeToastShownRef.current) {
-          const age = Date.now() - new Date(welcome.createdAt || 0).getTime();
-          if (age >= 0 && age < 120000) {
-            welcomeToastShownRef.current = true;
-            queueMicrotask(() => {
-              routeRealtimeNotification(welcome);
-              window.dispatchEvent(new CustomEvent('tp:notification-sound'));
-            });
+
+    const fetchInitialNotifications = () => {
+      if (cancelled) return;
+      (async () => {
+        try {
+          const res = await api.get('/notifications', {
+            params: notificationQueryParams(user, { limit: 30 }),
+            skipGlobalErrorToast: true
+          });
+          if (cancelled) return;
+          const page = normalizeNotificationsPayload(unwrapResponseData(res));
+          const items = ensureArray(page.items).map(mapNotificationRow);
+          setNotifications(items);
+          setNotificationsCursor(page.nextCursor);
+          setNotificationsHasMore(page.hasMore);
+          const welcome = items.find(
+            (n) => String(n.type || n.title || '').toUpperCase() === 'LOGIN_SUCCESS' && !n.read
+          );
+          if (welcome && !welcomeToastShownRef.current) {
+            const age = Date.now() - new Date(welcome.createdAt || 0).getTime();
+            if (age >= 0 && age < 120000) {
+              welcomeToastShownRef.current = true;
+              queueMicrotask(() => {
+                routeRealtimeNotification(welcome);
+                window.dispatchEvent(new CustomEvent('tp:notification-sound'));
+              });
+            }
           }
+        } catch (err) {
+          if (err?.response?.status !== 401) notifyApiError(err);
         }
-      } catch (err) {
-        if (err?.response?.status !== 401) notifyApiError(err);
-      }
-    })();
+      })();
+    };
+
+    const cancelIdle = scheduleIdleWork(fetchInitialNotifications);
 
     return () => {
       cancelled = true;
+      cancelIdle();
     };
   }, [user?.id, user?.activeRole]);
 
@@ -410,128 +426,143 @@ export const AppProvider = ({ children }) => {
       return undefined;
     }
 
-    const token = getAuthToken();
-    const workspaceScoped = (row) => {
-      const u = userRef.current;
-      if (!u) return true;
-      const rt = row?.roleType != null ? String(row.roleType).toLowerCase() : '';
-      if (!rt) return true;
-      if (userHasDualCommercialRoles(u)) {
-        return rt === 'shipper' || rt === 'carrier' || rt === 'admin';
-      }
-      const active = getWorkspace(u);
-      if (active === 'admin') return rt === 'admin';
-      return rt === active;
-    };
+    let cancelled = false;
+    let cleanupSocket = () => {};
 
-    const ingestNotification = (n) => {
-      if (!workspaceScoped(n)) return;
-      addNotificationRef.current?.(n);
-    };
+    const connectSocket = () => {
+      if (cancelled) return;
 
-    const client = createSocketClient({
-      token: token || undefined,
-      workspace: userRef.current ? getWorkspace(userRef.current) : null,
-      onConnectionChange: (connected, meta) => {
-        socketConnectedRef.current = Boolean(connected);
-        if (connected) {
-          socketLostRef.current = false;
-          setSocketStatus('connected');
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('tp:socket-ready', { detail: { status: 'ready' } }));
-          }
-          return;
-        }
-        if (meta?.exhausted) {
-          socketLostRef.current = true;
-          setSocketStatus('lost');
-          return;
-        }
-        socketLostRef.current = false;
-        setSocketStatus('reconnecting');
-      },
-      onReconnect: async () => {
-        if (socketLostRef.current) return;
-        const now = Date.now();
-        if (now - lastReconnectSyncRef.current < 8000) return;
-        lastReconnectSyncRef.current = now;
-        await syncReconnectRef.current?.();
-      },
-      onDispatch: (d) => {
+      const token = getAuthToken();
+      const workspaceScoped = (row) => {
         const u = userRef.current;
-        if (d?.scope?.workspace && u && !userHasDualCommercialRoles(u)) {
-          const active = getWorkspace(u);
-          if (String(d.scope.workspace).toLowerCase() !== active) return;
+        if (!u) return true;
+        const rt = row?.roleType != null ? String(row.roleType).toLowerCase() : '';
+        if (!rt) return true;
+        if (userHasDualCommercialRoles(u)) {
+          return rt === 'shipper' || rt === 'carrier' || rt === 'admin';
         }
-        handleDispatchEvent(d, { onNotification: ingestNotification });
-      },
-      onNotification: (n) => {
-        if (n?.items && Array.isArray(n.items)) {
-          n.items.filter(workspaceScoped).forEach((item) => ingestNotification(item));
-          return;
-        }
-        ingestNotification(n);
-      },
-      onTracking: (p) => {
-        const event = normalizeTrackingEvent(p, 'socket');
-        if (event.eventId && trackingEventDedupeCache.has(event.eventId)) {
-          recordTrackingEventDeduped();
-          return;
-        }
-        const refs = [p?.refKey, p?.loadId]
-          .map((v) => String(v ?? '').trim())
-          .filter(Boolean);
-        const ts = Number(p?.ts);
-        if (refs.length && Number.isFinite(ts)) {
-          const lastTs = Math.max(...refs.map((r) => lastTrackingTsByRef.current.get(r) || 0));
-          if (ts < lastTs) return;
-          refs.forEach((r) => lastTrackingTsByRef.current.set(r, ts));
-        }
-        const sig = `${refs.join('|')}|${p?.tracking?.status}|${ts}|${JSON.stringify(p?.tracking?.currentLocation ?? p?.tracking?.location)}|${(p?.history || []).length}`;
-        const now = Date.now();
-        if (sig && lastTrackingSig.current.sig === sig && now - lastTrackingSig.current.t < 450) {
-          return;
-        }
-        lastTrackingSig.current = { sig, t: now };
-        const status = p?.tracking?.status;
-        const statusRef = String(p?.refKey || p?.loadId || '').trim();
-        if (statusRef && status) {
-          emitShipmentStatusUpdated(statusRef, status, { source: 'socket' });
-        }
-        trackingHandlers.current.forEach((fn) => {
-          try {
-            fn(p);
-          } catch {
-            // ignore
+        const active = getWorkspace(u);
+        if (active === 'admin') return rt === 'admin';
+        return rt === active;
+      };
+
+      const ingestNotification = (n) => {
+        if (!workspaceScoped(n)) return;
+        addNotificationRef.current?.(n);
+      };
+
+      const client = createSocketClient({
+        token: token || undefined,
+        workspace: userRef.current ? getWorkspace(userRef.current) : null,
+        onConnectionChange: (connected, meta) => {
+          socketConnectedRef.current = Boolean(connected);
+          if (connected) {
+            socketLostRef.current = false;
+            setSocketStatus('connected');
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('tp:socket-ready', { detail: { status: 'ready' } }));
+            }
+            return;
           }
-        });
-      },
-      onChatMessage: (msg) => {
-        chatMessageHandlers.current.forEach((fn) => {
-          try {
-            fn(msg);
-          } catch {
-            // ignore
+          if (meta?.exhausted) {
+            socketLostRef.current = true;
+            setSocketStatus('lost');
+            return;
           }
-        });
-      },
-      onChatSeen: (payload) => {
-        chatSeenHandlers.current.forEach((fn) => {
-          try {
-            fn(payload);
-          } catch {
-            // ignore
+          socketLostRef.current = false;
+          setSocketStatus('reconnecting');
+        },
+        onReconnect: async () => {
+          if (socketLostRef.current) return;
+          const now = Date.now();
+          if (now - lastReconnectSyncRef.current < 8000) return;
+          lastReconnectSyncRef.current = now;
+          await syncReconnectRef.current?.();
+        },
+        onDispatch: (d) => {
+          const u = userRef.current;
+          if (d?.scope?.workspace && u && !userHasDualCommercialRoles(u)) {
+            const active = getWorkspace(u);
+            if (String(d.scope.workspace).toLowerCase() !== active) return;
           }
-        });
-      }
-    });
-    socketRef.current = client.socket;
-    socketClientRef.current = client;
+          handleDispatchEvent(d, { onNotification: ingestNotification });
+        },
+        onNotification: (n) => {
+          if (n?.items && Array.isArray(n.items)) {
+            n.items.filter(workspaceScoped).forEach((item) => ingestNotification(item));
+            return;
+          }
+          ingestNotification(n);
+        },
+        onTracking: (p) => {
+          const event = normalizeTrackingEvent(p, 'socket');
+          if (event.eventId && trackingEventDedupeCache.has(event.eventId)) {
+            recordTrackingEventDeduped();
+            return;
+          }
+          const refs = [p?.refKey, p?.loadId]
+            .map((v) => String(v ?? '').trim())
+            .filter(Boolean);
+          const ts = Number(p?.ts);
+          if (refs.length && Number.isFinite(ts)) {
+            const lastTs = Math.max(...refs.map((r) => lastTrackingTsByRef.current.get(r) || 0));
+            if (ts < lastTs) return;
+            refs.forEach((r) => lastTrackingTsByRef.current.set(r, ts));
+          }
+          const sig = `${refs.join('|')}|${p?.tracking?.status}|${ts}|${JSON.stringify(p?.tracking?.currentLocation ?? p?.tracking?.location)}|${(p?.history || []).length}`;
+          const now = Date.now();
+          if (sig && lastTrackingSig.current.sig === sig && now - lastTrackingSig.current.t < 450) {
+            return;
+          }
+          lastTrackingSig.current = { sig, t: now };
+          const status = p?.tracking?.status;
+          const statusRef = String(p?.refKey || p?.loadId || '').trim();
+          if (statusRef && status) {
+            emitShipmentStatusUpdated(statusRef, status, { source: 'socket' });
+          }
+          trackingHandlers.current.forEach((fn) => {
+            try {
+              fn(p);
+            } catch {
+              // ignore
+            }
+          });
+        },
+        onChatMessage: (msg) => {
+          chatMessageHandlers.current.forEach((fn) => {
+            try {
+              fn(msg);
+            } catch {
+              // ignore
+            }
+          });
+        },
+        onChatSeen: (payload) => {
+          chatSeenHandlers.current.forEach((fn) => {
+            try {
+              fn(payload);
+            } catch {
+              // ignore
+            }
+          });
+        }
+      });
+      socketRef.current = client.socket;
+      socketClientRef.current = client;
+      cleanupSocket = () => {
+        client.disconnect();
+        socketRef.current = null;
+        socketClientRef.current = null;
+        setSocketStatus('idle');
+      };
+    };
+
+    const cancelIdle = scheduleIdleWork(connectSocket);
+
     return () => {
-      client.disconnect();
-      socketRef.current = null;
-      socketClientRef.current = null;
-      setSocketStatus('idle');
+      cancelled = true;
+      cancelIdle();
+      cleanupSocket();
     };
   }, [user?.id, sessionVersion]);
 

@@ -10,23 +10,14 @@ import LoadingScreen from '../ui/LoadingScreen.jsx';
  */
 export default function AtomicRoute({ name, admin = false, children }) {
   const location = useLocation();
-  const { user, sessionVersion } = useAuth();
+  const { user } = useAuth();
   const pathname = location.pathname;
   const search = location.search;
   const userId = user?.id ?? 'guest';
   const activeRole = user?.activeRole ?? user?.roles?.[0] ?? 'none';
-  const roleRemountKey = user?.id && user?.activeRole ? `${user.id}:${user.activeRole}` : 'guest';
 
   const resetKey = `${pathname}${search}`;
-  const instanceKey = [
-    name,
-    pathname,
-    search,
-    userId,
-    activeRole,
-    String(sessionVersion ?? 0),
-    roleRemountKey
-  ].join('|');
+  const instanceKey = [name, pathname, search, userId, activeRole].join('|');
 
   const suspenseKey = `${instanceKey}-suspense`;
   const Boundary = admin ? AdminErrorBoundary : ErrorBoundary;

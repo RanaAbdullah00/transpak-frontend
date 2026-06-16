@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Button from '../ui/Button.jsx';
 import CitySelect from '../ui/CitySearchSelect.jsx';
-import Map from '../Map.jsx';
+import Loader from '../ui/Loader.jsx';
 import { routeFromCityNames } from '../../utils/mapCoords.js';
 import { useMapRoute } from '../../hooks/useMapRoute.js';
 import VehicleTypeSelect from './VehicleTypeSelect.jsx';
@@ -11,6 +11,9 @@ import { useFareEstimate } from '../../hooks/useFareEstimate.js';
 import { formatDistanceKm } from '../../utils/formatDistance.js';
 import { isKnownCity } from '../../data/pakistanCities.js';
 import { localTodayISO, isOnOrAfterLocalToday } from '../../utils/localDate.js';
+import { lazyWithRetry } from '../../utils/lazyWithRetry.js';
+
+const Map = lazyWithRetry(() => import('../Map.jsx'));
 
 const defaultForm = () => ({
   cargo: '',
@@ -213,21 +216,29 @@ const PostLoadForm = ({ onSubmit, initialValues = null, submitLabel = null, subm
           ) : null}
         </div>
       ) : null}
-      {routePreview.length >= 2 ? (
+      {showFareEstimate && routePreview.length >= 2 ? (
         <div className="tp-dashboard-map-preview mb-2">
           <label className="form-label small text-muted mb-1">{t('pages.postLoadForm.routeMapLabel')}</label>
-          <Map
-            pickup={routePreview[0]}
-            delivery={routePreview[routePreview.length - 1]}
-            route={routePreview}
-            height={200}
-            loading={routeLoading}
-            errorMessage={
-              routeFallback && !routeLoading ? t('map.routeFallback') : routeError ? t('map.routeError') : ''
+          <Suspense
+            fallback={
+              <div className="d-flex justify-content-center align-items-center rounded-3 tp-border-theme border py-4">
+                <Loader />
+              </div>
             }
-            pickupLabel={t('pages.postLoadForm.pickupCity')}
-            deliveryLabel={t('pages.postLoadForm.dropoffCity')}
-          />
+          >
+            <Map
+              pickup={routePreview[0]}
+              delivery={routePreview[routePreview.length - 1]}
+              route={routePreview}
+              height={200}
+              loading={routeLoading}
+              errorMessage={
+                routeFallback && !routeLoading ? t('map.routeFallback') : routeError ? t('map.routeError') : ''
+              }
+              pickupLabel={t('pages.postLoadForm.pickupCity')}
+              deliveryLabel={t('pages.postLoadForm.dropoffCity')}
+            />
+          </Suspense>
         </div>
       ) : null}
       <div className="row g-2 mt-1">

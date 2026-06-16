@@ -24,6 +24,20 @@ import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
 const navLinkClass = ({ isActive }) =>
   `nav-link d-flex align-items-center gap-2 rounded-lg px-3 py-2 mb-1 ${isActive ? 'active' : ''}`;
 
+function prefetchShipperRoutes() {
+  import('../../pages/dashboard/ShipperDashboard.jsx');
+  import('../../pages/loads/LoadsHub.jsx');
+}
+
+function scheduleIdleWork(fn, { timeout = 2000, fallbackMs = 500 } = {}) {
+  if (typeof requestIdleCallback === 'function') {
+    const id = requestIdleCallback(fn, { timeout });
+    return () => cancelIdleCallback(id);
+  }
+  const timerId = setTimeout(fn, fallbackMs);
+  return () => clearTimeout(timerId);
+}
+
 const Sidebar = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -37,20 +51,45 @@ const Sidebar = () => {
 
   const dashboardPath = isShipper ? '/dashboard/shipper' : '/dashboard/carrier';
 
+  React.useEffect(() => {
+    if (!isShipper) return undefined;
+    return scheduleIdleWork(prefetchShipperRoutes);
+  }, [isShipper]);
+
+  const warmShipperRoutes = React.useCallback(() => {
+    if (isShipper) prefetchShipperRoutes();
+  }, [isShipper]);
+
   return (
     <aside className="d-none d-md-block sidebar-fixed sidebar-aside d-flex flex-column">
       <nav className="nav flex-column p-3 small flex-grow-1 overflow-auto tp-sidebar-nav">
-        <NavLink to={dashboardPath} className={navLinkClass} end>
+        <NavLink
+          to={dashboardPath}
+          className={navLinkClass}
+          end
+          onMouseEnter={warmShipperRoutes}
+          onFocus={warmShipperRoutes}
+        >
           <FaTachometerAlt />
           {t('common.dashboard')}
         </NavLink>
         {isShipper && (
           <>
-            <NavLink to="/loads/post" className={navLinkClass}>
+            <NavLink
+              to="/loads/post"
+              className={navLinkClass}
+              onMouseEnter={warmShipperRoutes}
+              onFocus={warmShipperRoutes}
+            >
               <FaPlusCircle />
               {t('pages.loads.postLoad')}
             </NavLink>
-            <NavLink to="/loads/manage" className={navLinkClass}>
+            <NavLink
+              to="/loads/manage"
+              className={navLinkClass}
+              onMouseEnter={warmShipperRoutes}
+              onFocus={warmShipperRoutes}
+            >
               <FaListUl />
               {t('pages.loads.manageLoads')}
             </NavLink>

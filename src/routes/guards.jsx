@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
-import LoadingScreen from '../components/ui/LoadingScreen.jsx';
+import Loader from '../components/ui/Loader.jsx';
 import { dashboardPathForRole } from '../utils/dashboardPath.js';
 import { canAccessAdminRoutes, shouldUseAdminShell } from '../utils/rbac.js';
 
@@ -10,7 +10,11 @@ export function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
 
   if (loading) {
-    return <LoadingScreen />;
+    return (
+      <div className="d-flex justify-content-center align-items-center py-5" aria-busy="true">
+        <Loader />
+      </div>
+    );
   }
 
   if (!user) {
