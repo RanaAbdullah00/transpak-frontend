@@ -91,7 +91,6 @@ function MapForceInvalidate({ active = false, invalidateKey = 0 }) {
  * @param {string|number} [props.height]
  * @param {string} [props.pickupLabel]
  * @param {string} [props.deliveryLabel]
- * @param {string} [props.driverLabel]
  * @param {boolean} [props.loading]
  * @param {string} [props.errorMessage]
  */
@@ -104,7 +103,6 @@ const Map = ({
   height = 'min(420px, 50vh)',
   pickupLabel = 'Pickup',
   deliveryLabel = 'Delivery',
-  driverLabel = 'Driver',
   loading = false,
   errorMessage = '',
   forceInvalidate = false,
@@ -192,9 +190,7 @@ const Map = ({
           </Marker>
         ) : null}
         {driverPos ? (
-          <Marker position={driverPos} icon={driverIcon}>
-            <Popup>{driverLabel}</Popup>
-          </Marker>
+          <Marker position={driverPos} icon={driverIcon} />
         ) : null}
       </MapContainer>
     </div>

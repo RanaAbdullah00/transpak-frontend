@@ -133,7 +133,6 @@ const TrackingMap = ({
         errorMessage={orsFallback && !hasLiveRoute && !orsLoading ? t('map.routeFallback') : ''}
         pickupLabel={t('pages.trackingMap.pickup')}
         deliveryLabel={t('pages.trackingMap.delivery')}
-        driverLabel={t('pages.trackingMap.driver')}
         forceInvalidate={trackingActive}
         invalidateKey={mapInvalidateKey}
       />
