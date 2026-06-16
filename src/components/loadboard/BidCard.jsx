@@ -218,6 +218,13 @@ const BidCard = ({
             {resolvedBid.vehicleType} · {resolvedBid.transitTime} {t('bidCard.daysSuffix')}
             {routeDistance.available ? ` · ${routeDistance.display}` : ''}
           </small>
+          {resolvedBid.origin && resolvedBid.destination ? (
+            <small className="d-flex align-items-center text-break mt-1">
+              <span>{resolvedBid.origin}</span>
+              <span className="mx-1" aria-hidden="true">↓</span>
+              <span>{resolvedBid.destination}</span>
+            </small>
+          ) : null}
           {!routeDistance.available && distRaw != null ? (
             <small className="text-muted d-block">{routeDistance.display}</small>
           ) : null}

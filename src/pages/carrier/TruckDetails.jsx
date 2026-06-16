@@ -125,16 +125,6 @@ const TruckDetails = () => {
 
   const reset = () => setForm(emptyForm);
 
-  const setAsDefault = async (row) => {
-    try {
-      await request({ method: 'PATCH', url: `/trucks/${row.id}/default` });
-      notifySuccess(t('pages.truckDetailsPage.defaultSet'));
-      await refresh();
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('pages.truckDetailsPage.saveFailed') }));
-    }
-  };
-
   const removeTruck = async (row) => {
     if (!window.confirm(t('pages.truckDetailsPage.deleteConfirm'))) return;
     try {
@@ -419,9 +409,9 @@ const TruckDetails = () => {
                           {isSuspended ? (
                             <div className="small text-danger mt-1">{t('pages.truckDetailsPage.suspendedHint')}</div>
                           ) : isTruckMatchingEligible(row) ? (
-                            <div className="small text-success mt-1">{t('pages.truckDetailsPage.matchingEligible')}</div>
+                            <div className="small text-success mt-1">{t('pages.truckDetailsPage.eligibleForMatching')}</div>
                           ) : (
-                            <div className="small text-warning mt-1">{t('pages.truckDetailsPage.notMatchingEligible')}</div>
+                            <div className="small text-warning mt-1">{t('pages.truckDetailsPage.notEligibleForMatching')}</div>
                           )}
                         </div>
                         <div className="d-flex flex-column gap-1 flex-shrink-0">
@@ -439,16 +429,6 @@ const TruckDetails = () => {
                               {t('pages.truckDetailsPage.verifiedLocked')}
                             </span>
                           )}
-                          {isTruckMatchingEligible(row) && !row.isDefault ? (
-                            <Button
-                              variant="outline-secondary"
-                              size="sm"
-                              className="tp-touch-target"
-                              onClick={() => setAsDefault(row)}
-                            >
-                              {t('pages.truckDetailsPage.setDefault')}
-                            </Button>
-                          ) : null}
                           {!isApproved ? (
                           <Button
                             variant="outline-danger"

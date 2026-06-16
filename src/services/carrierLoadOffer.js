@@ -14,6 +14,13 @@ export function notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn) {
 /**
  * Carrier responds to open loads (accept listed fare, counter-offer, or pass).
  */
+function newBidIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `bid-${crypto.randomUUID()}`;
+  }
+  return `bid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export async function acceptLoadAtListedFare(request, load, { t, notifyWarn } = {}) {
   const amount = Number(load?.expectedPrice ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -24,7 +31,8 @@ export async function acceptLoadAtListedFare(request, load, { t, notifyWarn } = 
   const bid = await request({
     method: 'POST',
     url: '/bids',
-    data: { loadId: load.id, amount },
+    data: { loadId: load.id, amount, acceptListedFare: true },
+    headers: { 'Idempotency-Key': newBidIdempotencyKey() },
     skipGlobalErrorToast: true
   });
   notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn);
@@ -44,6 +52,7 @@ export async function submitCounterOffer(request, load, counterAmount, { t, noti
     method: 'POST',
     url: '/bids',
     data: { loadId: load.id, amount },
+    headers: { 'Idempotency-Key': newBidIdempotencyKey() },
     skipGlobalErrorToast: true
   });
   notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn);

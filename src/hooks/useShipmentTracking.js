@@ -24,12 +24,11 @@ import {
   EMPTY_UNIFIED_SNAPSHOT,
   getUnifiedShipmentSnapshot
 } from '../utils/shipmentUIState.js';
-import { canEmitGps, emitTrackingJoin } from '../utils/trackingSessionManager.js';
+import { canEmitGps } from '../utils/trackingSessionManager.js';
 import {
   requestTrackingJoin,
   clearTrackingJoinRequest,
-  clearTrackingJoinQueue,
-  flushTrackingJoinQueue
+  clearTrackingJoinQueue
 } from '../utils/trackingJoinQueue.js';
 import {
   emptyTrackingPayload,
@@ -470,35 +469,10 @@ export function useShipmentTracking({
     const aliasRefs = [socketKey].filter(Boolean);
     requestTrackingJoin(localRef, aliasRefs);
 
-    const performJoin = () => {
-      if (!isTrackingSocketReady(socketStatus, getSocket?.())) return false;
-      const activeSocket = getSocket?.();
-      if (!activeSocket?.connected) return false;
-      emitTrackingJoin(activeSocket, localRef, aliasRefs);
-      flushTrackingJoinQueue(activeSocket, emitTrackingJoin);
-      return true;
-    };
-
-    const onSocketReady = () => performJoin();
-    const onConnected = () => performJoin();
-
-    if (socketReady) {
-      performJoin();
-    }
-
-    window.addEventListener('tp:socket-ready', onSocketReady);
-    const activeSocket = getSocket?.();
-    activeSocket?.on?.('connect', onConnected);
-
     return () => {
-      window.removeEventListener('tp:socket-ready', onSocketReady);
-      try {
-        activeSocket?.off?.('connect', onConnected);
-      } catch {
-        /* ignore */
-      }
+      clearTrackingJoinRequest(localRef);
     };
-  }, [trackingGate, localRef, socketKey, socketReady, socketStatus, getSocket]);
+  }, [trackingGate, localRef, socketKey]);
 
   const liveLat = livePos?.[0];
   const liveLng = livePos?.[1];

@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeInterval } from '../../hooks/useSafeInterval.js';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { SkeletonStatCards } from '../../components/ui/Skeleton.jsx';
 import AdminDemoVideoManager from '../../components/admin/AdminDemoVideoManager.jsx';
 import AdminWidgetShell from '../../components/admin/AdminWidgetShell.jsx';
@@ -442,12 +442,17 @@ const AdminDashboardPage = () => {
                 loading={widgetLoading('audit')}
                 error={widgetFailed('audit') ? describeAdminWidgetError(widgetState?.audit, t) : null}
                 onRetry={() => retryWidget('audit')}
+                action={
+                  <Link to="/admin/audit" className="btn btn-sm btn-link text-decoration-none">
+                    {t('common.viewAll')}
+                  </Link>
+                }
               >
                 {!auditEvents.length ? (
                   <p className="small text-muted mb-0">{t('pages.admin.auditLogEmpty')}</p>
                 ) : (
                   <ul className="list-unstyled tp-admin-activity-list mb-0">
-                    {auditEvents.map((ev) => (
+                    {auditEvents.slice(0, 5).map((ev) => (
                       <AdminActivityCard
                         key={ev.id}
                         label={ev.action}
@@ -469,7 +474,12 @@ const AdminDashboardPage = () => {
             <div className="card-body">
               <AdminLiveFeedPanel
                 title={t('pages.admin.recentActivity')}
-                items={activity}
+                headerAction={
+                  <Link to="/admin/activity" className="btn btn-sm btn-link text-decoration-none">
+                    {t('common.viewAll')}
+                  </Link>
+                }
+                items={activity.slice(0, 5)}
                 locale={locale}
                 t={t}
                 connectionState={connectionState}

@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
-import { formatUserError } from '../../utils/userErrors.js';
+import { tonsToKg, kgToTons } from '../../utils/weightUnits.js';
 
 // Shipper: edit an open load (PATCH /loads/:id).
 const EditLoad = () => {
@@ -46,7 +46,7 @@ const EditLoad = () => {
       cargo: String(loadRaw.cargo || '').trim(),
       origin: String(loadRaw.origin || '').trim(),
       destination: String(loadRaw.destination || '').trim(),
-      weight: loadRaw.weight != null ? String(loadRaw.weight) : '',
+      weight: loadRaw.weight != null ? String(kgToTons(loadRaw.weight)) : '',
       vehicleType: String(loadRaw.vehicleType || 'Truck').trim(),
       expectedPrice: loadRaw.expectedPrice != null ? String(loadRaw.expectedPrice) : '',
       pickupDate: String(loadRaw.pickupDate || '').trim(),
@@ -63,7 +63,7 @@ const EditLoad = () => {
           cargo: payload.cargo,
           origin: payload.origin,
           destination: payload.destination,
-          weight: Number(payload.weight),
+          weight: tonsToKg(Number(payload.weight)),
           vehicleType: payload.vehicleType,
           expectedPrice: Number(payload.expectedPrice),
           pickupDate: payload.pickupDate,

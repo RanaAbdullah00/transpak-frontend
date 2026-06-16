@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
+import {
+  bindTrackingReconnect,
+  emitTrackingJoin,
+  joinSession,
+  leaveSession
+} from '../utils/trackingSessionManager.js';
 import { getOrCreateTraceId } from '../utils/traceContext.js';
 
 /**

@@ -28,6 +28,7 @@ import Settings from '../pages/settings/Settings.jsx';
 import Support from '../pages/support/Support.jsx';
 import Feedback from '../pages/support/Feedback.jsx';
 import Notifications from '../pages/notifications/Notifications.jsx';
+import OperationsActivity from '../pages/operations/OperationsActivity.jsx';
 
 function commercial(name, children) {
   return <AtomicRoute name={name}>{children}</AtomicRoute>;
@@ -70,6 +71,11 @@ export const commercialRoutes = [
   <Route key="support" path="/support" element={commercial('support', <ProtectedRoute><Support /></ProtectedRoute>)} />,
   <Route key="feedback" path="/feedback" element={commercial('feedback', <ProtectedRoute><Feedback /></ProtectedRoute>)} />,
   <Route key="notifications" path="/notifications" element={commercial('notifications', <ProtectedRoute><Notifications /></ProtectedRoute>)} />,
+  <Route
+    key="operations-activity"
+    path="/operations/activity"
+    element={protectedCommercial('operations-activity', <OperationsActivity />, ['shipper', 'carrier', 'admin'])}
+  />,
   <Route key="messages" path="/messages" element={commercial('messages', <ProtectedRoute><Messages /></ProtectedRoute>)} />,
   <Route key="public-profile" path="/profile/u/:id" element={commercial('public-profile', <ProtectedRoute><PublicProfile /></ProtectedRoute>)} />
 ];

@@ -1,3 +1,4 @@
+import { kgToTons } from '../utils/weightUnits.js';
 import { normalizeBidStatus, isCounterOffered } from '../utils/bidStatus.js';
 import { estimateLocalFare } from '../utils/localFareEstimate.js';
 
@@ -18,6 +19,7 @@ export const normalizeLoad = (raw) => {
   if (!raw) return null;
   const id = raw.id ?? raw._id ?? raw.loadId ?? null;
   const price = Number(raw.price ?? raw.expectedPrice ?? raw.amount ?? 0);
+  const weightKg = Number(raw.weight ?? raw.weightKg ?? 0);
   return {
     // canonical
     id,
@@ -33,7 +35,8 @@ export const normalizeLoad = (raw) => {
     cargo: raw.cargo ?? raw.title ?? raw.description ?? 'Load',
     origin: raw.origin ?? raw.pickup ?? '',
     destination: raw.destination ?? raw.delivery ?? '',
-    weight: raw.weight ?? 0,
+    weight: kgToTons(weightKg),
+    weightKg,
     vehicleType: raw.vehicleType ?? raw.type ?? 'Truck',
     distance: resolveLoadDistance(raw),
     distanceKm: resolveLoadDistance(raw),
@@ -78,6 +81,8 @@ export const normalizeBid = (raw) => {
     shipperAvatar: raw.shipperAvatar ?? raw.shipperProfileImage ?? raw.shipper_avatar ?? null,
     shipperId: raw.shipperId ?? raw.shipper_id ?? null,
     vehicleType: raw.vehicleType ?? 'Truck',
+    origin: raw.origin ?? raw.loadOrigin ?? null,
+    destination: raw.destination ?? raw.loadDestination ?? null,
     transitTime: raw.transitTime ?? raw.etaDays ?? 2,
     price,
     amount: price,

@@ -8,6 +8,8 @@ import {
   AdminLoads,
   AdminBids,
   AdminNotifications,
+  AdminAuditLog,
+  AdminActivityCenter,
   AdminRoleManagement,
   AdminFleetQueue,
   Disputes,
@@ -58,5 +60,7 @@ export const adminRoutes = [
   <Route key="admin-disputes" path="/admin/disputes" element={adminRoute('admin-disputes', <Disputes />)} />,
   <Route key="admin-shipments" path="/admin/shipments" element={adminRoute('admin-shipments', <ShipmentControl />)} />,
   <Route key="admin-bids" path="/admin/bids" element={adminRoute('admin-bids', <AdminBids />)} />,
+  <Route key="admin-audit" path="/admin/audit" element={adminRoute('admin-audit', <AdminAuditLog />)} />,
+  <Route key="admin-activity" path="/admin/activity" element={adminRoute('admin-activity', <AdminActivityCenter />)} />,
   <Route key="admin-notifications" path="/admin/notifications" element={adminRoute('admin-notifications', <AdminNotifications />)} />
 ];

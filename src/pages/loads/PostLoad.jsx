@@ -10,7 +10,7 @@ import { formatUserError } from '../../utils/userErrors.js';
 import { logApiSuccess, logApiFailure } from '../../utils/apiDevLog.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
-import { shouldUseAdminShell } from '../../utils/rbac.js';
+import { tonsToKg, kgToTons } from '../../utils/weightUnits.js';
 
 const PostLoad = () => {
   const { user } = useAuth();
@@ -35,7 +35,7 @@ const PostLoad = () => {
       cargo: payload.cargo,
       origin: payload.origin,
       destination: payload.destination,
-      weight: Number(payload.weight),
+      weight: tonsToKg(Number(payload.weight)),
       vehicleType: payload.vehicleType,
       expectedPrice: Number(payload.expectedPrice),
       pickupDate: payload.pickupDate,

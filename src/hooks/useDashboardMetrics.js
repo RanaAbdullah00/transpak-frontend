@@ -30,7 +30,7 @@ export function useDashboardMetrics() {
     try {
       const rows = await request({
         url: '/operations/activity',
-        params: { since: '24h', limit: 8 },
+        params: { since: '24h', limit: 3 },
         skipGlobalErrorToast: true
       });
       const list = Array.isArray(rows) ? rows : [];

@@ -21,6 +21,7 @@ const PlaceBid = () => {
   const location = useLocation();
   const load = location.state?.load;
   const { request, loading } = useApi();
+  const [submitting, setSubmitting] = useState(false);
   const { ratingMap, loading: ratingsLoading } = useRatingSummaryBatch(
     load?.shipperId ? [load.shipperId] : []
   );
@@ -70,6 +71,12 @@ const PlaceBid = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting || loading) return;
+    setSubmitting(true);
+    const idempotencyKey =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? `bid-${crypto.randomUUID()}`
+        : `bid-${Date.now()}`;
     try {
       const bid = await request({
         url: '/bids',
@@ -78,6 +85,7 @@ const PlaceBid = () => {
           loadId: load.id,
           amount: Number(amount)
         },
+        headers: { 'Idempotency-Key': idempotencyKey },
         skipGlobalErrorToast: true
       });
       if (!bid?.id && !bid?.loadId) {
@@ -93,6 +101,8 @@ const PlaceBid = () => {
       navigate('/loads');
     } catch (error) {
       notifyError(formatUserError(error, t, { fallback: t('pages.placeBid.bidFailed') }));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -206,7 +216,7 @@ const PlaceBid = () => {
                 variant="success"
                 className="w-100 py-3 fw-bold fs-5 shadow-sm"
                 type="submit"
-                disabled={!isValidBid || loading}
+                disabled={!isValidBid || loading || submitting}
               >
                 {isValidBid
                   ? t('pages.placeBid.submitCta', {

@@ -57,9 +57,16 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
       await request({ method: 'PATCH', url: `/carrier-space/${id}`, data: { status: 'closed' } });
       notifySuccess(t('loadsHub.spaceClosed'));
       emitRealtimeRefresh('loads');
-      refresh();
+      await refresh();
     } catch (err) {
-      notifyError(formatUserError(err, t));
+      const code = err?.response?.data?.error?.code || err?.code;
+      if (code === 'LISTING_ACTIVE') {
+        notifyError(t('loadsHub.spaceCloseActive'));
+      } else if (code === 'FORBIDDEN_OWNER' || code === 'FORBIDDEN_ROLE') {
+        notifyError(t('loadsHub.spaceCloseForbidden'));
+      } else {
+        notifyError(formatUserError(err, t, { fallback: t('loadsHub.spaceCloseFailed') }));
+      }
     }
   };
 

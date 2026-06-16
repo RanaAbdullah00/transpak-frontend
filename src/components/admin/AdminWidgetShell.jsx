@@ -6,6 +6,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
  */
 const AdminWidgetShell = ({
   title,
+  action = null,
   loading = false,
   error = null,
   errorMessage = null,
@@ -20,7 +21,12 @@ const AdminWidgetShell = ({
 
   return (
     <div className={className}>
-      {title ? <h6 className="fw-semibold mb-3">{title}</h6> : null}
+      {title ? (
+        <div className="d-flex align-items-center justify-content-between mb-3 gap-2">
+          <h6 className="fw-semibold mb-0">{title}</h6>
+          {action}
+        </div>
+      ) : null}
       {displayError ? (
         <div className="alert border rounded-3 mb-2 tp-bg-surface-soft" role="status">
           <p className="small text-muted mb-2">{displayError}</p>

@@ -44,6 +44,7 @@ const ShipmentHistory = () => {
   const [acceptedRows, setAcceptedRows] = useState([]);
   const [cancelledRows, setCancelledRows] = useState([]);
   const [fetchError, setFetchError] = useState(null);
+  const [hydrated, setHydrated] = useState(false);
   const roles = Array.isArray(user?.roles) ? user.roles : [];
   const activeRole = user?.activeRole ?? roles[0];
   const carrierMode = activeRole === 'carrier';
@@ -111,8 +112,18 @@ const ShipmentHistory = () => {
   }, [request, roles, carrierMode, t, user?.id]);
 
   useEffect(() => {
+    if (!user?.id) return;
+    const cached = loadHistoryCache(user.id);
+    if (Array.isArray(cached) && cached.length) {
+      setCompletedRows(normalizeShipmentHistoryList(cached, { carrierMode }));
+    }
+    setHydrated(true);
+  }, [user?.id, carrierMode]);
+
+  useEffect(() => {
+    if (!hydrated) return;
     refreshHistory();
-  }, [refreshHistory]);
+  }, [refreshHistory, hydrated]);
 
   useEffect(() => {
     const onRefresh = (e) => {

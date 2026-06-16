@@ -160,6 +160,7 @@ export const AppProvider = ({ children }) => {
         return nid === id || String(nid) === String(id) ? { ...n, read: true, isRead: true } : n;
       })
     );
+    api.patch(`/notifications/${id}/read`, {}, { skipGlobalErrorToast: true }).catch(() => {});
   }, []);
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AdminActivityCard from './AdminActivityCard.jsx';
 import { groupActivityByTime, formatWhen } from '../../hooks/useAdminLiveFeed.js';
 
@@ -30,6 +31,7 @@ function LiveBadge({ connectionState, t }) {
  */
 const AdminLiveFeedPanel = ({
   title,
+  headerAction = null,
   items = [],
   locale,
   t,
@@ -77,7 +79,8 @@ const AdminLiveFeedPanel = ({
     <div className="tp-admin-live-feed">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h6 className="fw-semibold mb-0">{title}</h6>
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          {headerAction}
           <LiveBadge connectionState={connectionState} t={t} />
           <label className="small text-muted mb-0 d-flex align-items-center gap-1">
             <input

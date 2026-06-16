@@ -1,16 +1,25 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Card from '../ui/Card.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
 import { sanitizeProductText } from '../../utils/userErrors.js';
 
 // Stream of recent activity events.
-const ActivityFeed = ({ activities }) => {
+const ActivityFeed = ({ activities, headerAction }) => {
   const { t } = useLanguage();
   const list = Array.isArray(activities) ? activities : [];
+  const viewAllLink = headerAction ?? (
+    <Link to="/operations/activity" className="small">
+      {t('common.viewAll')}
+    </Link>
+  );
   return (
     <Card>
-      <h6 className="mb-2">{t('pages.activityFeed.title')}</h6>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <h6 className="mb-0">{t('pages.activityFeed.title')}</h6>
+        {viewAllLink}
+      </div>
       {list.length ? (
         <ul className="list-unstyled mb-0 small">
           {list.map((act) => (

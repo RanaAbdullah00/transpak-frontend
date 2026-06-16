@@ -14,7 +14,7 @@ export function kgToTons(kg) {
   return n / KG_PER_TON;
 }
 
-export function formatTons(kgOrTons, { fromKg = true, digits = 1 } = {}) {
+export function formatTons(kgOrTons, { fromKg = true, digits = 2 } = {}) {
   const tons = fromKg ? kgToTons(kgOrTons) : Number(kgOrTons);
   if (!Number.isFinite(tons)) return '0';
   return tons.toLocaleString(undefined, {
