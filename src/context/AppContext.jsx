@@ -19,6 +19,7 @@ import {
 import { syncEventsSince, syncNotificationsSince, fetchUnreadCount } from '../utils/realtimeSync.js';
 import { handleDispatchEvent } from '../utils/realtimeDispatch.js';
 import { normalizePersistedNotification } from '../utils/notificationEngine.js';
+import { publishNotificationEffects } from '../utils/notificationPipeline.js';
 import { pushNotification, clearNotificationStore } from '../utils/notificationStore.js';
 import {
   buildNotificationEventId,
@@ -115,7 +116,7 @@ export const AppProvider = ({ children }) => {
       timestamp: normalized.createdAt,
       eventId: eid
     });
-    if (!claimNotificationEvent({ globalEventId, eventId: eid })) return;
+    const isNewEvent = claimNotificationEvent({ globalEventId, eventId: eid });
     const nid = normalized.id ?? normalized._id;
     setNotifications((prev) => {
       if (eid && prev.some((p) => String(p.eventId || p.id || p._id) === String(eid))) {
@@ -137,12 +138,18 @@ export const AppProvider = ({ children }) => {
       const next = [{ id: nid ?? `local-${Date.now()}`, read: Boolean(normalized.read), ...normalized }, ...prev];
       const scoped = user ? notificationsForWorkspace(next, user) : next;
       const eng = normalizePersistedNotification(normalized);
-      pushNotification({ ...eng, read: Boolean(normalized.read), dedupeKey: `persist|${eng.id}` });
-      if (showToast) {
+      eng.globalEventId =
+        eng.globalEventId ||
+        buildNotificationEventId({
+          dispatchType: eng.dispatchType,
+          shipmentRef: eng.shipmentRef,
+          timestamp: eng.timestamp,
+          eventId: eid
+        });
+      pushNotification({ ...eng, read: Boolean(normalized.read), dedupeKey: eng.globalEventId });
+      if (showToast && isNewEvent) {
         queueMicrotask(() => {
-          window.dispatchEvent(
-            new CustomEvent('tp:notification-toast', { detail: eng })
-          );
+          publishNotificationEffects(eng, { burstKey: eng.globalEventId });
           const unread = scoped.filter((n) => !(n.read || n.isRead)).length;
           window.dispatchEvent(new CustomEvent('tp:unread-sync', { detail: { count: unread } }));
         });

@@ -5,6 +5,7 @@ import {
   joinSession,
   leaveSession
 } from '../utils/trackingSessionManager.js';
+import { flushTrackingJoinQueue } from '../utils/trackingJoinQueue.js';
 import { getOrCreateTraceId } from '../utils/traceContext.js';
 
 /**
@@ -19,6 +20,7 @@ export function useTrackingSocket({ socket, sessionRef, aliasRefs = [], enabled 
   const emitJoin = useCallback(() => {
     if (!socket || !enabled || !primaryRef) return;
     emitTrackingJoin(socket, primaryRef, aliases);
+    flushTrackingJoinQueue(socket, emitTrackingJoin, { delayRetryMs: 1000 });
   }, [socket, enabled, primaryRef, aliases]);
 
   useEffect(() => {
