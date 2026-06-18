@@ -1,14 +1,36 @@
 .tp-load-card,
-.tp-bid-card {
+.tp-bid-card,
+.tp-space-card {
   border-radius: 1.25rem !important;
 }
 
 .tp-load-card h6,
-.tp-bid-card h6 {
+.tp-bid-card h6,
+.tp-space-card .fw-semibold {
   font-size: 0.95rem;
+}
+
+.tp-space-card {
+  border: 1px solid color-mix(in srgb, #0284c7 28%, var(--pak-border, rgba(15, 23, 42, 0.08)));
+  background: color-mix(in srgb, #0284c7 6%, var(--pak-card-bg, #fff));
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.tp-space-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px color-mix(in srgb, #0284c7 18%, transparent);
+  border-color: color-mix(in srgb, #059669 35%, var(--pak-border, rgba(15, 23, 42, 0.12)));
+}
+
+body.dark-theme .tp-space-card {
+  border-color: color-mix(in srgb, #38bdf8 32%, rgba(148, 163, 184, 0.25));
+  background: color-mix(in srgb, #0284c7 14%, var(--tp-surface, #1e293b));
+}
+
+body.dark-theme .tp-space-card:hover {
+  box-shadow: 0 12px 28px color-mix(in srgb, #059669 22%, transparent);
 }
 
 .tp-map-card {
   border-radius: 1.5rem !important;
 }
-

@@ -12,7 +12,7 @@ export function notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn) {
 }
 
 /**
- * Carrier responds to open loads (accept listed fare, counter-offer, or pass).
+ * Carrier responds to open loads (accept listed fare or pass).
  */
 function newBidIdempotencyKey() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -39,34 +39,6 @@ export async function acceptLoadAtListedFare(request, load, { t, notifyWarn } = 
   emitRealtimeRefresh('bids');
   emitRealtimeRefresh('loads');
   return bid;
-}
-
-export async function submitCounterOffer(request, load, counterAmount, { t, notifyWarn } = {}) {
-  const amount = Number(counterAmount);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    const err = new Error('Enter a valid counter amount');
-    err.statusCode = 400;
-    throw err;
-  }
-  const bid = await request({
-    method: 'POST',
-    url: '/bids',
-    data: { loadId: load.id, amount },
-    headers: { 'Idempotency-Key': newBidIdempotencyKey() },
-    skipGlobalErrorToast: true
-  });
-  notifyVehicleTypeMismatchIfPresent(bid, t, notifyWarn);
-  const bidId = bid?.id;
-  if (!bidId) return bid;
-  const updated = await request({
-    method: 'PUT',
-    url: `/bids/${bidId}/suggest-carrier`,
-    data: { amount },
-    skipGlobalErrorToast: true
-  });
-  emitRealtimeRefresh('bids');
-  emitRealtimeRefresh('loads');
-  return updated || bid;
 }
 
 export async function rejectLoadForCarrier(request, load) {

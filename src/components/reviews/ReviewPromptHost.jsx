@@ -92,11 +92,14 @@ const ReviewPromptHost = () => {
       if (e?.detail) enqueue(e.detail);
     };
     const onRefresh = () => fetchPending();
+    const onSync = () => fetchPending();
     window.addEventListener('tp:review-prompt', onPrompt);
     window.addEventListener('tp:realtime-refresh', onRefresh);
+    window.addEventListener('tp:review-prompt-sync', onSync);
     return () => {
       window.removeEventListener('tp:review-prompt', onPrompt);
       window.removeEventListener('tp:realtime-refresh', onRefresh);
+      window.removeEventListener('tp:review-prompt-sync', onSync);
     };
   }, [enqueue, fetchPending]);
 

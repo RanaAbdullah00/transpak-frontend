@@ -19,13 +19,15 @@ export const TpMark = ({ compact = false, className = '', showTagline = false })
   </span>
 );
 
-const BrandLogo = ({ className = '', onClick, title = 'TransPak', variant = 'full' }) => {
+const BrandLogo = ({ className = '', onClick, title = 'TransPak', variant = 'full', wordmarkOnly = false }) => {
   const isMark = variant === 'mark';
   const isAuth = variant === 'auth';
+  const isWordmark = variant === 'wordmark' || wordmarkOnly || isAuth;
   const compact = isMark || isAuth;
+  const showMark = !isWordmark;
 
   const wordmark = !isMark ? (
-    <span className={`tp-brand-logo__wordmark ${isAuth ? 'tp-brand-logo__wordmark--auth' : ''}`}>
+    <span className={`tp-brand-logo__wordmark ${isAuth || isWordmark ? 'tp-brand-logo__wordmark--auth' : ''}`}>
       <span className="tp-brand-logo__trans">TRANS</span>
       <span className="tp-brand-logo__pak">PAK</span>
     </span>
@@ -37,7 +39,7 @@ const BrandLogo = ({ className = '', onClick, title = 'TransPak', variant = 'ful
       className={`tp-brand-logo tp-brand-logo--ltr d-flex ${
         isMark
           ? 'flex-row align-items-center tp-brand-logo--mark'
-          : isAuth
+          : isAuth || isWordmark
           ? 'flex-row align-items-center justify-content-start flex-wrap gap-2 tp-brand-logo--auth tp-brand-logo--auth-inline'
           : 'flex-column align-items-center justify-content-center'
       } ${className}`}
@@ -52,12 +54,9 @@ const BrandLogo = ({ className = '', onClick, title = 'TransPak', variant = 'ful
       tabIndex={onClick ? 0 : undefined}
       aria-label={title}
     >
-      <TpMark compact={compact} />
+      {showMark ? <TpMark compact={compact} /> : null}
       {wordmark}
-      {!isMark && !isAuth ? <span className="tp-brand-logo__rule" aria-hidden="true" /> : null}
-      {isAuth ? (
-        <span className="tp-brand-logo__rule tp-brand-logo__rule--vertical d-none d-sm-inline" aria-hidden="true" />
-      ) : null}
+      {!isMark && !isAuth && !isWordmark ? <span className="tp-brand-logo__rule" aria-hidden="true" /> : null}
     </div>
   );
 };

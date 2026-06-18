@@ -31,9 +31,6 @@ const BidCard = ({
   bid = {},
   onAccept,
   onReject,
-  onSuggest,
-  onAcceptSuggestion,
-  onRejectSuggestion,
   isShipper,
   isCarrier,
   actionsDisabled,
@@ -127,63 +124,32 @@ const BidCard = ({
     (isShipper ? t('auth.carrier') : t('auth.shipper'));
   const profileRole = isShipper ? t('auth.carrier') : t('auth.shipper');
 
-  const [suggestInput, setSuggestInput] = useState('');
-  const [showSuggestInput, setShowSuggestInput] = useState(false);
-
   const [confirmState, setConfirmState] = useState(null); // { kind: 'accept'|'reject', handler: fn }
 
   const showActions = isActiveBidStatus(resolvedBid.status) && !isExpired;
 
-  const canAccept = isShipper
-    ? showActions &&
-      (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
-      typeof onAccept === 'function'
-    : isCarrier
-    ? showActions && suggestedByShipper && typeof onAcceptSuggestion === 'function'
-    : false;
+  const canAccept =
+    isShipper &&
+    showActions &&
+    (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
+    typeof onAccept === 'function';
 
-  const canReject = isShipper
-    ? showActions &&
-      (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
-      typeof onReject === 'function'
-    : isCarrier
-    ? showActions && suggestedByShipper && typeof onRejectSuggestion === 'function'
-    : false;
-
-  const canSuggest = isShipper
-    ? showActions &&
-      (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
-      typeof onSuggest === 'function'
-    : isCarrier
-    ? showActions &&
-      (isAwaitingShipper(resolvedBid.status) || suggestedByShipper) &&
-      typeof onSuggest === 'function'
-    : false;
+  const canReject =
+    isShipper &&
+    showActions &&
+    (isAwaitingShipper(resolvedBid.status) || suggestedByCarrier) &&
+    typeof onReject === 'function';
 
   const distRaw = bid?.distanceKm ?? bid?.distance ?? bid?.loadDistanceKm;
   const routeDistance = formatDistanceKm(distRaw, t);
 
-  const acceptHandler = canAccept
-    ? () => (isShipper ? onAccept?.(resolvedBid) : onAcceptSuggestion?.(resolvedBid))
-    : null;
+  const acceptHandler = canAccept ? () => onAccept?.(resolvedBid) : null;
 
-  const rejectHandler = canReject
-    ? () => (isShipper ? onReject?.(resolvedBid) : onRejectSuggestion?.(resolvedBid))
-    : null;
+  const rejectHandler = canReject ? () => onReject?.(resolvedBid) : null;
 
   useEffect(() => {
-    if (actionsDisabled || !canSuggest) setShowSuggestInput(false);
     if (actionsDisabled) setConfirmState(null);
-  }, [actionsDisabled, canSuggest]);
-
-  const handleSuggestSubmit = () => {
-    const val = Number(suggestInput);
-    if (!Number.isNaN(val) && val >= 0 && onSuggest) {
-      onSuggest(resolvedBid, val);
-      setSuggestInput('');
-      setShowSuggestInput(false);
-    }
-  };
+  }, [actionsDisabled]);
 
   const isAccepted = canonStatus === BID_STATUS.ACCEPTED;
   const trackingRef = getTrackingRef(resolvedBid) || null;
@@ -307,41 +273,6 @@ const BidCard = ({
               >
                 {t('ui.button.reject')}
               </Button>
-
-              {showSuggestInput ? (
-                <div className="d-flex gap-2 align-items-center flex-fill">
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    placeholder={t('bidCard.amountPlaceholder')}
-                    value={suggestInput}
-                    onChange={(e) => setSuggestInput(e.target.value)}
-                    min="0"
-                    step="1000"
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSuggestSubmit}
-                    disabled={actionsDisabled || !canSuggest}
-                  >
-                    {t('ui.button.submit')}
-                  </Button>
-                  <Button variant="outline-secondary" size="sm" onClick={() => setShowSuggestInput(false)}>
-                    {t('ui.button.cancel')}
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  className="flex-fill"
-                  disabled={actionsDisabled || !canSuggest}
-                  onClick={() => canSuggest && setShowSuggestInput(true)}
-                >
-                  {t('ui.button.suggest')}
-                </Button>
-              )}
             </div>
           </div>
 

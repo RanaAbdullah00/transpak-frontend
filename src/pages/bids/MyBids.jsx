@@ -7,17 +7,9 @@ import { normalizeTrucksResponse } from '../../utils/fleetApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { normalizeBids, normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
-import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
+import { notifyError } from '../../components/ui/ToastProvider.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
-import { formatUserError } from '../../utils/userErrors.js';
 import { usePollingAllowed } from '../../hooks/useSocketPolling.js';
-import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
-import {
-  commitOptimisticBidAccept,
-  commitOptimisticBidReject,
-  commitOptimisticBidSuggest,
-  emitScopedRefresh
-} from '../../utils/contractActivationLayer.js';
 import { createDebouncedRefresh } from '../../utils/refreshDebounce.js';
 
 import { isTruckMatchingEligible } from '../../utils/fleetApi.js';
@@ -25,7 +17,6 @@ import {
   BID_STATUS,
   isActiveBidStatus,
   isBidExpired,
-  isCounterOffered,
   isTerminalBidStatus,
   normalizeBidStatus
 } from '../../utils/bidStatus.js';
@@ -178,55 +169,6 @@ const MyBids = () => {
 
   const actionsDisabled = !profileComplete || !trucksComplete;
 
-  const handleAcceptSuggestion = async (bid) => {
-    try {
-      const res = await request({ method: 'PUT', url: `/bids/${bid.id}/accept-suggestion` });
-      const loadCode = res?.loadCode || bid.loadCode || loadMetaByLoad[String(bid.loadId)]?.code || null;
-      const payload = { ...res, loadCode };
-      commitOptimisticBidAccept(bid.id, payload, {
-        loadCode,
-        carrierId: user?.id,
-        origin: loadMetaByLoad[String(bid.loadId)]?.origin || null,
-        destination: loadMetaByLoad[String(bid.loadId)]?.destination || null,
-        userId: user?.id,
-        role: 'carrier'
-      });
-      await triggerAcceptActivationSync(payload, {
-        userId: user?.id,
-        role: 'carrier'
-      });
-      notifySuccess(t('pages.bids.suggestionAccepted'));
-      void fetchBidsData();
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('pages.bids.acceptSuggestionFailed') }));
-    }
-  };
-
-  const handleRejectSuggestion = async (bid) => {
-    try {
-      await request({ method: 'PUT', url: `/bids/${bid.id}/reject-suggestion` });
-      notifySuccess(t('pages.bids.suggestionRejected'));
-      emitScopedRefresh('bids');
-      fetchBidsData();
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('pages.bids.rejectSuggestionFailed') }));
-    }
-  };
-
-  const handleSuggest = async (bid, amount) => {
-    try {
-      commitOptimisticBidSuggest(bid.id, amount, {
-        suggestedBy: 'carrier',
-        loadCode: bid.loadCode
-      });
-      await request({ method: 'PUT', url: `/bids/${bid.id}/suggest-carrier`, data: { amount } });
-      notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      void fetchBidsData();
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
-    }
-  };
-
   return (
     <div className={`container py-3 ${isUrdu ? 'tp-rtl' : ''}`}>
       <h5 className="mb-3">{t('pages.bids.myBidsTitle')}</h5>
@@ -269,9 +211,6 @@ const MyBids = () => {
           <BidList
             bids={bidsWithDistance}
             mode="carrier"
-            onAcceptSuggestion={handleAcceptSuggestion}
-            onRejectSuggestion={handleRejectSuggestion}
-            onSuggest={handleSuggest}
             actionsDisabled={actionsDisabled}
             shipperIdByLoadId={shipperIdByLoadId}
             counterpartyLabelByLoadId={counterpartyLabelByLoadId}
@@ -283,4 +222,3 @@ const MyBids = () => {
 };
 
 export default MyBids;
-

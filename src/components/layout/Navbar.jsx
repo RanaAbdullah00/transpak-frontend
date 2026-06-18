@@ -12,7 +12,6 @@ import { resolveAdminShell } from '../../utils/rbac.js';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import LanguageToggle from '../ui/LanguageToggle.jsx';
-import ActiveRoleBadge from '../profile/ActiveRoleBadge.jsx';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -29,7 +28,7 @@ const Navbar = () => {
   const showWorkspaceSwitch = roleAction.mode === 'switch' || roleAction.mode === 'add';
 
   const navRoleActionLabel =
-    roleAction.mode === 'switch' ? t('nav.switchAccount') : roleAction.mode === 'add' ? t('nav.addProfile') : '';
+    roleAction.mode === 'switch' ? t('nav.switchAccount') : roleAction.mode === 'add' ? t('nav.addRole') : '';
 
   const handleNavRoleAction = async () => {
     if (!user || !showWorkspaceSwitch || roleSwitching) return;
@@ -100,9 +99,6 @@ const Navbar = () => {
           </button>
           <Link to="/" className="navbar-brand fw-bold mb-0 d-flex align-items-center gap-2">
             <BrandLogo variant="auth" title={t('common.appName')} className="tp-navbar-brand" />
-            {user && !adminShell ? (
-              <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />
-            ) : null}
           </Link>
           <div className="d-flex align-items-center gap-2">
             {!adminShell ? <LanguageToggle className="rounded-lg" /> : null}
@@ -121,9 +117,6 @@ const Navbar = () => {
         <div className="container-fluid px-3">
           <Link to="/" className="navbar-brand d-flex align-items-center gap-2 fw-bold">
             <BrandLogo variant="auth" title={t('common.appName')} className="tp-navbar-brand" />
-            {user && !adminShell ? (
-              <ActiveRoleBadge alwaysShow className="tp-active-role-badge--compact" />
-            ) : null}
           </Link>
 
           <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">

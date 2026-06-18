@@ -16,7 +16,6 @@ const LoadCard = ({
   onBid,
   carrierMode = false,
   onCarrierAccept,
-  onCarrierCounter,
   onCarrierReject,
   carrierBusy = false,
   ratingMap = null,
@@ -96,7 +95,6 @@ const LoadCard = ({
         <CarrierLoadActions
           load={load}
           onAccept={onCarrierAccept}
-          onCounter={onCarrierCounter}
           onReject={onCarrierReject}
           busy={carrierBusy}
           disabled={Boolean(load.deadline && isDeadlinePast) || load.status !== 'open'}

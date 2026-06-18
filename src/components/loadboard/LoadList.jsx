@@ -12,7 +12,6 @@ const LoadList = memo(({
   onBid,
   carrierMode = false,
   onCarrierAccept,
-  onCarrierCounter,
   onCarrierReject,
   carrierBusyLoadId = null
 }) => {
@@ -48,7 +47,6 @@ const LoadList = memo(({
           onBid={onBid}
           carrierMode={carrierMode}
           onCarrierAccept={onCarrierAccept}
-          onCarrierCounter={onCarrierCounter}
           onCarrierReject={onCarrierReject}
           carrierBusy={carrierBusyLoadId != null && String(carrierBusyLoadId) === String(load.id)}
           ratingMap={ratingMap}

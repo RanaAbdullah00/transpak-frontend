@@ -18,9 +18,6 @@ const BidList = memo(({
   bids = [],
   onAccept,
   onReject,
-  onSuggest,
-  onAcceptSuggestion,
-  onRejectSuggestion,
   mode = 'shipper',
   emptyMessage,
   actionsDisabled = false,
@@ -159,9 +156,6 @@ const BidList = memo(({
                     bid={bid}
                     onAccept={onAccept}
                     onReject={onReject}
-                    onSuggest={onSuggest}
-                    onAcceptSuggestion={onAcceptSuggestion}
-                    onRejectSuggestion={onRejectSuggestion}
                     isShipper={isShipper}
                     isCarrier={isCarrier}
                     actionsDisabled={actionsDisabled}
@@ -184,9 +178,6 @@ const BidList = memo(({
                   bid={bid}
                   onAccept={onAccept}
                   onReject={onReject}
-                  onSuggest={onSuggest}
-                  onAcceptSuggestion={onAcceptSuggestion}
-                  onRejectSuggestion={onRejectSuggestion}
                   isShipper={isShipper}
                   isCarrier={isCarrier}
                   actionsDisabled={actionsDisabled}

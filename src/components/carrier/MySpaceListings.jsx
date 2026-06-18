@@ -11,6 +11,7 @@ import EditCarrierSpaceModal from './EditCarrierSpaceModal.jsx';
 import SpaceRequestsPanel from './SpaceRequestsPanel.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
 import { emitRealtimeRefresh } from '../../utils/realtimeRefresh.js';
+import { closeCarrierSpace, reopenCarrierSpace } from '../../services/carrierSpace.js';
 
 const MySpaceListings = ({ hideIncomingRequests = false }) => {
   const { t } = useLanguage();
@@ -54,7 +55,7 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
 
   const closeListing = async (id) => {
     try {
-      await request({ method: 'PATCH', url: `/carrier-space/${id}`, data: { status: 'closed' } });
+      await closeCarrierSpace(request, id);
       notifySuccess(t('loadsHub.spaceClosed'));
       emitRealtimeRefresh('loads');
       await refresh();
@@ -67,6 +68,17 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
       } else {
         notifyError(formatUserError(err, t, { fallback: t('loadsHub.spaceCloseFailed') }));
       }
+    }
+  };
+
+  const reopenListing = async (id) => {
+    try {
+      await reopenCarrierSpace(request, id);
+      notifySuccess(t('loadsHub.spaceReopened'));
+      emitRealtimeRefresh('loads');
+      await refresh();
+    } catch (err) {
+      notifyError(formatUserError(err, t, { fallback: t('loadsHub.spaceReopenFailed') }));
     }
   };
 
@@ -93,6 +105,7 @@ const MySpaceListings = ({ hideIncomingRequests = false }) => {
               ratingMap={ratingMap}
               ratingsLoading={ratingsLoading}
               onClose={() => closeListing(row.id)}
+              onReopen={row.status === 'closed' ? () => reopenListing(row.id) : undefined}
               onEdit={setEditListing}
               onViewRequests={setRequestsListing}
             />

@@ -15,8 +15,7 @@ import { filterOpenLoads } from '../../utils/loadBidding.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import ActiveRoleBadge from '../../components/profile/ActiveRoleBadge.jsx';
 import Loader from '../../components/ui/Loader.jsx';
-import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
-import { commitOptimisticBidSuggest, emitScopedRefresh } from '../../utils/contractActivationLayer.js';
+import { acceptLoadAtListedFare, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { notifyApiError, notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { isActiveBidStatus, normalizeBidStatus } from '../../utils/bidStatus.js';
 const CarrierDashboard = () => {
@@ -111,29 +110,6 @@ const CarrierDashboard = () => {
         notifyWarn: (msg) => notifySystem(SystemNotifyType.WARNING, msg)
       });
       notifySystem(SystemNotifyType.SUCCESS, t('pages.loads.carrierAcceptSuccess'));
-      await refreshBoard();
-    } catch (err) {
-      notifyApiError(err);
-    } finally {
-      setOfferBusyId(null);
-    }
-  };
-
-  const handleCarrierCounter = async (load, amount) => {
-    setOfferBusyId(load.id);
-    try {
-      const updated = await submitCounterOffer(request, load, amount, {
-        t,
-        notifyWarn: (msg) => notifySystem(SystemNotifyType.WARNING, msg)
-      });
-      if (updated?.id) {
-        commitOptimisticBidSuggest(updated.id, amount, {
-          suggestedBy: 'carrier',
-          loadCode: load?.code
-        });
-      }
-      notifySystem(SystemNotifyType.SUCCESS, t('pages.loads.carrierCounterSuccess'));
-      emitScopedRefresh('bids');
       await refreshBoard();
     } catch (err) {
       notifyApiError(err);

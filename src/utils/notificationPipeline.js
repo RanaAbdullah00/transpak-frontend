@@ -81,6 +81,7 @@ export function ingestRealtimeDispatch(dispatch, { onPersistedNotification } = {
       CONTRACT_ACCEPTED: 'shipments',
       CONTRACT_REJECTED: 'bids',
       CONTRACT_COMPLETED: 'shipments',
+      REVIEW_PROMPT: 'shipments',
       COUNTER_OFFER_SENT: 'bids',
       COUNTER_OFFER_ACCEPTED: 'bids'
     };

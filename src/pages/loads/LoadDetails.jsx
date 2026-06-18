@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import LoadCard from '../../components/loadboard/LoadCard.jsx';
-import BidTimeline from '../../components/bids/BidTimeline.jsx';
 import BidList from '../../components/loadboard/BidList.jsx';
 import { SkeletonCard } from '../../components/ui/Skeleton.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -13,8 +12,7 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 import {
   notifyError,
   notifySuccess,
-  notifyBidRejected,
-  notifyCounterOffer
+  notifyBidRejected
 } from '../../components/ui/ToastProvider.jsx';
 import { normalizeLoads, normalizeBids } from '../../adapters/normalize.js';
 import { formatUserError } from '../../utils/userErrors.js';
@@ -24,7 +22,6 @@ import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
 import {
   commitOptimisticBidAccept,
   commitOptimisticBidReject,
-  commitOptimisticBidSuggest,
   emitScopedRefresh
 } from '../../utils/contractActivationLayer.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
@@ -138,20 +135,6 @@ const LoadDetails = () => {
     }
   };
 
-  const handleSuggest = async (bid, amount) => {
-    try {
-      commitOptimisticBidSuggest(bid.id, amount, {
-        suggestedBy: 'shipper',
-        loadCode: bid.loadCode || load?.code
-      });
-      await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
-      notifyCounterOffer(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      void fetchData();
-    } catch (error) {
-      notifyError(formatUserError(error, t, { fallback: t('pages.bids.suggestFailed') }));
-    }
-  };
-
   const handleDeleteLoad = async () => {
     try {
       await request({ method: 'DELETE', url: `/loads/${id}` });
@@ -175,6 +158,7 @@ const LoadDetails = () => {
   if (!load) return <div className="container py-3 text-muted">{t('pages.loads.failedLoadDetail')}</div>;
 
   const isOpen = load.status === 'open';
+  const isBooked = load.status === 'booked' || load.status === 'assigned';
 
   return (
     <div className="container py-3">
@@ -198,7 +182,7 @@ const LoadDetails = () => {
           </span>
         ) : Number(load?.bidCount ?? 0) > 0 ? (
           <span className="badge text-bg-secondary align-self-center">
-            {load.bidCount} bids
+            {t('pages.bids.bidCount', { count: load.bidCount })}
           </span>
         ) : null}
         {isOwner && isOpen && (
@@ -222,16 +206,23 @@ const LoadDetails = () => {
         ratingMap={ratingMap}
         ratingsLoading={ratingsLoading}
       />
-      <Card className="p-3 mt-3 tp-pipeline-card">
-        <h6 className="small text-muted text-uppercase mb-2">{t('bidTimeline.title')}</h6>
-        <BidTimeline
-          load={load}
-          bids={bids}
-          highlightStepId={null}
-        />
-      </Card>
+      {isBooked && (
+        <Card className="p-3 mt-3">
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <h6 className="mb-1">{t('pages.shipmentLifecycle.booked')}</h6>
+              <p className="small text-muted mb-0">{t('pages.tracking.trackShipmentHint')}</p>
+            </div>
+            <Link to={`/shipments/track/${load.code || load.id}`}>
+              <Button variant="primary" className="btn-sm rounded-lg">
+                {t('pages.tracking.viewLiveMap')}
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      )}
 
-      {isOwner && (
+      {isOwner && isOpen && (
         <>
           <h6 className="mt-4 mb-2">
             {t('pages.bids.bidManagementTitle')} ({(bids || []).length})
@@ -241,7 +232,6 @@ const LoadDetails = () => {
             mode="shipper"
             onAccept={handleAccept}
             onReject={handleReject}
-            onSuggest={handleSuggest}
           />
         </>
       )}

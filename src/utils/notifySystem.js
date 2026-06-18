@@ -233,6 +233,9 @@ export function routeRealtimeNotification(normalized) {
     notifySystem(SystemNotifyType.LOCATION_UPDATED, msg);
     return;
   }
+  if (type.includes('REVIEW_PROMPT')) {
+    return;
+  }
   if (type.includes('DELIVERED') || type.includes('DELIVERY_COMPLETED')) {
     notifySystem(SystemNotifyType.SUCCESS, msg);
     return;

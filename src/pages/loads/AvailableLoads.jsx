@@ -8,8 +8,7 @@ import Loader from '../../components/ui/Loader.jsx';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { notifySystem, SystemNotifyType } from '../../utils/notifySystem.js';
 import { formatUserError } from '../../utils/userErrors.js';
-import { acceptLoadAtListedFare, submitCounterOffer, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
-import { commitOptimisticBidSuggest } from '../../utils/contractActivationLayer.js';
+import { acceptLoadAtListedFare, rejectLoadForCarrier } from '../../services/carrierLoadOffer.js';
 import { normalizeLoads } from '../../adapters/normalize.js';
 import { ensureArray } from '../../utils/unwrapApi.js';
 import VehicleTypeDropdown from '../../components/loadboard/VehicleTypeDropdown.jsx';
@@ -122,28 +121,6 @@ const AvailableLoads = ({ embedded = false }) => {
     try {
       await rejectLoadForCarrier(request, load);
       notifySuccess(t('pages.loads.carrierRejectSuccess'));
-      await fetchAvailableLoads();
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
-    } finally {
-      setOfferBusyId(null);
-    }
-  };
-
-  const handleCarrierCounter = async (load, amount) => {
-    setOfferBusyId(load.id);
-    try {
-      const updated = await submitCounterOffer(request, load, amount, {
-        t,
-        notifyWarn: (msg) => notifySystem(SystemNotifyType.WARNING, msg)
-      });
-      if (updated?.id) {
-        commitOptimisticBidSuggest(updated.id, amount, {
-          suggestedBy: 'carrier',
-          loadCode: load?.code
-        });
-      }
-      notifySuccess(t('pages.loads.carrierCounterSuccess'));
       await fetchAvailableLoads();
     } catch (err) {
       notifyError(formatUserError(err, t, { fallback: t('pages.loads.failedLoadDetail') }));
@@ -276,7 +253,6 @@ const AvailableLoads = ({ embedded = false }) => {
           onBid={isCarrier ? undefined : handleBid}
           carrierMode={isCarrier}
           onCarrierAccept={handleCarrierAccept}
-          onCarrierCounter={handleCarrierCounter}
           onCarrierReject={handleCarrierReject}
           carrierBusyLoadId={offerBusyId}
         />

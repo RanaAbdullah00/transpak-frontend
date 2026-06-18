@@ -7,16 +7,8 @@ import { useLanguage } from '../../hooks/useLanguage.js';
 const ShipmentProgressBox = ({ status, uiState = null, eta }) => {
   const { t } = useLanguage();
   const cur = uiState?.status || normalizeShipmentStatus(status) || 'posted';
-  const displayOrder = useMemo(() => {
-    const curNorm = normalizeShipmentStatus(cur) || 'posted';
-    const bookedIdx = SHIPMENT_ORDER.indexOf('booked');
-    const curIdx = SHIPMENT_ORDER.indexOf(curNorm);
-    if (curIdx >= bookedIdx && bookedIdx >= 0) {
-      return SHIPMENT_ORDER.slice(bookedIdx);
-    }
-    return SHIPMENT_ORDER;
-  }, [cur]);
-  const idx = Math.max(0, displayOrder.indexOf(cur));
+  const displayOrder = useMemo(() => ['booked', 'pickedup', 'intransit', 'delivered'], []);
+  const idx = Math.max(0, displayOrder.indexOf(normalizeShipmentStatus(cur) || 'booked'));
   const n = displayOrder.length;
   const fillPct = n <= 1 ? 0 : (idx / (n - 1)) * 100;
 

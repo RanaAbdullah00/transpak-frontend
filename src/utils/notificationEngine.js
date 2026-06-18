@@ -206,6 +206,13 @@ const DISPATCH_MAP = Object.freeze({
     priority: 'medium',
     focus: true
   },
+  REVIEW_PROMPT: {
+    kind: NOTIFICATION_KIND.STATUS_UPDATE,
+    category: NOTIFICATION_CATEGORY.STATUS,
+    soundType: 'status',
+    priority: 'high',
+    focus: true
+  },
   STATUS_UPDATED: {
     kind: NOTIFICATION_KIND.STATUS_UPDATE,
     category: NOTIFICATION_CATEGORY.STATUS,

@@ -97,10 +97,6 @@ const Sidebar = () => {
               <FaGavel />
               {t('pages.bids.management')}
             </NavLink>
-            <NavLink to="/bids/approve" className={navLinkClass}>
-              <FaCheckCircle />
-              {t('pages.bids.approveCarrier')}
-            </NavLink>
           </>
         )}
         {isCarrier && (

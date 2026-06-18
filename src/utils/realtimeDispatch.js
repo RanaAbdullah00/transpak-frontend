@@ -9,6 +9,7 @@ import {
   hasNotificationEventId
 } from './notificationEventRegistry.js';
 import { emitShipmentStatusUpdated } from './shipmentStatusOptimistic.js';
+import { emitReviewPromptSync } from './reviewPrompt.js';
 
 /** @deprecated internal — scopes handled in notificationPipeline */
 export const SCOPE_REFRESH = {
@@ -43,6 +44,7 @@ export const SCOPE_REFRESH = {
   SHIPMENT_CREATED: 'shipments',
   CAPACITY_ACCEPTED: 'shipments',
   REVIEW_RECEIVED: 'all',
+  REVIEW_PROMPT: 'shipments',
   USER_REGISTERED: 'all',
   SPACE_CLOSED: 'space',
   LOGIN_SUCCESS: 'all',
@@ -128,6 +130,10 @@ export function handleDispatchEvent(dispatch, { onNotification } = {}) {
 
   applySocketContractActivation(dispatch, type);
   emitShipmentStatusUpdatedFromDispatch(dispatch, type);
+
+  if (type === 'REVIEW_PROMPT') {
+    emitReviewPromptSync(dispatch);
+  }
 
   if (!bridgeDispatchToShipmentStore(dispatch)) {
     runShipmentSyncFromDispatch(dispatch, type);

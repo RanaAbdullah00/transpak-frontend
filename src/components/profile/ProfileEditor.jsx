@@ -28,6 +28,7 @@ function profileFormFromUser(user, row = null) {
       full_name: '',
       email: '',
       phone: '',
+      address: '',
       cnic_number: '',
       cnic_image: '',
       cnic_image_back: '',
@@ -38,6 +39,7 @@ function profileFormFromUser(user, row = null) {
     full_name: row?.full_name ?? user?.fullName ?? user?.name ?? '',
     email: row?.email ?? user?.email ?? '',
     phone: row?.phone ?? user?.phone ?? '',
+    address: row?.address ?? user?.address ?? '',
     cnic_number: row?.cnic_number ?? user?.cnicNumber ?? user?.cnic ?? '',
     cnic_image: row?.cnic_image ?? user?.cnicImage ?? user?.cnic_image ?? '',
     cnic_image_back: row?.cnic_image_back ?? user?.cnicImageBack ?? user?.cnic_image_back ?? '',
@@ -174,6 +176,7 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
       const fd = new FormData();
       if (form.full_name) fd.append('full_name', form.full_name);
       if (form.phone) fd.append('phone', form.phone);
+      if (form.address != null) fd.append('address', form.address);
       if (canEditCnic && form.cnic_number) fd.append('cnic_number', form.cnic_number);
       if (files.profile_image) fd.append('profile_image', files.profile_image);
       if (files.cnic_image) fd.append('cnic_image', files.cnic_image);
@@ -190,6 +193,7 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
           ...p,
           full_name: prof.full_name || '',
           phone: prof.phone || '',
+          address: prof.address || '',
           cnic_number: prof.cnic_number || '',
           cnic_image: prof.cnic_image || prof.cnicImage || p.cnic_image || '',
           cnic_image_back: prof.cnic_image_back || prof.cnicImageBack || p.cnic_image_back || '',
@@ -407,6 +411,9 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
           <strong>{t('auth.mobile')}:</strong> {form.phone || t('common.emDash')}
         </p>
         <p className="mb-0 text-break">
+          <strong>{t('profile.address')}:</strong> {form.address || t('common.emDash')}
+        </p>
+        <p className="mb-0 text-break">
           <strong>{t('auth.email')}:</strong> {form.email}
         </p>
         {cnicReadOnlyBlock}
@@ -429,6 +436,10 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
           <div className="col-12">
             <label className="form-label small fw-semibold text-body">{t('auth.mobile')}</label>
             <input name="phone" className="form-control form-control-sm" value={form.phone} onChange={handleChange} />
+          </div>
+          <div className="col-12">
+            <label className="form-label small fw-semibold text-body">{t('profile.address')}</label>
+            <input name="address" className="form-control form-control-sm" value={form.address} onChange={handleChange} />
           </div>
         </div>
         {cnicEditableBlock}

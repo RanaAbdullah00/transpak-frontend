@@ -36,7 +36,6 @@ export const ACTIVE_ROUTE_MAP = new Set([
   '/bids',
   '/bids/mine',
   '/bids/place',
-  '/bids/approve',
   '/fleet',
   '/fleet/add',
   '/shipments/active',
@@ -46,8 +45,7 @@ export const ACTIVE_ROUTE_MAP = new Set([
   '/settings',
   '/support',
   '/feedback',
-  '/notifications',
-  '/messages'
+  '/notifications'
 ]);
 
 /** Match dynamic segments like /loads/:id */

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import BidList from '../../components/loadboard/BidList.jsx';
-import BidTimeline from '../../components/bids/BidTimeline.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -22,8 +21,7 @@ import {
 import { triggerAcceptActivationSync } from '../../utils/contractActivation.js';
 import {
   commitOptimisticBidAccept,
-  commitOptimisticBidReject,
-  commitOptimisticBidSuggest
+  commitOptimisticBidReject
 } from '../../utils/contractActivationLayer.js';
 import { createDebouncedRefresh } from '../../utils/refreshDebounce.js';
 
@@ -48,10 +46,7 @@ const BidManagement = () => {
       if (tab === 'active') {
         if (st !== BID_STATUS.ACCEPTED) return false;
         const loadStatus = String(loadMetaByLoad[bid.loadId]?.load?.status || '').toLowerCase();
-        if (['booked', 'assigned', 'in_transit', 'delivered', 'closed', 'completed'].includes(loadStatus)) {
-          return false;
-        }
-        return true;
+        return ['booked', 'assigned', 'in_transit', 'delivered'].includes(loadStatus);
       }
       if (tab === 'history') {
         return isTerminalBidStatus(st) || isBidExpired(bid);
@@ -94,19 +89,23 @@ const BidManagement = () => {
     }
   };
 
-  const handleSuggest = async (bid, amount) => {
-    try {
-      commitOptimisticBidSuggest(bid.id, amount, {
-        suggestedBy: 'shipper',
-        loadCode: bid.loadCode
-      });
-      await request({ method: 'PUT', url: `/bids/${bid.id}/suggest`, data: { amount } });
-      notifySuccess(t('pages.bids.suggestSent', { amount: Number(amount).toLocaleString() }));
-      void fetchBidsData();
-    } catch (err) {
-      notifyError(formatUserError(err, t, { fallback: t('pages.bids.suggestFailed') }));
-    }
-  };
+  const tabCounts = useMemo(() => {
+    const open = bids.filter((bid) => {
+      const st = normalizeBidStatus(bid.status);
+      return isActiveBidStatus(st) && !isCounterOffered(st) && !isBidExpired(bid);
+    }).length;
+    const active = bids.filter((bid) => {
+      const st = normalizeBidStatus(bid.status);
+      if (st !== BID_STATUS.ACCEPTED) return false;
+      const loadStatus = String(loadMetaByLoad[bid.loadId]?.load?.status || '').toLowerCase();
+      return ['booked', 'assigned', 'in_transit', 'delivered'].includes(loadStatus);
+    }).length;
+    const history = bids.filter((bid) => {
+      const st = normalizeBidStatus(bid.status);
+      return isTerminalBidStatus(st) || isBidExpired(bid);
+    }).length;
+    return { open, active, history };
+  }, [bids, loadMetaByLoad]);
 
   const handleReject = async (bid) => {
     try {
@@ -205,18 +204,17 @@ const BidManagement = () => {
       <h5 className="mb-3">{t('pages.bids.bidManagementTitle')}</h5>
       <ul className="nav nav-pills gap-1 mb-3 flex-wrap">
         {[
-          ['open', t('pages.bids.tabOpen')],
-          ['counter', t('pages.bids.tabCounter')],
-          ['active', t('pages.bids.tabActive')],
-          ['history', t('pages.bids.tabHistory')]
-        ].map(([id, label]) => (
+          ['open', t('pages.bids.tabOpen'), tabCounts.open],
+          ['active', t('pages.bids.tabActive'), tabCounts.active],
+          ['history', t('pages.bids.tabHistory'), tabCounts.history]
+        ].map(([id, label, count]) => (
           <li className="nav-item" key={id}>
             <button
               type="button"
               className={`nav-link py-1 px-3 small ${tab === id ? 'active' : ''}`}
               onClick={() => setTab(id)}
             >
-              {label}
+              {label} ({count})
             </button>
           </li>
         ))}
@@ -240,13 +238,11 @@ const BidManagement = () => {
               : null);
           return (
             <div key={loadId} className="mb-4">
-              {loadStub ? <BidTimeline load={loadStub} bids={groupBids} className="mb-3 p-3 rounded border bg-light-subtle" /> : null}
               <BidList
                 bids={groupBids}
                 mode="shipper"
                 onAccept={handleAccept}
                 onReject={handleReject}
-                onSuggest={handleSuggest}
                 actionsDisabled={!profileComplete}
               />
             </div>

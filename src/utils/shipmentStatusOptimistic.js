@@ -1,6 +1,7 @@
 import { normalizeShipmentStatus, nextShipmentStatus, SHIPMENT_ORDER } from './shipmentStatus.js';
 
 /** View-layer optimistic status + timeline — does not touch activation/snapshot engines. */
+const TIMELINE_DISPLAY_STATUSES = new Set(['booked', 'pickedup', 'intransit', 'delivered']);
 const statusByRef = new Map();
 const socketStatusByRef = new Map();
 const timelineByRef = new Map();
@@ -214,22 +215,16 @@ export function mergeShipmentTimelineEvents(
     note: ev.location ?? null,
     status: inferTimelineEventStatus(ev, effectiveStatus)
   }));
-  const terminal = effectiveStatus === 'closed' || effectiveStatus === 'delivered';
-  if (terminal) {
-    const lastStatus = events.length ? normalizeShipmentStatus(events[events.length - 1]?.status) : null;
-    if (lastStatus !== effectiveStatus) {
-      const terminalTime =
-        updatedAt ||
-        (historyList.length ? historyList[historyList.length - 1]?.time : null) ||
-        new Date().toISOString();
-      events.push({
-        label: effectiveStatus,
-        time: terminalTime,
-        done: true,
-        note: null,
-        status: effectiveStatus
-      });
-    }
+  const filtered = events.filter((ev) => {
+    const st = normalizeShipmentStatus(ev.status);
+    return st && TIMELINE_DISPLAY_STATUSES.has(st);
+  });
+  const byStatus = new Map();
+  for (const ev of filtered) {
+    byStatus.set(normalizeShipmentStatus(ev.status), ev);
   }
-  return { events, effectiveStatus };
+  const ordered = SHIPMENT_ORDER.filter((s) => TIMELINE_DISPLAY_STATUSES.has(s))
+    .map((s) => byStatus.get(s))
+    .filter(Boolean);
+  return { events: ordered, effectiveStatus };
 }

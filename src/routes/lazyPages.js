@@ -18,6 +18,5 @@ export const LoadDetails = lazyWithRetry(() => import('../pages/loads/LoadDetail
 export const BidManagement = lazyWithRetry(() => import('../pages/bids/BidManagement.jsx'));
 export const MyBids = lazyWithRetry(() => import('../pages/bids/MyBids.jsx'));
 export const ShipmentTracking = lazyWithRetry(() => import('../pages/shipments/ShipmentTracking.jsx'));
-export const Messages = lazyWithRetry(() => import('../pages/messages/Messages.jsx'));
 export const TruckDetails = lazyWithRetry(() => import('../pages/carrier/TruckDetails.jsx'));
 export const PublicProfile = lazyWithRetry(() => import('../pages/profile/PublicProfile.jsx'));

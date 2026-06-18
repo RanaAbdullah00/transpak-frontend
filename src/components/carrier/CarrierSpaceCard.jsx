@@ -10,7 +10,7 @@ import { formatTons, ratePerKgToTon } from '../../utils/weightUnits.js';
 import { canCloseListingWithContract } from '../../utils/contractMapper.js';
 import { formatVisibilitySummary } from '../../utils/capacityVisibility.js';
 
-const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onViewDetails, onViewRequests, ratingMap = null, ratingsLoading = false }) => {
+const CarrierSpaceCard = memo(({ listing, mine, onClose, onReopen, onRequest, onEdit, onViewDetails, onViewRequests, ratingMap = null, ratingsLoading = false }) => {
   const { t } = useLanguage();
   const remTons = formatTons(listing.remainingSpaceKg ?? 0);
   const capTons = formatTons(listing.truckCapacityKg ?? 0);
@@ -105,6 +105,13 @@ const CarrierSpaceCard = memo(({ listing, mine, onClose, onRequest, onEdit, onVi
               {t('loadsHub.closeListing')}
             </Button>
           ) : null}
+        </div>
+      ) : null}
+      {mine && listing.status === 'closed' && onReopen ? (
+        <div className="d-grid gap-2">
+          <Button variant="outline-primary" size="sm" className="w-100" onClick={onReopen}>
+            {t('loadsHub.reopenListing')}
+          </Button>
         </div>
       ) : null}
       {!mine && listing.status === 'open' ? (
