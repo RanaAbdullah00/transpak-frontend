@@ -66,6 +66,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_APP_BUILD_ID': JSON.stringify(appBuildId)
     },
     build: {
+      sourcemap: false,
       rollupOptions: {
         output: {
           manualChunks(id) {

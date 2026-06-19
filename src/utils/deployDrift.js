@@ -1,9 +1,7 @@
 import { getApiBase } from '../config/apiConfig.js';
 
-/** Expected Render backend commit (short) — override via VITE_EXPECTED_BACKEND_SHA at build. */
-const EXPECTED_BACKEND_SHA = String(
-  import.meta.env.VITE_EXPECTED_BACKEND_SHA || '5372f31'
-)
+/** Expected Render backend commit (short) — set VITE_EXPECTED_BACKEND_SHA at Cloudflare build time. */
+const EXPECTED_BACKEND_SHA = String(import.meta.env.VITE_EXPECTED_BACKEND_SHA || '')
   .trim()
   .toLowerCase()
   .slice(0, 12);

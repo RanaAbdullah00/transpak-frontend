@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { tonsToKg, kgToTons } from '../../utils/weightUnits.js';
+import { formatUserError } from '../../utils/userErrors.js';
 
 // Shipper: edit an open load (PATCH /loads/:id).
 const EditLoad = () => {

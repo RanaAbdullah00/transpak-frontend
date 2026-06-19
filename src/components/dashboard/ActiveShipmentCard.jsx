@@ -13,6 +13,10 @@ import {
   getOptimisticActivation,
   subscribeOptimisticActivation
 } from '../../utils/contractActivationLayer.js';
+import {
+  resolveEffectiveShipmentStatus,
+  subscribeOptimisticShipmentStatus
+} from '../../utils/shipmentStatusOptimistic.js';
 import { useTrackingActive } from '../../hooks/useTrackingActive.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import { useAuth } from '../../hooks/useAuth.js';

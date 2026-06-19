@@ -700,7 +700,7 @@ export const translations = {
         carrierTitle: 'Carrier dashboard',
         shipperTitle: 'Shipper dashboard',
         shipperSubtitle: 'Freight control center for loads, bids, and shipments',
-        carrierSubtitle: 'Fleet operations  capacity, routes, and marketplace',
+        carrierSubtitle: 'Fleet operations for capacity, routes, and marketplace',
         monthlyView: 'Monthly view',
         monthThis: 'This month',
         monthLast: 'Last month',

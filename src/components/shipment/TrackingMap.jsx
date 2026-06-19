@@ -20,15 +20,8 @@ const TrackingMap = ({
 
   const resolvedOrigin = originName || trackingData?.origin || '';
   const resolvedDestination = destinationName || trackingData?.destination || '';
-
-  if (!trackingData && !resolvedOrigin && !resolvedDestination && !route?.length) {
-    return (
-      <div className="tp-map-card tp-map-card--empty rounded-3 border p-3 text-muted small" role="status">
-        {t('pages.tracking.noCoords')}
-      </div>
-    );
-  }
-
+  const isCompletelyEmpty =
+    !trackingData && !resolvedOrigin && !resolvedDestination && !route?.length;
   const hasLiveRoute =
     normalizeCoordList(trackingData?.liveTrackingMap?.coordinates).length > 0 ||
     normalizeCoordList(route).length > 0;
@@ -40,7 +33,8 @@ const TrackingMap = ({
   } = useMapRoute({
     origin: resolvedOrigin,
     destination: resolvedDestination,
-    enabled: Boolean(resolvedOrigin && resolvedDestination && !hasLiveRoute)
+    enabled:
+      !isCompletelyEmpty && Boolean(resolvedOrigin && resolvedDestination && !hasLiveRoute)
   });
 
   const coords = useMemo(() => {
@@ -90,6 +84,14 @@ const TrackingMap = ({
   }, [hasDriverCoords, driverLat, driverLng]);
   const locationUnavailable =
     Boolean(trackingData?.tracking?.locationUnavailable) && !driver && !hasDriverCoords;
+
+  if (isCompletelyEmpty) {
+    return (
+      <div className="tp-map-card tp-map-card--empty rounded-3 border p-3 text-muted small" role="status">
+        {t('pages.tracking.noCoords')}
+      </div>
+    );
+  }
 
   if (!hasRenderableCoords && !orsLoading && !trackingActive) {
     return (
