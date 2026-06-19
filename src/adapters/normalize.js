@@ -8,8 +8,8 @@ function resolveLoadDistance(raw) {
   const fromApi = raw.distanceKm ?? raw.distance_km ?? raw.distance;
   const n = Number(fromApi);
   if (Number.isFinite(n) && n > 0) return Math.round(n);
-  const origin = raw.origin ?? raw.pickup ?? '';
-  const destination = raw.destination ?? raw.delivery ?? '';
+  const origin = raw.origin ?? raw.origin_city ?? raw.originCity ?? raw.pickup ?? '';
+  const destination = raw.destination ?? raw.destination_city ?? raw.destinationCity ?? raw.delivery ?? '';
   const est = estimateLocalFare(origin, destination, raw.vehicleType ?? raw.vehicle_type ?? 'Truck');
   if (est?.distanceKm > 0) return Math.round(est.distanceKm);
   return null;
@@ -25,16 +25,16 @@ export const normalizeLoad = (raw) => {
     id,
     title: raw.title ?? raw.cargo ?? raw.description ?? 'Load',
     price,
-    pickup: raw.pickup ?? raw.origin ?? '',
-    delivery: raw.delivery ?? raw.destination ?? '',
+    pickup: raw.pickup ?? raw.origin ?? raw.origin_city ?? raw.originCity ?? '',
+    delivery: raw.delivery ?? raw.destination ?? raw.destination_city ?? raw.destinationCity ?? '',
     status: raw.status ?? 'open',
     shipperId: raw.shipperId ?? null,
     assignedCarrierId: raw.assignedCarrierId ?? null,
     // backward-compatible fields used by existing components
     code: raw.code ?? null,
     cargo: raw.cargo ?? raw.title ?? raw.description ?? 'Load',
-    origin: raw.origin ?? raw.pickup ?? '',
-    destination: raw.destination ?? raw.delivery ?? '',
+    origin: raw.origin ?? raw.origin_city ?? raw.originCity ?? raw.pickup ?? '',
+    destination: raw.destination ?? raw.destination_city ?? raw.destinationCity ?? raw.delivery ?? '',
     weight: kgToTons(weightKg),
     weightKg,
     vehicleType: raw.vehicleType ?? raw.type ?? 'Truck',

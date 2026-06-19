@@ -117,4 +117,16 @@
   .tp-main-shell main {
     overflow-x: clip;
   }
+
+  .tp-profile-photo-block {
+    min-height: 148px;
+  }
+
+  .tp-profile-save-row {
+    position: sticky;
+    bottom: 0;
+    background: var(--pak-surface, #fff);
+    z-index: 2;
+    margin-bottom: 0;
+  }
 }

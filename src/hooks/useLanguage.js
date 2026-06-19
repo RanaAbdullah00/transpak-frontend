@@ -4,6 +4,7 @@ import { LanguageContext } from '../context/LanguageContext.jsx';
 import { translations } from '../i18n/translations.js';
 import { useAuth } from './useAuth.js';
 import { resolveAdminShell } from '../utils/rbac.js';
+import { sanitizeTranslationResult } from '../utils/uiLabelSanitizer.js';
 
 function buildT(lang) {
   return (key, vars = {}) => {
@@ -20,10 +21,11 @@ function buildT(lang) {
     if ((cur == null || typeof cur === 'object') && lang !== 'en') {
       cur = walk('en');
     }
-    if (cur == null) return String(key);
-    if (typeof cur === 'object') return String(key);
+    if (cur == null) return sanitizeTranslationResult(key, key);
+    if (typeof cur === 'object') return sanitizeTranslationResult(key, key);
     if (typeof cur !== 'string') return cur;
-    return cur.replace(/\{\{(\w+)\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{{${k}}}`));
+    const interpolated = cur.replace(/\{\{(\w+)\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{{${k}}}`));
+    return sanitizeTranslationResult(key, interpolated);
   };
 }
 
@@ -36,7 +38,7 @@ export const useLanguage = () => {
   const adminShell = resolveAdminShell(user, location.pathname);
 
   const t = useCallback(
-    (key, vars) => (adminShell ? adminT(key, vars) : ctx?.t?.(key, vars) ?? String(key)),
+    (key, vars) => (adminShell ? adminT(key, vars) : ctx?.t?.(key, vars) ?? sanitizeTranslationResult(key, key)),
     [adminShell, ctx]
   );
 

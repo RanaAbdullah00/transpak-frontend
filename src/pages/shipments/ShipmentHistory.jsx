@@ -11,6 +11,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
+import { formatRouteLabelFromRow } from '../../utils/routeDisplay.js';
 import VehicleTypeLabel from '../../components/loadboard/VehicleTypeLabel.jsx';
 import { normalizeBidStatus, BID_STATUS, isBidExpired } from '../../utils/bidStatus.js';
 import { normalizeShipmentStatus } from '../../utils/shipmentStatus.js';
@@ -210,11 +211,7 @@ const ShipmentHistory = () => {
                     ) : row.counterpartyName ? (
                       <span>· {row.counterpartyName}</span>
                     ) : null}
-                    {row.origin && row.destination ? (
-                      <span>
-                        · {row.origin} → {row.destination}
-                      </span>
-                    ) : null}
+                    <span>· {formatRouteLabelFromRow(row, t)}</span>
                   </div>
                   {row._raw?.vehicleType ? (
                     <div className="small text-muted mt-1">

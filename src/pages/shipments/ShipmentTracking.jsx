@@ -15,7 +15,7 @@ import { estimateLocalFare } from '../../utils/localFareEstimate.js';
 import { useShipmentTracking } from '../../hooks/useShipmentTracking.js';
 import TrackingDebugOverlay from '../../components/debug/TrackingDebugOverlay.jsx';
 import CausalReplayPanel from '../../components/debug/CausalReplayPanel.jsx';
-import { getNextAllowedActions } from '../../utils/stateNormalizationEngine.js';
+import { getNextAllowedActions, getShipperCloseAction } from '../../utils/stateNormalizationEngine.js';
 import { isValidShipmentTrackRef } from '../../utils/shipmentStatus.js';
 import {
   commitOptimisticStatusAdvance,
@@ -36,7 +36,7 @@ import {
   subscribeActiveShipmentStore
 } from '../../utils/activeShipmentStore.js';
 import { dashboardPathForRole } from '../../utils/dashboardPath.js';
-import { triggerStatusActivationSync } from '../../utils/contractActivation.js';
+import { triggerStatusActivationSync, handleShipmentActivationSync } from '../../utils/contractActivation.js';
 import { emitReviewPrompt } from '../../utils/reviewPrompt.js';
 import { FLOW_TYPE } from '../../utils/flowSession.js';
 import {
@@ -112,6 +112,14 @@ const ShipmentTracking = () => {
   useEffect(() => {
     refreshActiveRow();
   }, [refreshActiveRow]);
+
+  useEffect(() => {
+    if (!id || !user?.id) return;
+    const rows = getActiveShipmentList();
+    if (!rows.length) {
+      void handleShipmentActivationSync(id, { force: true });
+    }
+  }, [id, user?.id]);
 
   useEffect(() => {
     const onHydrate = (e) => {
@@ -247,14 +255,23 @@ const ShipmentTracking = () => {
     [workspaceRole, effectiveStatus]
   );
   const primaryAction = advanceActions[0] ?? null;
+  const shipperCloseAction = useMemo(
+    () => (workspaceRole === 'shipper' ? getShipperCloseAction(effectiveStatus) : null),
+    [workspaceRole, effectiveStatus]
+  );
+  const statusAction = primaryAction ?? shipperCloseAction;
   const canRenderAdvanceButton =
     workspaceRole === 'carrier' && isValidShipmentTrackRef(id) && trackingActive;
-  const canEnableButton = canRenderAdvanceButton && primaryAction != null;
+  const canRenderCloseButton =
+    workspaceRole === 'shipper' && isValidShipmentTrackRef(id) && trackingActive;
+  const canEnableButton =
+    (canRenderAdvanceButton && primaryAction != null) ||
+    (canRenderCloseButton && shipperCloseAction != null);
 
   const handleAdvanceStatus = useCallback(async () => {
-    const upcomingStatus = primaryAction?.nextBackendStatus;
+    const upcomingStatus = statusAction?.nextBackendStatus;
     if (!upcomingStatus || !id || !canEnableButton) return;
-    const label = t(primaryAction.labelKey);
+    const label = t(statusAction.labelKey);
     commitOptimisticStatusAdvance(id, upcomingStatus, { label });
     setAdvancing(true);
     try {
@@ -276,18 +293,16 @@ const ShipmentTracking = () => {
       });
       await triggerStatusActivationSync(id);
       emitShipmentStatusUpdated(id, upcomingStatus, { source: 'api' });
-      if (upcomingStatus === 'closed') {
+      if (upcomingStatus === 'closed' && workspaceRole === 'shipper') {
         const counterpartyId =
-          workspaceRole === 'carrier'
-            ? payload?.shipperId || rowForTracking?.shipperId
-            : payload?.carrierId || rowForTracking?.assignedCarrierId || rowForTracking?.carrierId;
+          payload?.carrierId || rowForTracking?.assignedCarrierId || rowForTracking?.carrierId;
         if (counterpartyId) {
           emitReviewPrompt({
             toUserId: counterpartyId,
             shipmentRef: id,
             shipmentId: payload?.shipmentId || rowForTracking?.shipmentId || null,
             loadId: payload?.loadId || rowForTracking?.loadId || null,
-            roleType: workspaceRole === 'carrier' ? 'shipper' : 'carrier'
+            roleType: 'carrier'
           });
         }
       }
@@ -296,7 +311,7 @@ const ShipmentTracking = () => {
     } finally {
       setAdvancing(false);
     }
-  }, [id, primaryAction, canEnableButton, request, t, workspaceRole, payload, rowForTracking]);
+  }, [id, statusAction, canEnableButton, request, t, workspaceRole, payload, rowForTracking]);
 
   const counterpartyProfileLink = useMemo(() => {
     const shipperId = payload?.shipperId || rowForTracking?.shipperId;
@@ -524,7 +539,7 @@ const ShipmentTracking = () => {
         currentStatus={effectiveStatus}
         events={timelineEvents}
       />
-      {workspaceRole === 'carrier' && trackingActive ? (
+      {workspaceRole === 'carrier' && trackingActive && primaryAction ? (
         <div className="mt-3 mb-3">
           <h6 className="mb-2">{t('pages.tracking.updateStatus')}</h6>
           <Button
@@ -533,11 +548,20 @@ const ShipmentTracking = () => {
             disabled={!canEnableButton || advancing}
             onClick={handleAdvanceStatus}
           >
-            {advancing
-              ? t('common.loading')
-              : primaryAction
-                ? t(primaryAction.labelKey)
-                : t('pages.tracking.updateStatus')}
+            {advancing ? t('common.loading') : t(primaryAction.labelKey)}
+          </Button>
+        </div>
+      ) : null}
+      {workspaceRole === 'shipper' && trackingActive && shipperCloseAction ? (
+        <div className="mt-3 mb-3">
+          <h6 className="mb-2">{t('pages.tracking.closeShipment')}</h6>
+          <Button
+            variant="secondary"
+            className="tp-touch-target"
+            disabled={!canEnableButton || advancing}
+            onClick={handleAdvanceStatus}
+          >
+            {advancing ? t('common.loading') : t(shipperCloseAction.labelKey)}
           </Button>
         </div>
       ) : null}

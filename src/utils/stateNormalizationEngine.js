@@ -41,7 +41,7 @@ const CANONICAL_BADGE_VARIANT = Object.freeze({
   CLOSED: resolveBadgeVariantForStatus('closed')
 });
 
-/** Next backend status → single carrier action (one Close only, at delivered→closed). */
+/** Next backend status → carrier advance actions (close is shipper-only). */
 const ACTION_BY_NEXT_BACKEND = Object.freeze({
   pickedup: {
     id: 'confirm_pickup',
@@ -57,12 +57,13 @@ const ACTION_BY_NEXT_BACKEND = Object.freeze({
     id: 'mark_delivered',
     labelKey: 'pages.tracking.advanceIntransit',
     variant: 'success'
-  },
-  closed: {
-    id: 'close',
-    labelKey: 'pages.tracking.advanceClosed',
-    variant: 'secondary'
   }
+});
+
+const SHIPPER_CLOSE_ACTION = Object.freeze({
+  id: 'close',
+  labelKey: 'pages.tracking.advanceClosed',
+  variant: 'secondary'
 });
 
 /** Returns uppercase canonical state for UI display. */
@@ -107,7 +108,7 @@ export function getNextAllowedActions(rawStatus, opts = {}) {
   if (backend === 'posted' || backend === 'closed') return [];
 
   const nextBackend = nextShipmentStatus(backend);
-  if (!nextBackend) return [];
+  if (!nextBackend || nextBackend === 'closed') return [];
 
   const def = ACTION_BY_NEXT_BACKEND[nextBackend];
   if (!def) return [];
@@ -121,6 +122,23 @@ export function getNextAllowedActions(rawStatus, opts = {}) {
       canonical: BACKEND_TO_CANONICAL[backend] || 'POSTED'
     }
   ];
+}
+
+/**
+ * Shipper-only close action when shipment is delivered.
+ * @param {string} rawStatus
+ * @returns {{ id: string, labelKey: string, nextBackendStatus: string, variant: string, canonical: string } | null}
+ */
+export function getShipperCloseAction(rawStatus) {
+  const backend = normalizeBackendStatus(rawStatus);
+  if (backend !== 'delivered') return null;
+  return {
+    id: SHIPPER_CLOSE_ACTION.id,
+    labelKey: SHIPPER_CLOSE_ACTION.labelKey,
+    nextBackendStatus: 'closed',
+    variant: SHIPPER_CLOSE_ACTION.variant,
+    canonical: 'DELIVERED'
+  };
 }
 
 /** i18n label key for a target backend status (backward compat for advanceStatusLabelKey). */

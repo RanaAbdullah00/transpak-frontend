@@ -9,6 +9,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
+import { formatRouteLabelFromRow } from '../../utils/routeDisplay.js';
 
 const TABS = ['open', 'booked', 'closed', 'expired'];
 
@@ -178,7 +179,7 @@ const ManageLoads = ({ embedded = false }) => {
                 <div>
                   <h6 className="mb-1">{l.cargo}</h6>
                   <div className="small text-muted">
-                    {l.code} · {l.origin} → {l.destination}
+                    {l.code} · {formatRouteLabelFromRow(l, t)}
                   </div>
                 </div>
                 <Badge

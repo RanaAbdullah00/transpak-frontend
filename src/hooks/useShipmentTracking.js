@@ -443,6 +443,18 @@ export function useShipmentTracking({
     return () => window.removeEventListener('tp:tracking-snapshot', onReconnectSnapshot);
   }, [trackingGate, localRef, socketKey, fetchTrack]);
 
+  useEffect(() => {
+    if (!trackingGate || !localRef || socketStatus === 'connected') return undefined;
+    const pollMs = Number(import.meta.env.VITE_TRACKING_POLL_MS || 8000);
+    const pollId = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      scheduleThrottledTrackingFetch(localRef, () =>
+        fetchTrackRef.current?.({ silent: true })
+      );
+    }, pollMs);
+    return () => window.clearInterval(pollId);
+  }, [trackingGate, localRef, socketStatus]);
+
   const { publishLocation } = useTrackingSocket({
     socket,
     sessionRef: localRef,

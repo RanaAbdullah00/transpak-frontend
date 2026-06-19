@@ -6,6 +6,7 @@ import Button from '../ui/Button.jsx';
 import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import TranslatedText from '../ui/TranslatedText.jsx';
+import { formatRouteLabelFromRow } from '../../utils/routeDisplay.js';
 import CarrierLoadActions from './CarrierLoadActions.jsx';
 import { formatLoadDisplayId } from '../../utils/displayId.js';
 import { formatDistanceKm } from '../../utils/formatDistance.js';
@@ -67,7 +68,7 @@ const LoadCard = ({
       <div className="d-flex flex-column small mb-2">
         <span className="d-flex align-items-center mb-1 text-break">
           <FaMapMarkerAlt className="text-primary me-2 flex-shrink-0" />
-          <TranslatedText text={load.origin} /> → <TranslatedText text={load.destination} />
+          {formatRouteLabelFromRow(load, t)}
         </span>
         <span className="d-flex align-items-center mb-1 text-break">
           <FaWeightHanging className="text-secondary me-2 flex-shrink-0" />

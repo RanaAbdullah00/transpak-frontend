@@ -259,7 +259,7 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
   const profileSummary = profileComplete && showTabs;
 
   const photoBlock = (
-    <div className="mb-3 text-center">
+    <div className="mb-3 text-center tp-profile-photo-block">
       <div
         className="rounded-circle overflow-hidden border mx-auto position-relative"
         style={{ width: 96, height: 96, borderColor: 'var(--pak-border)' }}
@@ -277,18 +277,20 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
           </div>
         )}
       </div>
-      <label className="btn btn-outline-primary btn-sm mt-2 mb-0 tp-touch-target">
-        {files.profile_image ? t('profile.photoSelected') : t('profile.uploadPhoto')}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="d-none"
-          onChange={(e) => setFiles((p) => ({ ...p, profile_image: e.target.files?.[0] || null }))}
-        />
-      </label>
-      {files.profile_image ? (
-        <p className="small text-success mt-1 mb-0">{t('profile.photoReadyToSave')}</p>
-      ) : null}
+      <div className="d-flex flex-column align-items-center gap-1 mt-2">
+        <label className="btn btn-outline-primary btn-sm mb-0 tp-touch-target">
+          {files.profile_image ? t('profile.photoSelected') : t('profile.uploadPhoto')}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="d-none"
+            onChange={(e) => setFiles((p) => ({ ...p, profile_image: e.target.files?.[0] || null }))}
+          />
+        </label>
+        {files.profile_image ? (
+          <p className="small text-success mb-0">{t('profile.photoReadyToSave')}</p>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -443,8 +445,8 @@ const ProfileEditor = ({ showTabs, onSaved }) => {
           </div>
         </div>
         {cnicEditableBlock}
-        <div className="d-flex justify-content-end mt-3">
-          <Button variant="primary" onClick={handleSave} disabled={loading}>
+        <div className="d-flex justify-content-end mt-4 pt-3 border-top tp-profile-save-row">
+          <Button variant="primary" className="tp-touch-target" onClick={handleSave} disabled={loading}>
             {loading ? <Loader light size="sm" /> : t('common.save')}
           </Button>
         </div>

@@ -21,10 +21,7 @@ import FlowSessionBanner from '../flow/FlowSessionBanner.jsx';
 import { FLOW_STATUS, FLOW_TYPE } from '../../utils/flowSession.js';
 import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
-import {
-  resolveEffectiveShipmentStatus,
-  subscribeOptimisticShipmentStatus
-} from '../../utils/shipmentStatusOptimistic.js';
+import { formatRouteLabel } from '../../utils/routeDisplay.js';
 
 /**
  * Unified active shipment card — only rendered from GET /shipments/active rows.
@@ -151,9 +148,8 @@ const ActiveShipmentCard = ({
 
   const summary =
     label ||
-    (originName && destinationName
-      ? `${originName} → ${destinationName}`.trim()
-      : resolvedTrackRef);
+    formatRouteLabel(originName, destinationName, t) ||
+    resolvedTrackRef;
 
   return (
     <div className="tp-active-shipment-card border rounded-3 mb-3 overflow-hidden tp-animate-fade-in">

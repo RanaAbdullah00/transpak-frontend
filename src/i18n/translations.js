@@ -42,6 +42,8 @@ export const translations = {
       collapse: 'Collapse',
       userFallback: 'User',
       emDash: '—',
+      routeUnavailable: 'Route unavailable',
+      notSet: 'Not set',
       distanceUnavailable: 'Distance unavailable',
       submitting: 'Submitting…',
       preparingWorkspace: 'Preparing your workspace…',
@@ -697,8 +699,8 @@ export const translations = {
       dashboard: {
         carrierTitle: 'Carrier dashboard',
         shipperTitle: 'Shipper dashboard',
-        shipperSubtitle: 'Freight control center — loads, bids, and shipments',
-        carrierSubtitle: 'Fleet operations — capacity, routes, and marketplace',
+        shipperSubtitle: 'Freight control center for loads, bids, and shipments',
+        carrierSubtitle: 'Fleet operations  capacity, routes, and marketplace',
         monthlyView: 'Monthly view',
         monthThis: 'This month',
         monthLast: 'Last month',
@@ -769,6 +771,7 @@ export const translations = {
         lastReportedPosition: 'Last reported position',
         locationStale: 'Driver location is outdated — waiting for a fresh GPS report.',
         updateStatus: 'Update shipment status',
+        closeShipment: 'Close shipment',
         advanceStatus: 'Next step',
         advanceBooked: 'Confirm pickup',
         advanceInTransit: 'Mark in transit',
@@ -781,7 +784,9 @@ export const translations = {
           'Live tracking starts after the bid is accepted and the shipment is booked.',
         waitingForData: 'Waiting for tracking data…',
         viewCarrierProfile: 'View carrier profile',
-        viewShipperProfile: 'View shipper profile'
+        viewShipperProfile: 'View shipper profile',
+        expectedDelivery: 'Expected delivery: {{eta}}',
+        lastUpdate: 'Last update: {{time}}'
       },
       shipments: {
         tracking: 'Shipment Tracking',
@@ -1624,6 +1629,8 @@ export const translations = {
       collapse: 'سمیٹیں',
       userFallback: 'صارف',
       emDash: '—',
+      routeUnavailable: 'Route unavailable',
+      notSet: 'Not set',
       distanceUnavailable: 'فاصلہ دستیاب نہیں',
       preparingWorkspace: 'آپ کا ورک اسپیس تیار ہو رہا ہے…',
       errorBoundaryTitle: 'یہ حصہ لوڈ نہیں ہو سکا',
@@ -2278,6 +2285,7 @@ export const translations = {
         lastReportedPosition: 'آخری رپورٹ شدہ مقام',
         locationStale: 'ڈرائیور کی لوکیشن پرانی ہے — تازہ GPS کا انتظار ہے۔',
         updateStatus: 'شپمنٹ کی حیثیت اپ ڈیٹ کریں',
+        closeShipment: 'شپمنٹ بند کریں',
         advanceStatus: 'اگلا مرحلہ',
         advanceBooked: 'پک اپ کی تصدیق',
         advanceInTransit: 'راستے میں نشان لگائیں',
@@ -2290,7 +2298,9 @@ export const translations = {
           'لائیو ٹریکنگ اس وقت شروع ہوتی ہے جب بولی قبول ہو اور شپمنٹ بک ہو جائے۔',
         waitingForData: 'ٹریکنگ ڈیٹا کا انتظار…',
         viewCarrierProfile: 'کیریئر پروفائل دیکھیں',
-        viewShipperProfile: 'شپر پروفائل دیکھیں'
+        viewShipperProfile: 'شپر پروفائل دیکھیں',
+        expectedDelivery: 'متوقع ڈیلیوری: {{eta}}',
+        lastUpdate: 'آخری اپ ڈیٹ: {{time}}'
       },
       supportPage: {
         title: 'مدد',
