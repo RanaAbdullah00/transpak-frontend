@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ActiveShipmentPanel from './ActiveShipmentPanel.jsx';
 import StatusBadge from '../shipment/StatusBadge.jsx';
@@ -26,6 +26,7 @@ import { FLOW_STATUS, FLOW_TYPE } from '../../utils/flowSession.js';
 import ProfileAccessLayer from '../profile/ProfileAccessLayer.jsx';
 import UserRatingBadge from '../reviews/UserRatingBadge.jsx';
 import { formatRouteLabel } from '../../utils/routeDisplay.js';
+import { getWorkspace } from '../../utils/workspace.js';
 
 /**
  * Unified active shipment card — only rendered from GET /shipments/active rows.
@@ -49,17 +50,7 @@ const ActiveShipmentCard = ({
 }) => {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const stableRoleRef = useRef(null);
-  if (stableRoleRef.current == null) {
-    stableRoleRef.current = carrierMode
-      ? 'carrier'
-      : user?.activeRole === 'shipper'
-        ? 'shipper'
-        : user?.activeRole === 'carrier'
-          ? 'carrier'
-          : null;
-  }
-  const workspaceRole = stableRoleRef.current;
+  const workspaceRole = carrierMode ? 'carrier' : getWorkspace(user);
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [, bumpOptimistic] = useState(0);
 

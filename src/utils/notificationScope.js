@@ -18,15 +18,13 @@ export function notificationsForWorkspace(notifications, user) {
   const commercial = roles.filter((r) => r === 'shipper' || r === 'carrier');
   const active = String(user.activeRole || '').trim().toLowerCase();
   const adminOnly = roles.includes('admin') && commercial.length === 0;
-  const dualCommercial = userHasDualCommercialRoles(user);
+  const workspace = active === 'shipper' || active === 'carrier' ? active : null;
 
   return notifications.filter((n) => {
     const rt = normalizeRole(n.roleType);
     if (!rt) return true;
     if (adminOnly || active === 'admin') return rt === 'admin';
-    if (dualCommercial) return rt === 'shipper' || rt === 'carrier' || rt === 'admin';
-    if (active === 'shipper') return rt === 'shipper';
-    if (active === 'carrier') return rt === 'carrier';
+    if (workspace) return rt === workspace || rt === 'admin';
     if (commercial.includes(rt)) return true;
     return false;
   });

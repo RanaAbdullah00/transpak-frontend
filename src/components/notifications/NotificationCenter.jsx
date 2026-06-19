@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import NotificationItem from './NotificationItem.jsx';
 import Button from '../ui/Button.jsx';
 import EmptyState from '../ui/EmptyState.jsx';
-import SegmentTabs from '../ui/SegmentTabs.jsx';
 import { AppContext } from '../../context/AppContext.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
@@ -14,7 +13,7 @@ import { fetchUnreadCount } from '../../utils/realtimeSync.js';
 import { notificationQueryParams } from '../../utils/workspaceApi.js';
 import { notifyError } from '../ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
-import { notificationsForUser, notificationsForRelatedRole, userHasDualCommercialRoles } from '../../utils/notificationScope.js';
+import { notificationsForUser } from '../../utils/notificationScope.js';
 import { getPortalContainer } from '../../utils/portalRoot.js';
 import { resolveAdminShell } from '../../utils/rbac.js';
 import { resolveNotificationPath } from '../../utils/notificationNavigation.js';
@@ -25,7 +24,6 @@ import {
   markNotificationRead,
   subscribeNotifications
 } from '../../utils/notificationStore.js';
-import { NOTIFICATION_CATEGORY } from '../../utils/notificationEngine.js';
 
 function mergeNotificationLists(apiRows = [], storeRows = []) {
   const byId = new Map();
@@ -56,8 +54,6 @@ const NotificationCenter = ({ className = '' }) => {
   const adminShell = resolveAdminShell(user, location.pathname);
   const app = React.useContext(AppContext);
   const [open, setOpen] = React.useState(false);
-  const [filterTab, setFilterTab] = React.useState('all');
-  const [relatedRoleView, setRelatedRoleView] = React.useState(false);
   const [serverUnread, setServerUnread] = React.useState(0);
   const [serverUnreadReady, setServerUnreadReady] = React.useState(false);
 
@@ -77,34 +73,12 @@ const NotificationCenter = ({ className = '' }) => {
     return notificationsForUser(merged, user);
   }, [apiRows, storeRows, user]);
 
-  const filtered = useMemo(() => {
-    const base = relatedRoleView ? notificationsForRelatedRole(notifications, user) : notifications;
-    if (filterTab === 'all') return base;
-    return base.filter((n) => {
-      const cat = String(n.category || '').toLowerCase();
-      if (filterTab === 'contract') return cat === NOTIFICATION_CATEGORY.CONTRACT;
-      if (filterTab === 'bid') return cat === NOTIFICATION_CATEGORY.BID;
-      if (filterTab === 'status') return cat === NOTIFICATION_CATEGORY.STATUS;
-      return true;
-    });
-  }, [notifications, filterTab, relatedRoleView, user]);
-
   const markNotificationReadCtx = app?.markNotificationRead || (() => {});
   const refetchNotifications = app?.refetchNotifications;
 
   const contextUnread = notifications.filter((n) => !(n.read || n.isRead)).length;
   const storeUnread = getUnreadCount();
   const unreadCount = serverUnreadReady ? serverUnread : Math.max(contextUnread, storeUnread);
-
-  const filterTabs = useMemo(
-    () => [
-      { id: 'all', label: t('pages.notifications.filterAll') },
-      { id: 'contract', label: t('pages.notifications.filterContract') },
-      { id: 'bid', label: t('pages.notifications.filterBid') },
-      { id: 'status', label: t('pages.notifications.filterStatus') }
-    ],
-    [t]
-  );
 
   React.useEffect(() => {
     const load = async () => {
@@ -174,7 +148,7 @@ const NotificationCenter = ({ className = '' }) => {
         skipGlobalErrorToast: true
       });
       markAllNotificationsRead();
-      filtered.forEach((n) => markNotificationReadCtx(n.id || n._id));
+      notifications.forEach((n) => markNotificationReadCtx(n.id || n._id));
       await refetchNotifications?.();
       await syncUnreadFromServer();
       window.dispatchEvent(new CustomEvent('tp_notifications_read'));
@@ -231,23 +205,8 @@ const NotificationCenter = ({ className = '' }) => {
             </button>
           </div>
         </div>
-        <div className="px-2 pt-2">
-          <SegmentTabs tabs={filterTabs} active={filterTab} onChange={setFilterTab} className="mb-2" />
-          {userHasDualCommercialRoles(user) ? (
-            <Button
-              variant={relatedRoleView ? 'primary' : 'outline-secondary'}
-              size="sm"
-              className="w-100 mb-2 rounded-lg"
-              onClick={() => setRelatedRoleView((v) => !v)}
-            >
-              {relatedRoleView
-                ? t('pages.notifications.viewAllRoles')
-                : t('pages.notifications.viewRelatedRoleActivity')}
-            </Button>
-          ) : null}
-        </div>
         <div className="tp-notif-slide__scroll px-2 py-2">
-          {!filtered.length ? (
+          {!notifications.length ? (
             <EmptyState
               icon={FaBell}
               title={t('empty.notificationsTitle')}
@@ -255,7 +214,7 @@ const NotificationCenter = ({ className = '' }) => {
               className="border-0 py-4"
             />
           ) : (
-            filtered.map((n) => (
+            notifications.map((n) => (
               <NotificationItem
                 key={String(n.id || n.dedupeKey || n.message)}
                 notification={n}

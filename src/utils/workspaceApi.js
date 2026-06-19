@@ -32,11 +32,6 @@ export function workspaceQueryParams(user) {
 
 export function notificationQueryParams(user, extra = {}) {
   if (!user?.id) return { ...extra };
-  const roles = Array.isArray(user.roles) ? user.roles : [];
-  const dualCommercial = roles.includes('shipper') && roles.includes('carrier');
-  if (dualCommercial) {
-    return { user_id: String(user.id), includeAllRoles: 1, ...extra };
-  }
   return { ...workspaceQueryParams(user), ...extra };
 }
 

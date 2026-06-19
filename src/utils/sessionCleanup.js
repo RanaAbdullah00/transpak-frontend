@@ -2,6 +2,8 @@ import { abortAllInflight } from './inflightRequests.js';
 import { clearAuthStorage } from './authSession.js';
 import { clearWorkspaceCachesForUser } from './workspace.js';
 import { clearAllWorkspaceQueryCaches, invalidateWorkspaceQueryCache } from './workspaceQueryCache.js';
+import { clearActiveShipmentStore } from './activeShipmentStore.js';
+import { clearNotificationStore } from './notificationStore.js';
 
 /**
  * Workspace switch — clear caches; optionally abort in-flight HTTP (commercial role changes).
@@ -14,6 +16,8 @@ export function prepareWorkspaceSwitch(userId = null, { abortInflight = false } 
   } else {
     clearAllWorkspaceQueryCaches();
   }
+  clearActiveShipmentStore();
+  clearNotificationStore();
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('tp:workspace-switching'));
   }

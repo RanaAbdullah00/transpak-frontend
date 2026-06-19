@@ -46,7 +46,13 @@ export function ProtectedRoute({ children, allowedRoles }) {
   if (allowedRoles?.includes('admin') && !canAccessAdminRoutes(user)) {
     return <Navigate to={dashboardPathForRole(activeRole === 'admin' ? 'shipper' : activeRole)} replace />;
   }
-  if (allowedRoles && !allowedRoles.some((r) => accountRoles.includes(r))) {
+  const isCommercialRoute =
+    allowedRoles?.length > 0 && allowedRoles.every((r) => r === 'shipper' || r === 'carrier');
+  if (isCommercialRoute) {
+    if (!allowedRoles.includes(activeRole)) {
+      return <Navigate to={dashboardPathForRole(activeRole)} replace />;
+    }
+  } else if (allowedRoles && !allowedRoles.some((r) => accountRoles.includes(r))) {
     const fallback =
       allowedRoles.includes('admin') && accountRoles.includes('admin')
         ? 'admin'

@@ -52,6 +52,7 @@ import { ingestFlowNotification } from '../../utils/notificationPipeline.js';
 import { NOTIFICATION_KIND } from '../../utils/notificationEngine.js';
 import { notifyError, notifySuccess } from '../../components/ui/ToastProvider.jsx';
 import { formatUserError } from '../../utils/userErrors.js';
+import { getWorkspace } from '../../utils/workspace.js';
 import TranslatedText from '../../components/ui/TranslatedText.jsx';
 import Loader from '../../components/ui/Loader.jsx';
 import TrackingSafeBoundary from '../../components/tracking/TrackingSafeBoundary.jsx';
@@ -68,13 +69,7 @@ const ShipmentTracking = () => {
   const [backgroundHydrating, setBackgroundHydrating] = useState(false);
   const [, bumpOptimistic] = useState(0);
   const hydrateTickRef = useRef(0);
-  const isCarrier =
-    user?.activeRole === 'carrier' || (user?.roles || []).includes('carrier');
-  const stableRoleRef = useRef(null);
-  if (stableRoleRef.current == null) {
-    stableRoleRef.current = isCarrier ? 'carrier' : 'shipper';
-  }
-  const workspaceRole = stableRoleRef.current;
+  const workspaceRole = getWorkspace(user);
   const shareLive = workspaceRole === 'carrier' && Boolean(id);
 
   const refreshActiveRow = useCallback(async ({ silent = false } = {}) => {
@@ -501,7 +496,7 @@ const ShipmentTracking = () => {
   }
 
   return (
-    <TrackingSafeBoundary trackRef={id} role={workspaceRole}>
+    <TrackingSafeBoundary key={user?.activeRole} trackRef={id} role={workspaceRole}>
     <div className="container-fluid px-2 px-md-3 py-3 tp-tracking-page tp-tracking-page--live">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h5 className="mb-0">{t('pages.tracking.title')}</h5>

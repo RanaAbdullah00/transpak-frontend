@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import { createSocketClient } from '../services/socket.js';
 import { normalizeNotification } from '../adapters/normalize.js';
 import { isRenderableClientNotification, sanitizeNotificationRoleType } from '../utils/notificationsFilter.js';
-import { notificationsForWorkspace, userHasDualCommercialRoles } from '../utils/notificationScope.js';
+import { notificationsForWorkspace } from '../utils/notificationScope.js';
 import { routeRealtimeNotification } from '../utils/notifySystem.js';
 import api from '../services/api.js';
 import { unwrapResponseData, ensureArray } from '../utils/unwrapApi.js';
@@ -202,7 +202,7 @@ export const AppProvider = ({ children }) => {
           if (cancelled) return;
           const page = normalizeNotificationsPayload(unwrapResponseData(res));
           const items = ensureArray(page.items).map(mapNotificationRow);
-          setNotifications(items);
+          setNotifications(notificationsForWorkspace(items, user));
           setNotificationsCursor(page.nextCursor);
           setNotificationsHasMore(page.hasMore);
           const welcome = items.find(
@@ -373,6 +373,7 @@ export const AppProvider = ({ children }) => {
       lastTrackingSig.current = { sig: '', t: 0 };
       lastTrackingTsByRef.current.clear();
       clearRealtimeDedupeCache();
+      clearNotificationStore();
       refetchNotifications();
     };
     window.addEventListener('tp:role-switched', onRoleSwitch);
@@ -438,9 +439,6 @@ export const AppProvider = ({ children }) => {
         if (!u) return true;
         const rt = row?.roleType != null ? String(row.roleType).toLowerCase() : '';
         if (!rt) return true;
-        if (userHasDualCommercialRoles(u)) {
-          return rt === 'shipper' || rt === 'carrier' || rt === 'admin';
-        }
         const active = getWorkspace(u);
         if (active === 'admin') return rt === 'admin';
         return rt === active;
@@ -481,7 +479,7 @@ export const AppProvider = ({ children }) => {
         },
         onDispatch: (d) => {
           const u = userRef.current;
-          if (d?.scope?.workspace && u && !userHasDualCommercialRoles(u)) {
+          if (d?.scope?.workspace && u) {
             const active = getWorkspace(u);
             if (String(d.scope.workspace).toLowerCase() !== active) return;
           }

@@ -84,9 +84,7 @@ export function useShipmentTracking({
 }) {
   const { t } = useLanguage();
   const { registerTrackingHandler, getSocket, socketStatus } = useContext(AppContext) || {};
-  const stableRoleRef = useRef(role);
-  if (role && stableRoleRef.current == null) stableRoleRef.current = role;
-  const effectiveRole = stableRoleRef.current ?? role;
+  const effectiveRole = role;
 
   const [reactiveTick, bumpReactive] = useState(0);
   useEffect(() => subscribeOptimisticActivation(() => bumpReactive((n) => n + 1)), []);
